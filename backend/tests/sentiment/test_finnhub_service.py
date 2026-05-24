@@ -12,6 +12,11 @@ SAMPLE_FINNHUB_RESPONSE = [
 ]
 
 
+@pytest.fixture(autouse=True)
+def patch_api_key(monkeypatch):
+    monkeypatch.setenv("FINNHUB_API_KEY", "test_key")
+
+
 def mock_response(status_code=200, json_data=None):
     mock = MagicMock()
     mock.status_code = status_code
@@ -110,3 +115,23 @@ def test_headline_missing_filtered_out(mock_get):
     result = fetch_news("AAPL", from_date=date(2026, 5, 23))
     assert len(result) == 1
     assert result[0]["headline"] == "Valid headline"
+
+
+@patch(f"{MODULE}.time.sleep")
+@patch(f"{MODULE}.requests.get")
+def test_retry_429_exponential_backoff_sequence(mock_get, mock_sleep):
+    mock_get.return_value = mock_response(429)
+    with pytest.raises(Exception, match="rate limit"):
+        fetch_news("AAPL", from_date=date(2026, 5, 23))
+    mock_sleep.assert_has_calls([call(2), call(4)])
+
+
+@patch(f"{MODULE}.requests.get")
+def test_missing_datetime_filtered_out(mock_get):
+    mock_get.return_value = mock_response(json_data=[
+        {"headline": "Valid article", "datetime": 1716537600},
+        {"headline": "No timestamp article"},
+    ])
+    result = fetch_news("AAPL", from_date=date(2026, 5, 23))
+    assert len(result) == 1
+    assert result[0]["headline"] == "Valid article"

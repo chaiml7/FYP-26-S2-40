@@ -3,20 +3,22 @@ import time
 import requests
 from datetime import date, datetime, timedelta, timezone
 
-FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY")
 BASE_URL = "https://finnhub.io/api/v1"
 MAX_RETRIES = 3
 BACKOFF_BASE = 2
 
 
 def fetch_news(symbol: str, from_date: date = None) -> list:
+    api_key = os.getenv("FINNHUB_API_KEY")
+    if not api_key:
+        raise ValueError("FINNHUB_API_KEY is not set")
     if from_date is None:
         from_date = date.today() - timedelta(days=1)
     params = {
         "symbol": symbol.upper(),
         "from": from_date.isoformat(),
         "to": date.today().isoformat(),
-        "token": FINNHUB_API_KEY,
+        "token": api_key,
     }
     for attempt in range(MAX_RETRIES):
         try:
@@ -31,9 +33,9 @@ def fetch_news(symbol: str, from_date: date = None) -> list:
             if not isinstance(data, list):
                 return []
             return [
-                {"headline": item["headline"], "source": "finnhub", "published_at": _unix_to_iso(item.get("datetime", 0))}
+                {"headline": item["headline"], "source": "finnhub", "published_at": _unix_to_iso(item["datetime"])}
                 for item in data
-                if item.get("headline")
+                if item.get("headline") and item.get("datetime")
             ]
         except requests.Timeout:
             if attempt < MAX_RETRIES - 1:
