@@ -27,8 +27,8 @@ Thumbs.db
 *.pth
 models/weights/
 
-# Personal / branch-specific files (live on bali branch, never merge to main)
-# CLAUDE.md
-# LOG.md
-# docs/
-# .claude/
+# Personal / private files — local only, never pushed to GitHub
+CLAUDE.md
+LOG.md
+docs/
+.claude/
