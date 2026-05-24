@@ -218,17 +218,169 @@ The `source` column in `sentiment_scores` is the only coupling point.
 
 ---
 
-## 9. Testing Checkpoints
+## 9. Testing Framework
 
-| What | How |
+### Structure
+
+```
+backend/
+  tests/
+    sentiment/
+      __init__.py
+      conftest.py                   ← shared fixtures and mocks
+      test_finbert_service.py
+      test_finnhub_service.py
+      test_news_scraper_service.py
+      test_sentiment_aggregator.py
+      test_sentiment_pipeline.py
+      test_sentiment_routes.py
+
+scripts/
+  test_sentiment_manual.py          ← manual end-to-end test script (runs against real APIs)
+```
+
+**Dependencies:** `pytest`, `pytest-mock`, `httpx` (for FastAPI TestClient)
+
+---
+
+### Unit Tests (automated, no real APIs)
+
+All external calls (FinnHub, NewsAPI, Supabase, HuggingFace) are mocked.
+
+**`conftest.py` — shared fixtures:**
+- `mock_headlines` — sample list of `{headline, source, published_at}` dicts
+- `mock_scored_headlines` — same with `label` and `score` added
+- `mock_supabase` — mocked Supabase client (patches `supabase_client.supabase`)
+- `finbert_not_loaded` — fixture that ensures `_model` and `_tokenizer` are reset to `None` before each test
+
+---
+
+**`test_finbert_service.py`**
+
+| Test | What it checks |
 |---|---|
-| FinBERT scores correctly | Run `score_headlines(["Apple profits up", "Tesla recall"])` directly, verify labels |
-| FinnHub fetcher returns data | Call `fetch_news("AAPL", from_date=yesterday)`, verify non-empty list |
-| NewsAPI fetcher returns data | Same for `fetch_news("AAPL", "Apple", from_date=yesterday)` |
-| Pipeline end-to-end | `POST /api/sentiment/run-pipeline`, check Supabase rows inserted |
-| Read endpoint | `GET /api/stocks/AAPL/sentiment`, verify response shape |
-| Retry logic | Use bad API key, confirm pipeline logs errors and completes without crash |
-| Idempotency | Run pipeline twice in a row, confirm no duplicate rows in Supabase |
+| `test_lazy_load_on_first_call` | `_model` is None before call, not None after |
+| `test_score_returns_label_and_score` | Output has `label` in `{positive, negative, neutral}` and `score` in `[0, 1]` |
+| `test_score_empty_list` | Returns `[]`, does not raise |
+| `test_score_single_headline` | Works with list of 1 item |
+| `test_score_batch_larger_than_16` | 20 headlines processed correctly across two batches |
+| `test_headline_over_512_tokens` | Very long headline is truncated, does not raise |
+| `test_load_failure_raises` | Patched loader raises → `score_headlines` propagates exception |
+| `test_model_not_reloaded_on_second_call` | `load_model()` called twice → model loaded only once (check call count) |
+
+---
+
+**`test_finnhub_service.py`**
+
+| Test | What it checks |
+|---|---|
+| `test_fetch_returns_headlines` | Mocked 200 response → returns list of dicts with correct keys |
+| `test_fetch_empty_response` | API returns `[]` → returns `[]`, no exception |
+| `test_fetch_malformed_json` | API returns garbage → returns `[]`, logs error |
+| `test_retry_on_429` | First call returns 429, second returns 200 → retries and succeeds |
+| `test_retry_exhausted` | All 3 attempts return 429 → raises exception after backoff |
+| `test_retry_on_timeout` | `requests.Timeout` on first call → retries, succeeds on second |
+| `test_rate_limit_sleep` | Verify 0.5s sleep is called between symbol fetches |
+| `test_published_at_format` | `published_at` is a valid ISO 8601 string |
+
+---
+
+**`test_news_scraper_service.py`**
+
+| Test | What it checks |
+|---|---|
+| `test_fetch_returns_headlines` | Mocked 200 → returns list with correct shape |
+| `test_fetch_empty_response` | API returns no articles → returns `[]` |
+| `test_quota_exceeded_skips` | 429 response → returns `[]` immediately, does NOT retry |
+| `test_quota_exceeded_does_not_retry` | Confirm retry is not attempted on 429 (check call count = 1) |
+| `test_malformed_response` | Missing `articles` key → returns `[]`, no crash |
+| `test_network_timeout_retries` | Timeout → retries up to 3×, then returns `[]` |
+
+---
+
+**`test_sentiment_aggregator.py`**
+
+| Test | What it checks |
+|---|---|
+| `test_save_scores_upserts_rows` | Mocked Supabase upsert called with correct data shape |
+| `test_save_scores_empty_list` | Empty input → upsert not called, returns gracefully |
+| `test_label_positive_threshold` | avg_score = 0.61 → label = `positive` |
+| `test_label_negative_threshold` | avg_score = 0.39 → label = `negative` |
+| `test_label_neutral_threshold` | avg_score = 0.50 → label = `neutral` |
+| `test_label_boundary_exact_06` | avg_score = 0.60 → label = `neutral` (boundary inclusive check) |
+| `test_get_summary_returns_correct_shape` | Mocked Supabase select → response has `daily_scores` and `headlines` keys |
+| `test_get_summary_empty_db` | No rows in DB → returns `{daily_scores: [], headlines: []}` |
+| `test_daily_aggregation_groups_by_date` | 5 headlines on same date → one entry in `daily_scores` with `headline_count: 5` |
+| `test_supabase_write_retry` | First upsert fails → retries up to 3×, succeeds on second |
+| `test_supabase_write_all_retries_fail` | All 3 upsert attempts fail → raises exception |
+
+---
+
+**`test_sentiment_pipeline.py`**
+
+| Test | What it checks |
+|---|---|
+| `test_run_pipeline_processes_all_watchlist` | All 10 symbols attempted |
+| `test_idempotency_skips_existing` | Symbol already has today's data → fetch/score not called for that symbol |
+| `test_idempotency_processes_missing` | Symbol missing today's data → fetch/score called |
+| `test_one_symbol_failure_continues` | FinnHub raises for AAPL → pipeline continues to TSLA |
+| `test_all_sources_called_per_symbol` | Both FinnHub and NewsAPI called for each symbol |
+| `test_newsapi_skip_does_not_abort` | NewsAPI returns `[]` (quota) → FinnHub results still scored and saved |
+| `test_finbert_load_failure_aborts_run` | FinBERT raises → pipeline aborts, returns error status |
+| `test_no_headlines_returns_no_data_status` | Both fetchers return `[]` → symbol status is `no_data` |
+| `test_result_shape` | Return dict has `symbols_processed` and `results` keys |
+| `test_pipeline_run_at_midnight` | `from_date` correctly resolves to yesterday across midnight boundary |
+
+---
+
+**`test_sentiment_routes.py`** (FastAPI TestClient)
+
+| Test | What it checks |
+|---|---|
+| `test_get_sentiment_200` | Valid symbol with data → 200, correct response shape |
+| `test_get_sentiment_404_no_data` | Valid symbol, no rows in DB → 404 with detail message |
+| `test_get_sentiment_symbol_uppercased` | `aapl` → treated same as `AAPL` |
+| `test_run_pipeline_200` | `POST /api/sentiment/run-pipeline` → 200, returns summary |
+| `test_run_pipeline_finbert_failure` | FinBERT mock raises → 500 with error detail |
+
+---
+
+### Manual Test Script (`scripts/test_sentiment_manual.py`)
+
+Run directly against real APIs and real Supabase. Prints pass/fail for each step.
+
+```
+python scripts/test_sentiment_manual.py
+```
+
+**Steps executed:**
+
+1. **FinBERT smoke test** — score 3 known headlines, print labels + scores. Verify labels match expectations.
+2. **FinnHub fetch** — fetch AAPL news for yesterday, print headline count and first 3 headlines.
+3. **NewsAPI fetch** — fetch AAPL / "Apple" news, print headline count.
+4. **Pipeline trigger** — call `run_pipeline()` directly (not via HTTP), print per-symbol results.
+5. **Supabase row check** — query `sentiment_scores` for today, print row count per symbol.
+6. **Idempotency check** — run pipeline again, confirm row count unchanged.
+7. **API endpoint check** — hit `GET /api/stocks/AAPL/sentiment` via `httpx`, print `daily_scores` and first 3 headlines.
+8. **Error simulation** — temporarily replace FinnHub API key with invalid value, confirm pipeline logs error for all symbols without crashing, confirm `no_data` status returned.
+9. **Rate limit simulation** — mock a 429 from FinnHub mid-run, confirm retry logic fires and logs backoff.
+
+Each step prints `[PASS]` or `[FAIL: <reason>]`. Script exits with code 1 if any step fails.
+
+---
+
+### Running Tests
+
+```bash
+# All unit tests
+cd backend && pytest tests/sentiment/ -v
+
+# Single service
+pytest tests/sentiment/test_finbert_service.py -v
+
+# Manual end-to-end (requires running backend + real API keys)
+python scripts/test_sentiment_manual.py
+```
 
 ---
 
