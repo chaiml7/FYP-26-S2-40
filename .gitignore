@@ -19,3 +19,16 @@ build/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# ML model weights (large files — download at runtime)
+*.h5
+*.pkl
+*.pt
+*.pth
+models/weights/
+
+# Personal / branch-specific files (live on bali branch, never merge to main)
+# CLAUDE.md
+# LOG.md
+# docs/
+# .claude/
