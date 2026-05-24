@@ -4,3 +4,10 @@ python-dotenv
 supabase
 yfinance
 pandas
+transformers
+torch
+APScheduler
+requests
+pytest
+pytest-mock
+httpx
