@@ -25,3 +25,7 @@ _dotenv = _stub_module("dotenv", load_dotenv=lambda *a, **kw: None)
 # Stub supabase package
 _supa_mock = MagicMock()
 _stub_module("supabase", create_client=lambda url, key: _supa_mock)
+
+# Stub yfinance so stock_routes.py can be imported without the real package
+_yf_mock = MagicMock()
+_stub_module("yfinance", download=_yf_mock, Ticker=MagicMock())
