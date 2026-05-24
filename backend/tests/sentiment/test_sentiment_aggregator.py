@@ -6,17 +6,6 @@ from tests.sentiment.conftest import SAMPLE_SCORED_HEADLINES
 MODULE = "services.sentiment.sentiment_aggregator"
 
 
-def make_supabase_chain(upsert_data=None, select_data=None):
-    mock = MagicMock()
-    # upsert chain: .table().upsert().execute()
-    mock.table.return_value.upsert.return_value.execute.return_value.data = upsert_data or SAMPLE_SCORED_HEADLINES
-    # select chain for get_sentiment_summary: .table().select().eq().gte().order().execute()
-    mock.table.return_value.select.return_value.eq.return_value.gte.return_value.order.return_value.execute.return_value.data = select_data or []
-    # select chain for has_data_for_today: .table().select().eq().gte().limit().execute()
-    mock.table.return_value.select.return_value.eq.return_value.gte.return_value.limit.return_value.execute.return_value.data = []
-    return mock
-
-
 @patch(f"{MODULE}.supabase")
 def test_save_scores_upserts_rows(mock_supa):
     save_scores("AAPL", SAMPLE_SCORED_HEADLINES)
@@ -51,6 +40,7 @@ def test_save_scores_retries_on_failure(mock_supa, mock_sleep):
     ]
     result = save_scores("AAPL", SAMPLE_SCORED_HEADLINES)
     assert mock_supa.table.return_value.upsert.call_count == 2
+    mock_sleep.assert_called_once_with(2)
 
 
 @patch(f"{MODULE}.time.sleep")
