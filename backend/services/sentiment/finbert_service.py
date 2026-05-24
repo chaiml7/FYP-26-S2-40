@@ -13,9 +13,11 @@ _model = None
 def load_model():
     global _tokenizer, _model
     if _model is None:
-        _tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-        _model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME)
-        _model.eval()
+        tok = AutoTokenizer.from_pretrained(MODEL_NAME)
+        mdl = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME)
+        mdl.eval()
+        _tokenizer = tok
+        _model = mdl
 
 
 def score_headlines(headlines: list) -> list:

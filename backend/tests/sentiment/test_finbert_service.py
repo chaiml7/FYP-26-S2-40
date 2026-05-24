@@ -24,6 +24,7 @@ def _patch_transformers(label_idx=0):
 def test_score_empty_list():
     result = score_headlines([])
     assert result == []
+    assert finbert_module._model is None
 
 
 def test_lazy_load_on_first_call():
@@ -76,9 +77,10 @@ def test_score_single_headline():
 def test_score_batch_larger_than_16():
     tok_p, model_p = _patch_transformers()
     headlines = [f"Headline number {i}" for i in range(20)]
-    with tok_p, model_p:
+    with tok_p, model_p as mock_model_cls:
         results = score_headlines(headlines)
     assert len(results) == 20
+    assert mock_model_cls.return_value.call_count == 2
 
 
 def test_headline_over_512_tokens():
