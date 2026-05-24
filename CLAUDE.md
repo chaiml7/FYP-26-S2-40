@@ -113,6 +113,11 @@ Pipeline flow:
 → GET /api/stocks/{symbol}/sentiment → frontend
 ```
 
+## Claude Code Rules
+- **Never** add `Co-Authored-By: Claude` or any Claude attribution to commit messages
+- Work from `bali` branch; feature branches named `feature/bali-*`
+- Personal files (LOG.md, CLAUDE.md, docs/, .claude/) stay on `bali` — never PR to main
+
 ## Dev Commands
 ```bash
 # Backend
