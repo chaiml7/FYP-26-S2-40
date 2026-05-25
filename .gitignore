@@ -19,3 +19,16 @@ build/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# ML model weights (large files — download at runtime)
+*.h5
+*.pkl
+*.pt
+*.pth
+models/weights/
+
+# Personal / private files — local only, never pushed to GitHub
+CLAUDE.md
+LOG.md
+docs/
+.claude/
