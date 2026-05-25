@@ -93,6 +93,23 @@
 - If all pass: push `feature/bali-sentiment-pipeline` → PR to `main` (code only, no docs/.claude/LOG.md)
 - Then start next phase (ML models: XGBoost/LSTM, or frontend charts)
 
+### 2026-05-25 — Bali — Environment Setup (uni machine)
+
+**What I did:**
+- Pulled latest context via gist sync
+- Fixed uvicorn not on PATH: ran `pip install` from scratch on uni machine
+- Fixed `supabase` install failure: `storage3` 2.x pulls in `pyiceberg` (requires C++ build tools) — pinned `supabase==2.7.4` in requirements.txt which uses `storage3==0.7.7` (no pyiceberg)
+- Fixed "Invalid API key": new Supabase `sb_secret_*` key format not supported by supabase-py 2.7.4 — switched to legacy JWT service_role key from dashboard → "Legacy anon, service_role API keys" tab
+- Backend server confirmed running on uni machine
+
+**What I discovered:**
+- `feature/bali-sentiment-pipeline` branch (14 commits) was never pushed — exists only on home PC
+- No stash or reflog trace in this repo; branch is safe at home but inaccessible here
+
+**Next steps:**
+- At home: push `feature/bali-sentiment-pipeline` to remote
+- Next session: pull branch, run `python scripts/test_sentiment_manual.py` E2E test, then PR to `main`
+
 ---
 
 ## Issues / Bugs Tracker
