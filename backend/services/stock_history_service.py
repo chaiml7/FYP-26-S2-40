@@ -12,7 +12,7 @@ def save_stock_history(rows: list):
     response = (
         supabase
         .table("daily_ohlcv")
-        .upsert(rows, on_conflict="symbol,trade_date")
+        .upsert(rows, on_conflict="stock_id,trade_date")
         .execute()
     )
 

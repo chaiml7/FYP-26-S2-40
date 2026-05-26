@@ -1,7 +1,7 @@
 import yfinance as yf
 
 
-def fetch_stock_history(symbol: str, period: str = "6mo", interval: str = "1d"):
+def fetch_stock_history(stock_id: int, symbol: str, period: str = "6mo", interval: str = "1d"):
     ticker = yf.Ticker(symbol.upper())
 
     df = ticker.history(
@@ -18,11 +18,10 @@ def fetch_stock_history(symbol: str, period: str = "6mo", interval: str = "1d"):
     rows = []
 
     for _, row in df.iterrows():
-        trade_date = row["Date"].date().isoformat()
-
         rows.append({
+            "stock_id": stock_id,
             "symbol": symbol.upper(),
-            "trade_date": trade_date,
+            "trade_date": row["Date"].date().isoformat(),
             "open": float(row["Open"]),
             "high": float(row["High"]),
             "low": float(row["Low"]),
