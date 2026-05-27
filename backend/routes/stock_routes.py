@@ -3,10 +3,13 @@ from services.stock_list_service import (
     get_active_stocks,
     get_stock_by_symbol,
     add_stock,
-    deactivate_stock
+    deactivate_stock,
+    update_last_imported_at
 )
 from services.yfinance_service import fetch_stock_history
 from services.stock_history_service import save_stock_history, get_stock_history
+from services.sentiment.sentiment_aggregator import get_sentiment_summary
+from services.sentiment.sentiment_pipeline import run_pipeline as run_sentiment_pipeline
 
 router = APIRouter()
 
@@ -100,3 +103,43 @@ def view_stock_history(symbol: str):
         )
 
     return data
+
+
+@router.get("/stocks/{symbol}/sentiment")
+def get_stock_sentiment(symbol: str):
+    data = get_sentiment_summary(symbol)
+    if not data["daily_scores"] and not data["headlines"]:
+        raise HTTPException(status_code=404, detail=f"No sentiment data found for {symbol.upper()}")
+    return {"symbol": symbol.upper(), **data}
+
+
+@router.post("/sentiment/run-pipeline")
+def trigger_sentiment_pipeline():
+    try:
+        return run_sentiment_pipeline()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/stocks/import/{symbol}")
+def import_one_tracked_stock(symbol: str, period: str = "6mo", interval: str = "1d"):
+    stock = get_stock_by_symbol(symbol)
+
+    if len(stock) == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=f"{symbol.upper()} is not in the stocks table"
+        )
+
+    stock_id = stock[0]["id"]
+
+    rows = fetch_stock_history(stock_id, symbol, period, interval)
+    result = save_stock_history(rows)
+
+    if result["success"]:
+        update_last_imported_at(symbol)
+
+    return {
+        "symbol": symbol.upper(),
+        "rows_imported": result["rows_saved"],
+        "message": result["message"]
+    }

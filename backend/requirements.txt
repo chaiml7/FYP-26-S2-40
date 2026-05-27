@@ -4,3 +4,10 @@ python-dotenv
 supabase==2.7.4
 yfinance
 pandas
+transformers
+torch
+APScheduler
+requests
+pytest
+pytest-mock
+httpx
