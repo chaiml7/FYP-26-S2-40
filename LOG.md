@@ -136,6 +136,32 @@
 - Start next phase: XGBoost/LSTM ML models, or frontend sentiment charts
 - Decide with team what to tackle next
 
+### 2026-05-27 — Bali — Pulled teammate's yfinance/stock import changes from main
+
+**What changed on main (commit `110cc75`):**
+
+Teammate (Addison or Ian — unclear who pushed) made 4 backend changes:
+
+1. **`yfinance_service.py`** — `fetch_stock_history()` now takes `stock_id: int` as first argument; includes `stock_id` in every row dict sent to Supabase.
+
+2. **`stock_history_service.py`** — upsert conflict target changed from `symbol,trade_date` → `stock_id,trade_date`. Requires a matching unique constraint change in the Supabase `daily_ohlcv` table (DB schema updated directly in dashboard, not via code).
+
+3. **`stock_list_service.py`** — added `update_last_imported_at(symbol)` function that stamps `last_imported_at` on the `stocks` table row. Requires a `last_imported_at` column on `stocks` (added in Supabase dashboard).
+
+4. **`stock_routes.py`** — new endpoint `POST /stocks/import/{symbol}` that: looks up `stock_id` from DB, calls yfinance, saves history, and updates `last_imported_at`. Clean single-stock import trigger.
+
+Commit message also mentions a new **`logs` table** (import run logs) added in Supabase dashboard — not reflected in code diff.
+
+**Integration impact on sentiment pipeline (my scope):**
+
+- **No breakage** — sentiment pipeline imports nothing from yfinance_service or stock_history_service. The `sentiment_scores` table remains keyed on `symbol` and is independent.
+- **Future ML join concern** — when XGBoost/LSTM models join price + sentiment data, `daily_ohlcv` is now indexed by `stock_id` while `sentiment_scores` uses `symbol`. Both tables carry `symbol` so joining on that column still works, but worth noting.
+- **Hardcoded WATCHLIST vs DB** — sentiment pipeline still has a hardcoded 10-symbol WATCHLIST. The new per-symbol import endpoint is separate. If we later want sentiment to run on exactly the same set as imported stocks, we should call `get_active_stocks()` from inside the pipeline instead.
+
+**Action items:**
+- [ ] Confirm teammate updated Supabase schema (`last_imported_at` column on `stocks`, unique constraint `stock_id,trade_date` on `daily_ohlcv`, new `logs` table)
+- [ ] When building ML models: note the `stock_id` / `symbol` join pattern
+
 ---
 
 ## Issues / Bugs Tracker
