@@ -1,17 +1,41 @@
+from datetime import date
+
 from fastapi import APIRouter, HTTPException
 from services.stock_list_service import (
+    get_all_stocks,
     get_active_stocks,
+    get_inactive_stocks,
+    get_stocks_by_sector,
     get_stock_by_symbol,
     add_stock,
+    update_stock,
     deactivate_stock,
     update_last_imported_at
 )
 from services.yfinance_service import fetch_stock_history
-from services.stock_history_service import save_stock_history, get_stock_history
+from services.stock_history_service import (
+    save_stock_history,
+    get_stock_history,
+    get_latest_stock_price,
+    get_stock_history_by_date_range,
+    delete_stock_history
+)
 from services.sentiment.sentiment_aggregator import get_sentiment_summary
 from services.sentiment.sentiment_pipeline import run_pipeline as run_sentiment_pipeline
+from services.prediction_service import (
+    save_prediction,
+    get_predictions_by_symbol,
+    get_latest_prediction_by_symbol
+)
+from schemas import StockCreate, StockUpdate, PredictionCreate
 
 router = APIRouter()
+
+
+def _payload(model, exclude_none: bool = False):
+    if hasattr(model, "model_dump"):
+        return model.model_dump(exclude_none=exclude_none, mode="json")
+    return model.dict(exclude_none=exclude_none)
 
 
 @router.get("/stocks")
@@ -19,9 +43,55 @@ def view_active_stocks():
     return get_active_stocks()
 
 
+@router.get("/stocks/all")
+def view_all_stocks():
+    return get_all_stocks()
+
+
+@router.get("/stocks/inactive")
+def view_inactive_stocks():
+    return get_inactive_stocks()
+
+
+@router.get("/stocks/sector/{sector}")
+def view_stocks_by_sector(sector: str):
+    return get_stocks_by_sector(sector)
+
+
 @router.post("/stocks")
-def create_stock(stock_data: dict):
-    return add_stock(stock_data)
+def create_stock(stock_data: StockCreate):
+    return add_stock(_payload(stock_data))
+
+
+@router.get("/stocks/{symbol}")
+def view_stock_by_symbol(symbol: str):
+    stock = get_stock_by_symbol(symbol)
+
+    if len(stock) == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=f"{symbol.upper()} is not in the stocks table"
+        )
+
+    return stock[0]
+
+
+@router.patch("/stocks/{symbol}")
+def edit_stock(symbol: str, stock_data: StockUpdate):
+    payload = _payload(stock_data, exclude_none=True)
+
+    if len(payload) == 0:
+        raise HTTPException(status_code=400, detail="No fields provided to update")
+
+    updated = update_stock(symbol, payload)
+
+    if len(updated) == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=f"{symbol.upper()} is not in the stocks table"
+        )
+
+    return updated[0]
 
 
 @router.patch("/stocks/{symbol}/deactivate")
@@ -39,10 +109,14 @@ def import_all_active_stocks(period: str = "6mo", interval: str = "1d"):
     results = []
 
     for stock in stocks:
+        stock_id = stock["id"]
         symbol = stock["symbol"]
 
-        rows = fetch_stock_history(symbol, period, interval)
+        rows = fetch_stock_history(stock_id, symbol, period, interval)
         result = save_stock_history(rows)
+
+        if result["success"]:
+            update_last_imported_at(symbol)
 
         results.append({
             "symbol": symbol,
@@ -73,7 +147,9 @@ def import_one_tracked_stock(symbol: str, period: str = "6mo", interval: str = "
             detail=f"{symbol.upper()} is not active"
         )
 
-    rows = fetch_stock_history(symbol, period, interval)
+    stock_id = stock[0]["id"]
+
+    rows = fetch_stock_history(stock_id, symbol, period, interval)
 
     if len(rows) == 0:
         raise HTTPException(
@@ -82,6 +158,9 @@ def import_one_tracked_stock(symbol: str, period: str = "6mo", interval: str = "
         )
 
     result = save_stock_history(rows)
+
+    if result["success"]:
+        update_last_imported_at(symbol)
 
     return {
         "symbol": symbol.upper(),
@@ -105,6 +184,105 @@ def view_stock_history(symbol: str):
     return data
 
 
+@router.get("/stocks/{symbol}/history/latest")
+def view_latest_stock_price(symbol: str):
+    data = get_latest_stock_price(symbol)
+
+    if len(data) == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No history found for {symbol.upper()}"
+        )
+
+    return data[0]
+
+
+@router.get("/stocks/{symbol}/history/range")
+def view_stock_history_by_date_range(symbol: str, start_date: date, end_date: date):
+    if start_date > end_date:
+        raise HTTPException(
+            status_code=400,
+            detail="start_date must be before or equal to end_date"
+        )
+
+    data = get_stock_history_by_date_range(
+        symbol,
+        start_date.isoformat(),
+        end_date.isoformat()
+    )
+
+    if len(data) == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No history found for {symbol.upper()} in the selected date range"
+        )
+
+    return data
+
+
+@router.delete("/stocks/{symbol}/history")
+def remove_stock_history(symbol: str):
+    deleted = delete_stock_history(symbol)
+
+    return {
+        "symbol": symbol.upper(),
+        "rows_deleted": len(deleted),
+        "message": "Stock history deleted"
+    }
+
+
+@router.post("/stocks/{symbol}/predictions")
+def create_stock_prediction(symbol: str, prediction_data: PredictionCreate):
+    stock = get_stock_by_symbol(symbol)
+
+    if len(stock) == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=f"{symbol.upper()} is not in the stocks table"
+        )
+
+    payload = _payload(prediction_data, exclude_none=True)
+    payload["symbol"] = symbol.upper()
+    payload["stock_id"] = stock[0]["id"]
+
+    result = save_prediction(payload) or []
+    return result[0] if len(result) > 0 else payload
+
+
+@router.get("/stocks/{symbol}/predictions")
+def view_stock_predictions(symbol: str):
+    stock = get_stock_by_symbol(symbol)
+
+    if len(stock) == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=f"{symbol.upper()} is not in the stocks table"
+        )
+
+    return get_predictions_by_symbol(symbol)
+
+
+@router.get("/stocks/{symbol}/predictions/latest")
+def view_latest_stock_prediction(symbol: str):
+    stock = get_stock_by_symbol(symbol)
+
+    if len(stock) == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=f"{symbol.upper()} is not in the stocks table"
+        )
+
+    prediction = get_latest_prediction_by_symbol(symbol)
+
+    if len(prediction) == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No predictions found for {symbol.upper()}"
+        )
+
+    return prediction[0]
+
+
 @router.get("/stocks/{symbol}/sentiment")
 def get_stock_sentiment(symbol: str):
     data = get_sentiment_summary(symbol)
@@ -119,27 +297,3 @@ def trigger_sentiment_pipeline():
         return run_sentiment_pipeline()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-@router.post("/stocks/import/{symbol}")
-def import_one_tracked_stock(symbol: str, period: str = "6mo", interval: str = "1d"):
-    stock = get_stock_by_symbol(symbol)
-
-    if len(stock) == 0:
-        raise HTTPException(
-            status_code=404,
-            detail=f"{symbol.upper()} is not in the stocks table"
-        )
-
-    stock_id = stock[0]["id"]
-
-    rows = fetch_stock_history(stock_id, symbol, period, interval)
-    result = save_stock_history(rows)
-
-    if result["success"]:
-        update_last_imported_at(symbol)
-
-    return {
-        "symbol": symbol.upper(),
-        "rows_imported": result["rows_saved"],
-        "message": result["message"]
-    }

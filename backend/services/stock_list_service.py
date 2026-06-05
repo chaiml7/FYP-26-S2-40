@@ -1,12 +1,51 @@
 from database.supabase_client import supabase
 from datetime import datetime, timezone
 
+
+def get_all_stocks():
+    response = (
+        supabase
+        .table("stocks")
+        .select("*")
+        .order("symbol")
+        .execute()
+    )
+
+    return response.data
+
+
 def get_active_stocks():
     response = (
         supabase
         .table("stocks")
         .select("*")
         .eq("is_active", True)
+        .execute()
+    )
+
+    return response.data
+
+
+def get_inactive_stocks():
+    response = (
+        supabase
+        .table("stocks")
+        .select("*")
+        .eq("is_active", False)
+        .order("symbol")
+        .execute()
+    )
+
+    return response.data
+
+
+def get_stocks_by_sector(sector: str):
+    response = (
+        supabase
+        .table("stocks")
+        .select("*")
+        .eq("sector", sector)
+        .order("symbol")
         .execute()
     )
 
@@ -32,6 +71,18 @@ def add_stock(stock_data: dict):
         supabase
         .table("stocks")
         .insert(stock_data)
+        .execute()
+    )
+
+    return response.data
+
+
+def update_stock(symbol: str, stock_data: dict):
+    response = (
+        supabase
+        .table("stocks")
+        .update(stock_data)
+        .eq("symbol", symbol.upper())
         .execute()
     )
 
