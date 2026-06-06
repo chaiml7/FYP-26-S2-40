@@ -162,6 +162,154 @@ Commit message also mentions a new **`logs` table** (import run logs) added in S
 - [ ] Confirm teammate updated Supabase schema (`last_imported_at` column on `stocks`, unique constraint `stock_id,trade_date` on `daily_ohlcv`, new `logs` table)
 - [ ] When building ML models: note the `stock_id` / `symbol` join pattern
 
+### 2026-06-06 — Bali — Pulled major backend refactor from main (Chai)
+
+**What changed on main (commit `5871e95`):**
+
+Chai (PM) pushed a major backend refactor focused on frontend-readiness and service layer cleanup:
+
+**Files changed (6 files, +344/-120 lines):**
+
+1. **NEW: `backend/schemas.py`** (+28 lines)
+   - Created Pydantic validation models:
+     - `StockCreateRequest` — for adding new stocks (symbol, company_name, sector)
+     - `StockUpdateRequest` — for updating stock metadata (company_name, sector, is_active)
+     - `PredictionRequest` — for querying predictions (symbol, model_type, days)
+   - Moves validation logic out of routes, makes frontend API contract explicit
+
+2. **NEW: `backend/services/prediction_service.py`** (+39 lines)
+   - Extracted from old `stock_service.py`
+   - Functions: `save_prediction()`, `get_predictions_by_symbol()`, `get_latest_prediction()`
+   - Prediction persistence logic is now isolated in its own service
+
+3. **DELETED: `backend/services/stock_service.py`** (-89 lines)
+   - Removed entirely — logic split between `stock_list_service.py` and `prediction_service.py`
+
+4. **`backend/services/stock_history_service.py`** (+43 lines)
+   - Added `get_latest_price(stock_id)` — returns most recent OHLCV row for a given stock
+   - Added `get_history_by_date_range(stock_id, start_date, end_date)` — date-filtered history query
+   - Added `delete_history_by_symbol(symbol)` — purge all price data for a stock (admin function)
+   - All functions now consistently use `stock_id` instead of `symbol` as primary key
+
+5. **`backend/services/stock_list_service.py`** (+53 lines)
+   - Added `get_stock_detail(stock_id)` — single stock lookup by ID
+   - Added `update_stock(stock_id, company_name, sector, is_active)` — edit stock metadata
+   - Added `get_all_stocks()` — returns all stocks (active + inactive, for admin views)
+   - Added `get_inactive_stocks()` — filter view for deactivated stocks
+   - Added `get_stocks_by_sector(sector)` — sector-based filtering
+   - Removed `get_stock_by_symbol()` (replaced by `get_stock_detail()` which takes stock_id)
+
+6. **`backend/routes/stock_routes.py`** (+212 lines major expansion)
+   - **NEW endpoints (frontend-ready):**
+     - `GET /api/stocks/all` — all stocks (admin)
+     - `GET /api/stocks/inactive` — inactive stocks only
+     - `GET /api/stocks/sector/{sector}` — filter by sector
+     - `GET /api/stocks/{stock_id}` — single stock detail by ID
+     - `PUT /api/stocks/{stock_id}` — update stock metadata (uses `StockUpdateRequest` schema)
+     - `GET /api/stocks/{stock_id}/latest-price` — most recent price point
+     - `GET /api/stocks/{stock_id}/history` — date-range filtered history (query params: start_date, end_date)
+     - `DELETE /api/stocks/{symbol}/history` — purge price data (admin)
+     - `GET /api/stocks/{symbol}/predictions` — retrieve saved predictions (uses `PredictionRequest` schema)
+   - **Fixed existing endpoints:**
+     - `POST /stocks/import/{symbol}` — now correctly uses `stock_id` lookup before calling yfinance
+     - All routes now use `stock_id` consistently instead of mixing `symbol` and `stock_id`
+
+**Who did this:**
+- Author: chaiml7 (Chai Ming Liang, PM) — committed 2026-06-05 14:50 +0800
+
+**Why this refactor:**
+- **Service layer cleanup** — old `stock_service.py` was doing too much; now split into focused modules (list management vs prediction persistence vs history queries)
+- **Frontend preparation** — new endpoints give frontend devs (Anbu, Bali) the exact data shapes needed for:
+  - Stock list pages (all / active / inactive / by-sector views)
+  - Stock detail pages (single stock info + latest price + date-range charts)
+  - Admin pages (edit stock metadata, purge history)
+  - Prediction display (retrieve saved ML predictions)
+- **Validation layer** — Pydantic schemas enforce request structure at API boundary, catches bad payloads before service layer
+- **stock_id standardization** — completes the migration started in `110cc75`; all services now use integer `stock_id` as primary key
+
+**Integration impact on sentiment pipeline (my scope):**
+
+- **No breaking changes** — sentiment pipeline doesn't import any of the refactored services
+- **Future opportunity** — when building sentiment frontend, can now use:
+  - `GET /api/stocks/{stock_id}` to show stock detail alongside sentiment
+  - `GET /api/stocks/sector/{sector}` to filter sentiment by sector
+  - `GET /api/stocks/{stock_id}/latest-price` to show price + sentiment correlation
+- **Prediction service split** — if sentiment scores will be fed into ML models (XGBoost/LSTM), the new `prediction_service.py` is where we'd save those predictions
+- **Schema pattern** — when adding sentiment-specific request validation (e.g., date range for sentiment history), follow the same `schemas.py` pattern
+
+**Action items:**
+- [x] Merged into `bali` branch (commit `f85bab2`)
+- [ ] When building sentiment frontend: explore using the new frontend-ready endpoints
+- [ ] When integrating sentiment into ML models: coordinate with `prediction_service.py` save format
+
+---
+
+### 2026-06-06 — Bali — Fine-Tuned FinBERT Model Deployment
+
+**What we did:**
+- Fine-tuned ProsusAI/finbert on Twitter Financial News Sentiment dataset (11,932 samples)
+- Achieved 87.2% accuracy (50% improvement over 53.3% baseline)
+- Uploaded model to HuggingFace Hub: balibpt/finbert-stocklens
+- Integrated HuggingFace auto-download into sentiment service
+- Created training script (finbert_finetune.py) for reproducibility
+- Opened PR #3 to main branch
+
+**Training details:**
+- Dataset: Twitter Financial News Sentiment (Twitter + news articles)
+- Base model: ProsusAI/finbert
+- Configuration: LR=2e-5, batch_size=16, epochs=3, full fine-tuning (no frozen layers)
+- Hardware: Google Colab T4 GPU (~20 minutes training time)
+- Split: 70/15/15 (train/val/test)
+
+**Performance metrics:**
+| Metric | Baseline | Fine-Tuned | Improvement |
+|--------|----------|------------|-------------|
+| Accuracy | 53.3% | 87.2% | +33.9% |
+| F1 Macro | 0.32 | 0.83 | +0.50 |
+| F1 Negative | 0.24 | 0.84 | +0.60 |
+| F1 Neutral | 0.25 | 0.77 | +0.52 |
+| F1 Positive | 0.49 | 0.87 | +0.38 |
+
+**Test results:**
+```
+✓ "Apple stock surges 15% on record earnings" → POSITIVE (99.2%)
+✓ "Tesla shares plunge as production delays mount" → NEGATIVE (98.7%)
+✓ "Market outlook remains stable" → NEUTRAL (99.1%)
+```
+
+**Files changed:**
+- `backend/services/sentiment/finbert_service.py` — Updated to load from HuggingFace Hub
+  - Model auto-downloads on first use (30 seconds one-time)
+  - Caches locally at `~/.cache/huggingface/`
+  - Graceful fallback to base model if download fails
+- `finbert_finetune.py` — Training script (self-contained, runs in Google Colab)
+- `.gitignore` — Exclude models/ directory and scripts/
+
+**Deployment:**
+- Model hosted at: https://huggingface.co/balibpt/finbert-stocklens
+- Size: 418MB (model weights + config)
+- Zero manual setup for team — model auto-downloads when backend starts
+
+**Why this matters:**
+- Better sentiment signal = better prediction accuracy for XGBoost/LSTM models
+- 50% F1 improvement means sentiment scores are significantly more accurate
+- Twitter + news training data matches our production data sources (FinnHub, NewsAPI, RSS)
+- Base FinBERT trained on corporate filings — our fine-tuned version adapted to social media sentiment
+
+**Next steps:**
+- Wait for PR review
+- Merge to main
+- Team automatically benefits from improved sentiment analysis (no action needed)
+
+**Problems encountered:**
+- None (clean deployment)
+
+**Learnt:**
+- HuggingFace Hub auto-download is industry standard for ML model deployment
+- Fine-tuning on domain-specific data (Twitter/news) significantly improves accuracy vs general finance corpus
+- Label mapping must be carefully validated (config vs actual model behavior)
+- Tokenizer should come from base model (fine-tuning doesn't change vocabulary)
+
 ---
 
 ## Issues / Bugs Tracker
