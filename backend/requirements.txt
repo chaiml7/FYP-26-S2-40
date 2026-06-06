@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 python-dotenv
-supabase
+supabase==2.7.4
 yfinance
 pandas
 transformers
