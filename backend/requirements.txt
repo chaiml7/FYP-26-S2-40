@@ -4,6 +4,10 @@ python-dotenv
 supabase
 yfinance
 pandas
+numpy
+scikit-learn
+lightgbm
+xgboost
 transformers
 torch
 APScheduler
