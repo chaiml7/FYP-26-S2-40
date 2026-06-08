@@ -26,3 +26,15 @@ class PredictionCreate(BaseModel):
     signal: Literal["buy", "sell", "hold"]
     confidence: Optional[float] = Field(default=None, ge=0, le=1)
     model_version: Optional[str] = None
+
+
+class FinancialForecastCreate(BaseModel):
+    stock_id: Optional[str] = None
+    symbol: str = Field(..., min_length=1, max_length=20)
+    category: str = Field(..., min_length=1)
+    item: str = Field(..., min_length=1)
+    next_quarter: str = Field(..., min_length=1)
+    predicted_value: float
+    confidence: Optional[float] = None
+    model_path: Optional[str] = None
+    model_version: Optional[str] = None

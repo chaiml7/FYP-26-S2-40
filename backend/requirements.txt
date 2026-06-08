@@ -4,6 +4,8 @@ python-dotenv
 supabase==2.7.4
 yfinance
 pandas
+scikit-learn
+xgboost
 transformers
 torch
 APScheduler
