@@ -31,7 +31,6 @@ class PredictionCreate(BaseModel):
 class AccountCreate(BaseModel):
     email: str = Field(..., pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
     password: str = Field(..., min_length=8)
-    username: Optional[str] = Field(default=None, min_length=3, max_length=30)
     full_name: Optional[str] = None
 
 
@@ -41,7 +40,6 @@ class LoginRequest(BaseModel):
 
 
 class ProfileUpdate(BaseModel):
-    username: Optional[str] = Field(default=None, min_length=3, max_length=30)
     full_name: Optional[str] = None
 
 

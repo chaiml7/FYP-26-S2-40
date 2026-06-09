@@ -98,7 +98,6 @@ def signup(account_data: AccountCreate):
         return create_account(
             account_data.email,
             account_data.password,
-            account_data.username,
             account_data.full_name,
         )
     except AuthServiceError as error:

@@ -118,11 +118,8 @@ def _admin_request(method: str, path: str, payload: dict = None):
     return response.json()
 
 
-def create_account(email: str, password: str, username: str = None, full_name: str = None):
+def create_account(email: str, password: str, full_name: str = None):
     metadata = {}
-
-    if username:
-        metadata["username"] = username
 
     if full_name:
         metadata["full_name"] = full_name
