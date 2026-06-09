@@ -1,7 +1,3 @@
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-import torch
-import torch.nn.functional as F
-
 # Fine-tuned model hosted on HuggingFace Hub
 # Trained on Twitter Financial News Sentiment: 87.2% accuracy (vs 53% baseline)
 # Auto-downloads on first use - zero setup required for team members
@@ -17,6 +13,8 @@ BATCH_SIZE = 16
 _tokenizer = None
 _model = None
 _label_map = None
+_torch = None
+_softmax = None
 
 
 def load_model():
@@ -28,8 +26,18 @@ def load_model():
 
     Model auto-downloads and caches on first use - no manual setup needed.
     """
-    global _tokenizer, _model, _label_map
+    global _tokenizer, _model, _label_map, _torch, _softmax
     if _model is None:
+        try:
+            from transformers import AutoTokenizer, AutoModelForSequenceClassification
+            import torch
+            import torch.nn.functional as F
+        except ImportError as e:
+            raise RuntimeError(
+                "FinBERT sentiment scoring requires ML dependencies. "
+                "Install them with: pip install -r requirements-ml.txt"
+            ) from e
+
         model_name = FINETUNED_MODEL if USE_FINETUNED else BASE_MODEL
 
         print(f"[OK] Loading {model_name} from HuggingFace Hub...")
@@ -53,6 +61,8 @@ def load_model():
             mdl.eval()
             _tokenizer = tok
             _model = mdl
+            _torch = torch
+            _softmax = F.softmax
 
             print(f"     Model loaded successfully!")
 
@@ -67,6 +77,8 @@ def load_model():
             mdl.eval()
             _tokenizer = tok
             _model = mdl
+            _torch = torch
+            _softmax = F.softmax
 
 
 def score_headlines(headlines: list) -> list:
@@ -88,9 +100,9 @@ def score_headlines(headlines: list) -> list:
     for i in range(0, len(headlines), BATCH_SIZE):
         batch = headlines[i:i + BATCH_SIZE]
         inputs = _tokenizer(batch, padding=True, truncation=True, max_length=512, return_tensors="pt")
-        with torch.no_grad():
+        with _torch.no_grad():
             outputs = _model(**inputs)
-        probs = F.softmax(outputs.logits, dim=-1)
+        probs = _softmax(outputs.logits, dim=-1)
         for prob in probs:
             idx = prob.argmax().item()
             # Use label map from model config (int keys)

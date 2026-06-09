@@ -26,3 +26,39 @@ class PredictionCreate(BaseModel):
     signal: Literal["buy", "sell", "hold"]
     confidence: Optional[float] = Field(default=None, ge=0, le=1)
     model_version: Optional[str] = None
+
+
+class AccountCreate(BaseModel):
+    email: str = Field(..., pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    password: str = Field(..., min_length=8)
+    full_name: Optional[str] = None
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(..., pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    password: str
+
+
+class ProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+
+
+class PasswordUpdate(BaseModel):
+    new_password: str = Field(..., min_length=8)
+
+
+class EmailUpdate(BaseModel):
+    email: str = Field(..., pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+class WatchlistAdd(BaseModel):
+    stock_id: Optional[int] = None
+    symbol: Optional[str] = None
+
+
+class UserRoleUpdate(BaseModel):
+    role_id: Literal["basic_user", "premium_user", "frontend_admin", "backend_admin"]
+
+
+class UserStatusUpdate(BaseModel):
+    is_active: bool
