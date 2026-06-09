@@ -1,0 +1,182 @@
+# StockLens — Team Activity Log
+
+> Personal log — tracked on `bali` branch only. Not merged to `main`.  
+> Format each entry: `### YYYY-MM-DD — [Who] — [What]`
+
+---
+
+## Sprint 1
+
+### 2026-05-24 — Bali — Project Setup
+
+**What we did:**
+- Cloned repo from https://github.com/chaiml7/FYP-26-S2-40
+- Reviewed existing codebase:
+  - Backend: FastAPI with CRUD for `stocks`, yfinance OHLCV import, stock history retrieval
+  - Frontend: Minimal React app — just a list of active stocks fetched from backend
+  - DB: 3 tables in Supabase — `stocks`, `daily_ohlcv`, `predictions`
+- Set up `bali` branch as personal working branch
+- Created CLAUDE.md, LOG.md, .claude/settings.json
+- Moved PTR and PRD into `docs/` folder
+- Added `sentiment_scores` table to planned DB schema
+- Read through PRD and Prelim Tech Report — confirmed Bali's scope is sentiment ML pipeline
+
+**What I'm responsible for:**
+- Sentiment analysis ML pipeline:
+  - FinnHub API — company news fetching
+  - FinBERT (ProsusAI/finbert) — financial sentiment scoring
+  - NewsAPI / RSS scrapers — supplementary news sources
+  - `sentiment_scores` Supabase table
+  - `/api/stocks/{symbol}/sentiment` endpoint
+
+**Next steps:**
+- Create `sentiment_scores` table in Supabase
+- Set up `backend/services/sentiment/` module
+- Implement FinnHub news fetcher
+- Implement FinBERT inference service
+- Wire up API endpoint
+
+**Problems encountered:**
+- git clone on Windows mangled the path — fixed by running clone directly via bash
+- frontend/.env is committed to the repo with the Supabase anon key (flagged for later cleanup)
+
+**Learnt:**
+- Project uses FastAPI not Flask (PRD says Flask but codebase uses FastAPI — going with FastAPI)
+- Supabase anon key in .env is public-safe, but secret key should never be committed
+- FinBERT model is large (~440MB) — need to plan for model caching / lazy loading
+
+---
+
+## Sprint 2
+
+### 2026-05-24 — Bali — Sentiment Analysis ML Pipeline (full implementation)
+
+**What I did:**
+- Designed full sentiment pipeline via brainstorming + spec + implementation plan
+- Implemented all sentiment services on branch `feature/bali-sentiment-pipeline` (branched from `bali`)
+- Created `sentiment_scores` table in Supabase with RLS enabled
+- All 63 unit tests passing (mocked — no real API calls)
+
+**Services built (`backend/services/sentiment/`):**
+- `finbert_service.py` — lazy-loads ProsusAI/finbert, batches inference (size 16), atomic model load
+- `finnhub_service.py` — FinnHub `/company-news`, exponential backoff, 0.5s rate limit sleep
+- `news_scraper_service.py` — NewsAPI `/everything`, quota-aware (429 = skip, no retry)
+- `sentiment_aggregator.py` — Supabase upsert, daily avg + label, idempotency check (`has_data_for_today`)
+- `sentiment_pipeline.py` — orchestrator, WATCHLIST of 10 symbols, per-symbol error isolation
+
+**Other changes:**
+- `routes/stock_routes.py` — added `GET /api/stocks/{symbol}/sentiment` + `POST /api/sentiment/run-pipeline`
+- `main.py` — APScheduler nightly cron (11pm, 11:30pm, 1am, 3am) via FastAPI lifespan
+- `requirements.txt` — added transformers, torch, APScheduler, requests, pytest, pytest-mock, httpx
+- `backend/.env.example` — template with all 4 required keys
+- `scripts/test_sentiment_manual.py` — 8-step E2E test script (requires running backend + real API keys)
+
+**Tests (`backend/tests/sentiment/`):**
+- `test_finbert_service.py`, `test_finnhub_service.py`, `test_news_scraper_service.py`
+- `test_sentiment_aggregator.py`, `test_sentiment_pipeline.py`, `test_sentiment_routes.py`
+- `conftest.py` — shared fixtures and mocks
+
+**Key bugs fixed during implementation:**
+- FinBERT partial load: atomic assignment (load both locals first, then assign globals)
+- FinnHub epoch-0 timestamp: guard `item.get("datetime")` before use
+- Pipeline mock mutation: `list()` copy of fetch results prevents cross-iteration mutation
+- NewsAPI key name mismatch: `.env` had `NEWS_API_KEY`, code expects `NEWSAPI_KEY` — fixed
+
+**Current state:**
+- Branch `feature/bali-sentiment-pipeline` has 14 commits, all LOCAL ONLY (not pushed yet)
+- `.env` is complete with all 4 keys (FINNHUB_API_KEY, NEWSAPI_KEY, SUPABASE_URL, SUPABASE_SECRET_KEY)
+- Next session: run `scripts/test_sentiment_manual.py` to verify real APIs work, then push branch + open PR to `main`
+
+**Next steps:**
+- Start backend server: `cd backend && uvicorn main:app --reload`
+- Run manual E2E test: `python scripts/test_sentiment_manual.py`
+- If all pass: push `feature/bali-sentiment-pipeline` → PR to `main` (code only, no docs/.claude/LOG.md)
+- Then start next phase (ML models: XGBoost/LSTM, or frontend charts)
+
+### 2026-05-25 — Bali — Environment Setup (uni machine)
+
+**What I did:**
+- Pulled latest context via gist sync
+- Fixed uvicorn not on PATH: ran `pip install` from scratch on uni machine
+- Fixed `supabase` install failure: `storage3` 2.x pulls in `pyiceberg` (requires C++ build tools) — pinned `supabase==2.7.4` in requirements.txt which uses `storage3==0.7.7` (no pyiceberg)
+- Fixed "Invalid API key": new Supabase `sb_secret_*` key format not supported by supabase-py 2.7.4 — switched to legacy JWT service_role key from dashboard → "Legacy anon, service_role API keys" tab
+- Backend server confirmed running on uni machine
+
+**What I discovered:**
+- `feature/bali-sentiment-pipeline` branch (14 commits) was never pushed — exists only on home PC
+- No stash or reflog trace in this repo; branch is safe at home but inaccessible here
+
+**Next steps:**
+- At home: push `feature/bali-sentiment-pipeline` to remote
+- Next session: pull branch, run `python scripts/test_sentiment_manual.py` E2E test, then PR to `main`
+
+### 2026-05-25 — Bali — PR to main (sentiment pipeline)
+
+**What I did:**
+- Pulled `feature/bali-sentiment-pipeline` from remote (pushed from home PC)
+- Installed dependencies on this machine: `pip install -r requirements.txt` (torch/transformers ~2GB)
+- Ran 63 unit tests — all passing
+- Started backend server, ran `python scripts/test_sentiment_manual.py` — all 8 E2E steps passing
+  - Real FinnHub + NewsAPI calls working, real Supabase writes confirmed
+  - Idempotency verified, error isolation verified
+- Fixed 3 test script issues (all test bugs, not pipeline bugs):
+  - Windows `charmap` encoding error on `✓` character → `sys.stdout.reconfigure(encoding='utf-8')`
+  - FinBERT label assertion too strict for real model inference → softened check
+  - Idempotency check expected 10 skipped, but 2 symbols (NFLX, BABA) had no news → fixed assertion
+- Removed `docs/superpowers/` from feature branch before PR (personal files, stay on `bali` only)
+- Opened PR #1 to `main`: https://github.com/chaiml7/FYP-26-S2-40/pull/1
+- PR merged, feature branch deleted (local + remote)
+- Installed `gh` CLI via winget for future PR creation
+
+**Current state:**
+- Sentiment pipeline is merged to `main` — Sprint 2 scope complete
+- On `bali` branch, clean
+
+**Next steps:**
+- Start next phase: XGBoost/LSTM ML models, or frontend sentiment charts
+- Decide with team what to tackle next
+
+### 2026-05-27 — Bali — Pulled teammate's yfinance/stock import changes from main
+
+**What changed on main (commit `110cc75`):**
+
+Teammate (Addison or Ian — unclear who pushed) made 4 backend changes:
+
+1. **`yfinance_service.py`** — `fetch_stock_history()` now takes `stock_id: int` as first argument; includes `stock_id` in every row dict sent to Supabase.
+
+2. **`stock_history_service.py`** — upsert conflict target changed from `symbol,trade_date` → `stock_id,trade_date`. Requires a matching unique constraint change in the Supabase `daily_ohlcv` table (DB schema updated directly in dashboard, not via code).
+
+3. **`stock_list_service.py`** — added `update_last_imported_at(symbol)` function that stamps `last_imported_at` on the `stocks` table row. Requires a `last_imported_at` column on `stocks` (added in Supabase dashboard).
+
+4. **`stock_routes.py`** — new endpoint `POST /stocks/import/{symbol}` that: looks up `stock_id` from DB, calls yfinance, saves history, and updates `last_imported_at`. Clean single-stock import trigger.
+
+Commit message also mentions a new **`logs` table** (import run logs) added in Supabase dashboard — not reflected in code diff.
+
+**Integration impact on sentiment pipeline (my scope):**
+
+- **No breakage** — sentiment pipeline imports nothing from yfinance_service or stock_history_service. The `sentiment_scores` table remains keyed on `symbol` and is independent.
+- **Future ML join concern** — when XGBoost/LSTM models join price + sentiment data, `daily_ohlcv` is now indexed by `stock_id` while `sentiment_scores` uses `symbol`. Both tables carry `symbol` so joining on that column still works, but worth noting.
+- **Hardcoded WATCHLIST vs DB** — sentiment pipeline still has a hardcoded 10-symbol WATCHLIST. The new per-symbol import endpoint is separate. If we later want sentiment to run on exactly the same set as imported stocks, we should call `get_active_stocks()` from inside the pipeline instead.
+
+**Action items:**
+- [ ] Confirm teammate updated Supabase schema (`last_imported_at` column on `stocks`, unique constraint `stock_id,trade_date` on `daily_ohlcv`, new `logs` table)
+- [ ] When building ML models: note the `stock_id` / `symbol` join pattern
+
+---
+
+## Issues / Bugs Tracker
+
+| Date | Issue | Status | Resolution |
+|---|---|---|---|
+| 2026-05-24 | frontend/.env committed with anon key | Open | Add to .gitignore cleanup task |
+| 2026-05-24 | PRD says Flask, codebase uses FastAPI | Resolved | Using FastAPI, noted discrepancy |
+
+---
+
+## Key Decisions
+
+| Date | Decision | Reason |
+|---|---|---|
+| 2026-05-24 | Use `bali` branch for personal files, PRs to main for code only | Keep main clean, share context across machines |
+| 2026-05-24 | FinBERT over VADER for sentiment | PRD specifies FinBERT as primary; VADER as fallback if compute is an issue |
+| 2026-05-24 | FinnHub + NewsAPI + RSS as news sources | Free tier coverage + redundancy |

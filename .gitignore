@@ -25,7 +25,12 @@ Thumbs.db
 *.pkl
 *.pt
 *.pth
-models/weights/
+*.safetensors
+models/
+experiment_*_model/
+
+# Scripts (personal development tools)
+scripts/
 
 # Personal / private files — local only, never pushed to GitHub
 CLAUDE.md

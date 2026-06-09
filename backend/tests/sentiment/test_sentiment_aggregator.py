@@ -1,18 +1,28 @@
 import pytest
 from unittest.mock import patch, MagicMock, call
-from services.sentiment.sentiment_aggregator import save_scores, get_sentiment_summary, has_data_for_today, _score_to_label
+from datetime import date
+
+from services.sentiment.sentiment_aggregator import (
+    calculate_daily_sentiment_score,
+    save_scores,
+    get_sentiment_summary,
+    has_data_for_today,
+    _score_to_label,
+)
 from tests.sentiment.conftest import SAMPLE_SCORED_HEADLINES
 
 MODULE = "services.sentiment.sentiment_aggregator"
 
 
+@patch(f"{MODULE}._get_stock_id", return_value=1)
 @patch(f"{MODULE}.supabase")
-def test_save_scores_upserts_rows(mock_supa):
+def test_save_scores_upserts_rows(mock_supa, mock_get_stock_id):
     save_scores("AAPL", SAMPLE_SCORED_HEADLINES)
     mock_supa.table.assert_called_with("sentiment_scores")
     rows = mock_supa.table.return_value.upsert.call_args[0][0]
     assert len(rows) == 3
     assert rows[0]["symbol"] == "AAPL"
+    assert rows[0]["stock_id"] == 1
     assert rows[0]["model_version"] == "ProsusAI/finbert"
 
 
@@ -23,17 +33,19 @@ def test_save_scores_empty_list_does_not_upsert(mock_supa):
     assert result["rows_saved"] == 0
 
 
+@patch(f"{MODULE}._get_stock_id", return_value=1)
 @patch(f"{MODULE}.supabase")
-def test_save_scores_includes_required_fields(mock_supa):
+def test_save_scores_includes_required_fields(mock_supa, mock_get_stock_id):
     save_scores("AAPL", SAMPLE_SCORED_HEADLINES)
     rows = mock_supa.table.return_value.upsert.call_args[0][0]
-    required = {"symbol", "headline", "source", "published_at", "label", "score", "model_version"}
+    required = {"symbol", "stock_id", "headline", "source", "published_at", "label", "score", "model_version"}
     assert required.issubset(rows[0].keys())
 
 
 @patch(f"{MODULE}.time.sleep")
+@patch(f"{MODULE}._get_stock_id", return_value=1)
 @patch(f"{MODULE}.supabase")
-def test_save_scores_retries_on_failure(mock_supa, mock_sleep):
+def test_save_scores_retries_on_failure(mock_supa, mock_get_stock_id, mock_sleep):
     mock_supa.table.return_value.upsert.return_value.execute.side_effect = [
         Exception("db error"),
         MagicMock(data=SAMPLE_SCORED_HEADLINES),
@@ -44,8 +56,9 @@ def test_save_scores_retries_on_failure(mock_supa, mock_sleep):
 
 
 @patch(f"{MODULE}.time.sleep")
+@patch(f"{MODULE}._get_stock_id", return_value=1)
 @patch(f"{MODULE}.supabase")
-def test_save_scores_all_retries_fail_raises(mock_supa, mock_sleep):
+def test_save_scores_all_retries_fail_raises(mock_supa, mock_get_stock_id, mock_sleep):
     mock_supa.table.return_value.upsert.return_value.execute.side_effect = Exception("db error")
     with pytest.raises(Exception, match="db error"):
         save_scores("AAPL", SAMPLE_SCORED_HEADLINES)
@@ -81,8 +94,10 @@ def test_get_summary_returns_correct_shape(mock_supa):
     mock_supa.table.return_value.select.return_value.eq.return_value.gte.return_value.order.return_value.execute.return_value.data = rows
     result = get_sentiment_summary("AAPL")
     assert "daily_scores" in result
+    assert "weighted_scores" in result
     assert "headlines" in result
     assert isinstance(result["daily_scores"], list)
+    assert isinstance(result["weighted_scores"], list)
     assert isinstance(result["headlines"], list)
 
 
@@ -90,7 +105,7 @@ def test_get_summary_returns_correct_shape(mock_supa):
 def test_get_summary_empty_db_returns_empty_lists(mock_supa):
     mock_supa.table.return_value.select.return_value.eq.return_value.gte.return_value.order.return_value.execute.return_value.data = []
     result = get_sentiment_summary("AAPL")
-    assert result == {"daily_scores": [], "headlines": []}
+    assert result == {"daily_scores": [], "weighted_scores": [], "headlines": []}
 
 
 @patch(f"{MODULE}.supabase")
@@ -115,3 +130,18 @@ def test_has_data_for_today_true(mock_supa):
 def test_has_data_for_today_false(mock_supa):
     mock_supa.table.return_value.select.return_value.eq.return_value.gte.return_value.limit.return_value.execute.return_value.data = []
     assert has_data_for_today("AAPL") is False
+
+
+def test_calculate_daily_sentiment_score_weights_labels():
+    rows = [
+        {"label": "positive", "score": 0.8, "model_version": "ProsusAI/finbert"},
+        {"label": "negative", "score": 0.6, "model_version": "ProsusAI/finbert"},
+        {"label": "neutral", "score": 0.9, "model_version": "ProsusAI/finbert"},
+    ]
+
+    result = calculate_daily_sentiment_score("AAPL", 1, date(2026, 6, 9), rows)
+
+    assert result["raw_sentiment"] == 0.0667
+    assert result["bullish_score"] == 5.33
+    assert result["sentiment_label"] == "neutral"
+    assert result["article_count"] == 3
