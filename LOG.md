@@ -312,6 +312,34 @@ Chai (PM) pushed a major backend refactor focused on frontend-readiness and serv
 
 ---
 
+### 2026-06-09 — Bali — Merged changes from main (commit `dfce3bd`)
+
+**What changed on main (5871e95..dfce3bd):**
+
+Teammate: Chai Ming Liang (chaiml7)
+
+- `dfce3bd` — Remove username from user schema and update auth service accordingly
+- `fbc295c` — Add user auth, profiles, roles, and watchlist APIs
+
+**Files added/changed:**
+- `backend/routes/user_routes.py` — Full user auth + watchlist REST API (363 lines)
+- `backend/services/auth_service.py` — Auth business logic (180 lines)
+- `backend/services/user_profile_service.py` — User profile CRUD (62 lines)
+- `backend/services/user_watchlist_service.py` — Watchlist CRUD (44 lines)
+- `backend/schemas.py` — Pydantic schemas for user/auth models (36 lines)
+- `backend/main.py` — Registered new user_routes router
+- `backend/requirements.txt` / `requirements-dev.txt` / `requirements-ml.txt` — Deps split/updated
+- `backend/.env.example` — Added new env var
+- `backend/services/sentiment/finbert_service.py` — Minor update (26 lines changed)
+
+**Integration impact:**
+- Auth service adds JWT/Supabase-based login, register, profile, role management, and watchlist endpoints
+- Watchlist feature is relevant to Bali's frontend work — `/api/users/watchlist` endpoints now available
+- `finbert_service.py` was touched on main; verify no conflicts with Bali's fine-tuned FinBERT version (already merged cleanly)
+- `requirements.txt` restructured into `requirements-dev.txt` and `requirements-ml.txt` — update local install commands
+
+---
+
 ## Issues / Bugs Tracker
 
 | Date | Issue | Status | Resolution |
