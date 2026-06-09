@@ -27,9 +27,11 @@ def patched_pipeline(has_data=False, finnhub_data=None, newsapi_data=None, score
          patch(f"{MODULE}.fetch_newsapi", return_value=_newsapi) as m_fa, \
          patch(f"{MODULE}.score_headlines", return_value=_scores, side_effect=score_side_effect) as m_sc, \
          patch(f"{MODULE}.save_scores", return_value={"rows_saved": 2}) as m_sv, \
+         patch(f"{MODULE}.save_daily_sentiment_score", return_value={"rows_saved": 1}) as m_ds, \
          patch(f"{MODULE}.time.sleep") as m_sl:
         yield {"has_data": m_has, "fetch_finnhub": m_fh, "fetch_newsapi": m_fa,
-               "score_headlines": m_sc, "save_scores": m_sv, "sleep": m_sl}
+               "score_headlines": m_sc, "save_scores": m_sv,
+               "save_daily_sentiment_score": m_ds, "sleep": m_sl}
 
 
 def test_run_pipeline_processes_all_watchlist():

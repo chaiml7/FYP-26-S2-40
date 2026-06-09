@@ -233,6 +233,9 @@ def view_current_user_watchlist_summary(authorization: str = Header(default=None
         except Exception:
             sentiment = {}
 
+        weighted_scores = sentiment.get("weighted_scores") or []
+        legacy_daily_scores = sentiment.get("daily_scores") or []
+
         summary.append({
             "watchlist_id": item["id"],
             "stock_id": item["stock_id"],
@@ -242,11 +245,9 @@ def view_current_user_watchlist_summary(authorization: str = Header(default=None
             "latest_price": latest_price[0] if len(latest_price) > 0 else None,
             "latest_prediction": latest_prediction[0] if len(latest_prediction) > 0 else None,
             "sentiment": {
-                "latest_daily_score": (
-                    sentiment.get("daily_scores", [None])[0]
-                    if sentiment.get("daily_scores")
-                    else None
-                )
+                "latest_daily_score": weighted_scores[0]
+                if weighted_scores
+                else (legacy_daily_scores[0] if legacy_daily_scores else None)
             },
             "added_at": item["created_at"],
         })
