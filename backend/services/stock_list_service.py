@@ -1,112 +1,19 @@
-from database.supabase_client import supabase
-from datetime import datetime, timezone
+from backend.database.supabase_client import get_client
+
+TICKERS = ["AAPL", "MSFT", "TSLA", "AMD", "AMZN", "GOOGL", "META", "NVDA", "PLTTR", "AVGO", "ORCL"]
 
 
-def get_all_stocks():
-    response = (
-        supabase
-        .table("stocks")
-        .select("*")
-        .order("symbol")
-        .execute()
-    )
-
-    return response.data
+def get_tracked_tickers() -> list[str]:
+    return TICKERS
 
 
-def get_active_stocks():
-    response = (
-        supabase
-        .table("stocks")
-        .select("*")
-        .eq("is_active", True)
-        .execute()
-    )
-
-    return response.data
-
-
-def get_inactive_stocks():
-    response = (
-        supabase
-        .table("stocks")
-        .select("*")
-        .eq("is_active", False)
-        .order("symbol")
-        .execute()
-    )
-
-    return response.data
-
-
-def get_stocks_by_sector(sector: str):
-    response = (
-        supabase
-        .table("stocks")
-        .select("*")
-        .eq("sector", sector)
-        .order("symbol")
-        .execute()
-    )
-
-    return response.data
-
-
-def get_stock_by_symbol(symbol: str):
-    response = (
-        supabase
-        .table("stocks")
+def get_stock_by_symbol(symbol: str) -> dict | None:
+    supabase = get_client()
+    resp = (
+        supabase.table("stocks")
         .select("*")
         .eq("symbol", symbol.upper())
+        .limit(1)
         .execute()
     )
-
-    return response.data
-
-
-def add_stock(stock_data: dict):
-    stock_data["symbol"] = stock_data["symbol"].upper()
-
-    response = (
-        supabase
-        .table("stocks")
-        .insert(stock_data)
-        .execute()
-    )
-
-    return response.data
-
-
-def update_stock(symbol: str, stock_data: dict):
-    response = (
-        supabase
-        .table("stocks")
-        .update(stock_data)
-        .eq("symbol", symbol.upper())
-        .execute()
-    )
-
-    return response.data
-
-
-def deactivate_stock(symbol: str):
-    response = (
-        supabase
-        .table("stocks")
-        .update({"is_active": False})
-        .eq("symbol", symbol.upper())
-        .execute()
-    )
-
-    return response.data
-
-def update_last_imported_at(symbol: str):
-    response = (
-        supabase
-        .table("stocks")
-        .update({"last_imported_at": datetime.now(timezone.utc).isoformat()})
-        .eq("symbol", symbol.upper())
-        .execute()
-    )
-
-    return response.data
+    return resp.data[0] if resp.data else None

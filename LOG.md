@@ -328,3 +328,69 @@ Chai (PM) pushed a major backend refactor focused on frontend-readiness and serv
 | 2026-05-24 | Use `bali` branch for personal files, PRs to main for code only | Keep main clean, share context across machines |
 | 2026-05-24 | FinBERT over VADER for sentiment | PRD specifies FinBERT as primary; VADER as fallback if compute is an issue |
 | 2026-05-24 | FinnHub + NewsAPI + RSS as news sources | Free tier coverage + redundancy |
+
+## Run — 2026-06-10 09:17 UTC
+
+| Metric | Value |
+|--------|-------|
+| Samples | 51 |
+| CV Folds | 3 |
+| CV Accuracy | 74.51% |
+| Train/Test Accuracy | 72.73% |
+| Best Accuracy | 74.51% |
+
+**Label distribution:** {'negative': 3, 'neutral': 15, 'positive': 33}
+
+**Per-class metrics:**
+
+| Class | Precision | Recall | F1-score | Support |
+|-------|-----------|--------|----------|---------|
+| negative | 0.00% | 0.00% | 0.00% | 3 |
+| neutral | 75.00% | 40.00% | 52.17% | 15 |
+| positive | 74.42% | 96.97% | 84.21% | 33 |
+
+---
+
+## Run — 2026-06-10 09:24 UTC
+
+| Metric | Value |
+|--------|-------|
+| Samples | 51 |
+| CV Folds | 3 |
+| CV Accuracy | 74.51% |
+| Train/Test Accuracy | 72.73% |
+| Best Accuracy | 74.51% |
+
+**Label distribution:** {'negative': 3, 'neutral': 15, 'positive': 33}
+
+**Per-class metrics:**
+
+| Class | Precision | Recall | F1-score | Support |
+|-------|-----------|--------|----------|---------|
+| negative | 0.00% | 0.00% | 0.00% | 3 |
+| neutral | 75.00% | 40.00% | 52.17% | 15 |
+| positive | 74.42% | 96.97% | 84.21% | 33 |
+
+---
+
+## Run — 2026-06-10 09:29 UTC
+
+| Metric | Value |
+|--------|-------|
+| Samples | 51 |
+| CV Folds | 3 |
+| CV Accuracy | 74.51% |
+| Train/Test Accuracy | 72.73% |
+| Best Accuracy | 74.51% |
+
+**Label distribution:** {'negative': 3, 'neutral': 15, 'positive': 33}
+
+**Per-class metrics:**
+
+| Class | Precision | Recall | F1-score | Support |
+|-------|-----------|--------|----------|---------|
+| negative | 0.00% | 0.00% | 0.00% | 3 |
+| neutral | 75.00% | 40.00% | 52.17% | 15 |
+| positive | 74.42% | 96.97% | 84.21% | 33 |
+
+---
