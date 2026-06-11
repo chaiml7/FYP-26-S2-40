@@ -28,6 +28,11 @@ class PredictionCreate(BaseModel):
     model_version: Optional[str] = None
 
 
+class FinancialModelTrainRequest(BaseModel):
+    training_mode: Literal["fresh", "continue"] = "fresh"
+    base_version: Optional[str] = None
+
+
 class AccountCreate(BaseModel):
     email: str = Field(..., pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
     password: str = Field(..., min_length=8)
