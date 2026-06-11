@@ -458,3 +458,103 @@ Chai (PM) pushed a major backend refactor focused on frontend-readiness and serv
 | positive | 100.00% | 100.00% | 100.00% | 33 |
 
 ---
+
+## Run — 2026-06-11 04:52 UTC
+ 
+| Metric | Value |
+|--------|-------|
+| Samples | 50 |
+| Train/Test Accuracy | 60.00% |
+| Best Accuracy | 98.00% |
+ 
+**Label distribution:** {'negative': 2, 'neutral': 15, 'positive': 33}
+ 
+**Per-class metrics:**
+
+| Class | Precision | Recall | F1-score | Support |
+|-------|-----------|--------|----------|---------|
+| negative | 100.00% | 50.00% | 66.67% | 2 |
+| neutral | 93.75% | 100.00% | 96.77% | 15 |
+| positive | 100.00% | 100.00% | 100.00% | 33 |
+
+---
+
+## Run — 2026-06-11 05:32 UTC
+ 
+| Metric | Value |
+|--------|-------|
+| Samples | 625 |
+| Train/Test Accuracy | 81.60% |
+| Best Accuracy | 94.88% |
+ 
+**Label distribution:** {'negative': 104, 'neutral': 219, 'positive': 302}
+ 
+**Per-class metrics:**
+
+| Class | Precision | Recall | F1-score | Support |
+|-------|-----------|--------|----------|---------|
+| negative | 89.38% | 97.12% | 93.09% | 104 |
+| neutral | 95.61% | 89.50% | 92.45% | 219 |
+| positive | 96.42% | 98.01% | 97.21% | 302 |
+
+---
+
+## Run — 2026-06-11 05:41 UTC
+ 
+| Metric | Value |
+|--------|-------|
+| Samples | 628 |
+| Train/Test Accuracy | 88.10% |
+| Best Accuracy | 95.38% |
+ 
+**Label distribution:** {'negative': 108, 'neutral': 212, 'positive': 308}
+ 
+**Per-class metrics:**
+
+| Class | Precision | Recall | F1-score | Support |
+|-------|-----------|--------|----------|---------|
+| negative | 92.86% | 96.30% | 94.55% | 108 |
+| neutral | 95.52% | 90.57% | 92.98% | 212 |
+| positive | 96.19% | 98.38% | 97.27% | 308 |
+
+---
+
+## Run — 2026-06-11 05:53 UTC
+ 
+| Metric | Value |
+|--------|-------|
+| Samples | 628 |
+| Train/Test Accuracy | 88.10% |
+| Best Accuracy | 95.38% |
+ 
+**Label distribution:** {'negative': 108, 'neutral': 212, 'positive': 308}
+ 
+**Per-class metrics:**
+
+| Class | Precision | Recall | F1-score | Support |
+|-------|-----------|--------|----------|---------|
+| negative | 92.86% | 96.30% | 94.55% | 108 |
+| neutral | 95.52% | 90.57% | 92.98% | 212 |
+| positive | 96.19% | 98.38% | 97.27% | 308 |
+
+---
+
+## Run — 2026-06-11 05:55 UTC
+ 
+| Metric | Value |
+|--------|-------|
+| Samples | 50 |
+| Train/Test Accuracy | 60.00% |
+| Best Accuracy | 98.00% |
+ 
+**Label distribution:** {'negative': 2, 'neutral': 15, 'positive': 33}
+ 
+**Per-class metrics:**
+
+| Class | Precision | Recall | F1-score | Support |
+|-------|-----------|--------|----------|---------|
+| negative | 100.00% | 50.00% | 66.67% | 2 |
+| neutral | 93.75% | 100.00% | 96.77% | 15 |
+| positive | 100.00% | 100.00% | 100.00% | 33 |
+
+---
