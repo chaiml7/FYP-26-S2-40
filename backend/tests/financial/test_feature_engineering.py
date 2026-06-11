@@ -1,11 +1,11 @@
 import pandas as pd
 
-from services.financial.feature_engineering import (
+from backend.services.financial.feature_engineering import (
     FEATURE_COLUMNS,
     build_training_dataset,
     engineer_features,
 )
-from services.financial.financial_model import _chronological_holdout
+from backend.services.financial.financial_model import _chronological_holdout
 
 
 def _statement(stock_id: int, ticker: str, period: str, revenue: float, quality: float):

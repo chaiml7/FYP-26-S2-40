@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
-from services.financial.yfinance_financial_fetcher import (
+from backend.services.financial.yfinance_financial_fetcher import (
     fetch_quarterly_financial_statements,
     get_yfinance_symbol,
 )
@@ -31,7 +31,7 @@ def test_yfinance_symbol_uses_dash_for_share_class():
     assert get_yfinance_symbol("BRK.B") == "BRK-B"
 
 
-@patch("services.financial.yfinance_financial_fetcher.yf.Ticker")
+@patch("backend.services.financial.yfinance_financial_fetcher.yf.Ticker")
 def test_fetches_aligned_quarter_and_derives_free_cashflow(mock_ticker):
     income = _statement({
         "TotalRevenue": 1000,
@@ -71,7 +71,7 @@ def test_fetches_aligned_quarter_and_derives_free_cashflow(mock_ticker):
     assert row["research_development"] is None
 
 
-@patch("services.financial.yfinance_financial_fetcher.yf.Ticker")
+@patch("backend.services.financial.yfinance_financial_fetcher.yf.Ticker")
 def test_skips_period_when_core_field_is_missing(mock_ticker):
     income = _statement({"TotalRevenue": 1000})
     balance = _statement({
@@ -94,7 +94,7 @@ def test_skips_period_when_core_field_is_missing(mock_ticker):
     }]
 
 
-@patch("services.financial.yfinance_financial_fetcher.yf.Ticker")
+@patch("backend.services.financial.yfinance_financial_fetcher.yf.Ticker")
 def test_requests_quarterly_unformatted_statements(mock_ticker):
     empty = pd.DataFrame()
     ticker = _ticker_with_statements(empty, empty, empty)

@@ -3,10 +3,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from services.financial.financial_repository import save_financial_prediction
+from backend.services.financial.financial_repository import save_financial_prediction
 
 
-@patch("services.financial.financial_repository.supabase")
+@patch("backend.services.financial.financial_repository.supabase")
 def test_save_financial_prediction_requires_persisted_score_fields(mock_supabase):
     table = MagicMock()
     mock_supabase.table.return_value = table
@@ -32,7 +32,7 @@ def test_save_financial_prediction_requires_persisted_score_fields(mock_supabase
         })
 
 
-@patch("services.financial.financial_repository.supabase")
+@patch("backend.services.financial.financial_repository.supabase")
 def test_save_financial_prediction_returns_confirmed_stored_row(mock_supabase):
     table = MagicMock()
     mock_supabase.table.return_value = table

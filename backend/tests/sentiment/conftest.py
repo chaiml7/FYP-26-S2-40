@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock
 import torch
-import services.sentiment.finbert_service as finbert_module
+import backend.services.sentiment.finbert_service as finbert_module
 
 SAMPLE_HEADLINES = [
     {"headline": "Apple reports record profits", "source": "finnhub", "published_at": "2026-05-24T09:00:00+00:00"},

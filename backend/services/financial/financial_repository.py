@@ -1,6 +1,6 @@
 """Supabase persistence for financial statements and outlook predictions."""
 
-from database.supabase_client import supabase
+from backend.database.supabase_client import supabase
 
 
 PREDICTION_COLUMNS = {

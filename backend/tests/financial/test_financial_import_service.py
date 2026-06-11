@@ -1,11 +1,11 @@
 from unittest.mock import patch
 
-from services.financial.financial_service import import_financial_statements
+from backend.services.financial.financial_service import import_financial_statements
 
 
-@patch("services.financial.financial_service.save_financial_statements")
-@patch("services.financial.financial_service.fetch_quarterly_financial_statements")
-@patch("services.financial.financial_service.get_stock_by_symbol")
+@patch("backend.services.financial.financial_service.save_financial_statements")
+@patch("backend.services.financial.financial_service.fetch_quarterly_financial_statements")
+@patch("backend.services.financial.financial_service.get_stock_by_symbol")
 def test_import_financial_statements_saves_yfinance_rows(
     mock_stock,
     mock_fetch,

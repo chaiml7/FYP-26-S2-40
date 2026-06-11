@@ -2,8 +2,8 @@
 
 from fastapi import APIRouter, HTTPException
 
-from schemas import FinancialModelTrainRequest
-from services.financial.financial_service import (
+from backend.schemas import FinancialModelTrainRequest
+from backend.services.financial.financial_service import (
     generate_all_financial_predictions,
     generate_financial_prediction,
     import_all_financial_statements,

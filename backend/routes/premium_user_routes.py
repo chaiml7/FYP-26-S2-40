@@ -75,8 +75,6 @@ async def premium_prediction_breakdown(request: Request, symbol: str = "NVDA"):
 
     # Fetch Sentiment
     sentiment_date = date(2026, 5, 25)
-    technical_date = date(2026, 6, 10)
-    financial_date = date(2026, 4, 30)
     sentiment_data = get_weighted_sentiment_score(target_symbol, sentiment_date)
     if sentiment_data and "bullish_score" in sentiment_data:
         raw_sent = int((sentiment_data.get("bullish_score") or 0))
@@ -84,26 +82,27 @@ async def premium_prediction_breakdown(request: Request, symbol: str = "NVDA"):
         raw_sent = 0
 
     try:
-        tech_data = get_technical_score(target_symbol, technical_date)
+        tech_data = get_technical_score(target_symbol)
         raw_tech = tech_data if isinstance(tech_data, (int, float)) else tech_data.get('score', 0)
     except Exception:
         raw_tech = 0
 
     try:
-        fin_data = get_financial_score(target_symbol, financial_date)
+        fin_data = get_financial_score(target_symbol)
         raw_fin = fin_data if isinstance(fin_data, (int, float)) else fin_data.get('score', 0)
     except Exception:
         raw_fin = 0
 
-    composite_score = int(
+    composite_score = round(
         (raw_tech * (tech_w / 100.0)) +
         (raw_sent * (sent_w / 100.0)) +
-        (raw_fin * (fin_w / 100.0))
+        (raw_fin * (fin_w / 100.0)),
+        2,
     )
 
-    if composite_score >= 65:
+    if composite_score >= 6.5:
         action_label = "BUY"
-    elif composite_score <= 35:
+    elif composite_score <= 3.5:
         action_label = "SELL"
     else:
         action_label = "HOLD"
@@ -112,9 +111,9 @@ async def premium_prediction_breakdown(request: Request, symbol: str = "NVDA"):
         "symbol": target_symbol,
         "action": action_label,
         "composite": composite_score,
-        "technical_score": int(raw_tech), 
-        "sentiment_score": int(raw_sent), 
-        "financial_score": int(raw_fin),
+        "technical_score": round(float(raw_tech), 2),
+        "sentiment_score": round(float(raw_sent), 2),
+        "financial_score": round(float(raw_fin), 2),
         "tech_weight": tech_w,
         "sent_weight": sent_w,
         "fin_weight": fin_w

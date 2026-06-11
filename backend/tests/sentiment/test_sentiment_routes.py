@@ -1,13 +1,13 @@
 import pytest
 from unittest.mock import patch
 from fastapi.testclient import TestClient
-from main import app
+from backend.main import app
 
 client = TestClient(app)
-MODULE_WEIGHTED = "routes.stock_routes.get_weighted_sentiment_score"
-MODULE_PIPE = "routes.stock_routes.run_sentiment_pipeline"
-MODULE_STOCK = "routes.stock_routes.get_stock_by_symbol"
-MODULE_SAVE_DAILY = "routes.stock_routes.save_daily_sentiment_score"
+MODULE_WEIGHTED = "backend.routes.stock_routes.get_weighted_sentiment_score"
+MODULE_PIPE = "backend.routes.stock_routes.run_sentiment_pipeline"
+MODULE_STOCK = "backend.routes.stock_routes.get_stock_by_symbol"
+MODULE_SAVE_DAILY = "backend.routes.stock_routes.save_daily_sentiment_score"
 
 MOCK_SUMMARY = {
     "id": "score-1",

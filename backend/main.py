@@ -3,10 +3,11 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
-from routes.financial_routes import router as financial_router
-from routes.stock_routes import router as stock_router
-from routes.user_routes import router as user_router
-from services.sentiment.sentiment_pipeline import run_pipeline
+from backend.routes.financial_routes import router as financial_router
+from backend.routes.stock_routes import router as stock_router
+from backend.routes.technical_routes import router as technical_router
+from backend.routes.user_routes import router as user_router
+from backend.services.sentiment.sentiment_pipeline import run_pipeline
 
 scheduler = BackgroundScheduler()
 
@@ -30,7 +31,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://localhost:8001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -45,3 +46,4 @@ def home():
 app.include_router(stock_router, prefix="/api")
 app.include_router(user_router, prefix="/api")
 app.include_router(financial_router, prefix="/api")
+app.include_router(technical_router, prefix="/api")
