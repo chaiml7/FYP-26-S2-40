@@ -1,0 +1,124 @@
+{% extends base_layout %}
+
+{% block title %}Stocks - StockLens{% endblock %}
+
+{% block nav_dashboard %}active{% endblock %}
+
+{% block content %}
+<section class="workspace-heading">
+    <div>
+        <p class="workspace-eyebrow">Market workspace</p>
+        <h1>Stocks</h1>
+        <p>Review every tracked company and open its latest analysis.</p>
+    </div>
+    <div class="market-count">
+        <strong>{{ stocks | length }}</strong>
+        <span>active stocks</span>
+    </div>
+</section>
+
+<section class="stock-toolbar" aria-label="Stock filters">
+    <label class="stock-search">
+        <span>Search</span>
+        <input
+            id="stock-search"
+            type="search"
+            placeholder="Symbol or company"
+            autocomplete="off"
+        >
+    </label>
+    <label class="sector-filter">
+        <span>Sector</span>
+        <select id="sector-filter">
+            <option value="">All sectors</option>
+            {% for sector in sectors %}
+                <option value="{{ sector | lower }}">{{ sector }}</option>
+            {% endfor %}
+        </select>
+    </label>
+</section>
+
+<div class="card table-card stock-table-shell">
+    <table class="stock-browser-table">
+        <thead>
+            <tr>
+                <th>Company</th>
+                <th>Sector</th>
+                <th>Latest price</th>
+                <th>Daily move</th>
+                <th><span class="sr-only">Open stock</span></th>
+            </tr>
+        </thead>
+        <tbody id="stock-table-body">
+            {% for stock in stocks %}
+            <tr
+                class="stock-browser-row"
+                data-search="{{ stock.symbol | lower }} {{ stock.company_name | lower }}"
+                data-sector="{{ (stock.sector or '') | lower }}"
+                onclick="window.location='/stocks/{{ stock.symbol }}/view'"
+            >
+                <td>
+                    <a class="company-cell" href="/stocks/{{ stock.symbol }}/view">
+                        <span class="ticker-tile">{{ stock.symbol[:2] }}</span>
+                        <span>
+                            <strong>{{ stock.symbol }}</strong>
+                            <small>{{ stock.company_name }}</small>
+                        </span>
+                    </a>
+                </td>
+                <td><span class="sector-label">{{ stock.sector or "Unclassified" }}</span></td>
+                <td>
+                    {% if stock.price is not none %}
+                        <strong class="stock-price">${{ "%.2f" | format(stock.price) }}</strong>
+                        <small class="price-date">{{ stock.trade_date }}</small>
+                    {% else %}
+                        <span class="data-unavailable">No price data</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if stock.change_percent is not none %}
+                        <span class="move-value {% if stock.change_percent > 0 %}positive{% elif stock.change_percent < 0 %}negative{% else %}flat{% endif %}">
+                            {% if stock.change_percent > 0 %}+{% endif %}{{ "%.2f" | format(stock.change_percent) }}%
+                        </span>
+                    {% else %}
+                        <span class="data-unavailable">Unavailable</span>
+                    {% endif %}
+                </td>
+                <td><a class="row-action" href="/stocks/{{ stock.symbol }}/view" aria-label="View {{ stock.symbol }}">View</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="stock-empty-state" id="stock-empty-state" hidden>
+        No stocks match the current filters.
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const searchInput = document.getElementById("stock-search");
+    const sectorFilter = document.getElementById("sector-filter");
+    const rows = Array.from(document.querySelectorAll(".stock-browser-row"));
+    const emptyState = document.getElementById("stock-empty-state");
+
+    function filterStocks() {
+        const query = searchInput.value.trim().toLowerCase();
+        const sector = sectorFilter.value;
+        let visible = 0;
+
+        rows.forEach((row) => {
+            const matchesQuery = !query || row.dataset.search.includes(query);
+            const matchesSector = !sector || row.dataset.sector === sector;
+            const show = matchesQuery && matchesSector;
+            row.hidden = !show;
+            if (show) visible += 1;
+        });
+
+        emptyState.hidden = visible !== 0;
+    }
+
+    searchInput.addEventListener("input", filterStocks);
+    sectorFilter.addEventListener("change", filterStocks);
+</script>
+{% endblock %}

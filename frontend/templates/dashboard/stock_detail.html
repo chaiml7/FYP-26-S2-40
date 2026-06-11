@@ -1,0 +1,127 @@
+{% extends base_layout %}
+
+{% block title %}{{ stock.symbol }} - StockLens{% endblock %}
+
+{% block nav_dashboard %}active{% endblock %}
+
+{% block content %}
+<a href="/dashboard" class="back-to-stocks">Back to stocks</a>
+
+<section class="stock-detail-header">
+    <div class="stock-identity">
+        <span class="ticker-tile ticker-tile-large">{{ stock.symbol[:2] }}</span>
+        <div>
+            <div class="stock-title-line">
+                <h1>{{ stock.symbol }}</h1>
+                <span class="exchange-label">{{ stock.exchange or "Tracked" }}</span>
+            </div>
+            <p>{{ stock.company_name }}</p>
+            <span class="sector-label">{{ stock.sector or "Unclassified" }}</span>
+        </div>
+    </div>
+
+    <div class="stock-quote">
+        {% if stock.price is not none %}
+            <strong>${{ "%.2f" | format(stock.price) }}</strong>
+            {% if stock.change_percent is not none %}
+                <span class="move-value {% if stock.change_percent > 0 %}positive{% elif stock.change_percent < 0 %}negative{% else %}flat{% endif %}">
+                    {% if stock.change > 0 %}+{% endif %}${{ "%.2f" | format(stock.change) }}
+                    ({% if stock.change_percent > 0 %}+{% endif %}{{ "%.2f" | format(stock.change_percent) }}%)
+                </span>
+            {% endif %}
+            <small>Close on {{ stock.trade_date }}</small>
+        {% else %}
+            <span class="data-unavailable">No price data</span>
+        {% endif %}
+    </div>
+</section>
+
+<section class="analysis-section">
+    <div class="section-title-row">
+        <div>
+            <p class="workspace-eyebrow">Model outlook</p>
+            <h2>Analysis scores</h2>
+        </div>
+        <span class="score-scale-note">1 bearish · 5 neutral · 10 bullish</span>
+    </div>
+
+    <div class="score-grid">
+        {% for item in stock.scores %}
+        <article class="panel-card score-panel score-{{ item.tone }}">
+            <div class="score-panel-header">
+                <span>{{ item.name }}</span>
+                <span class="score-status">{{ item.tone | title }}</span>
+            </div>
+            {% if item.score is not none %}
+                <div class="score-number">{{ "%.1f" | format(item.score) }}<small>/10</small></div>
+                <div class="score-track" aria-label="{{ item.name }} score {{ item.score }} out of 10">
+                    <span style="width: {{ item.score * 10 }}%"></span>
+                </div>
+            {% else %}
+                <div class="score-missing">Not available</div>
+                <div class="score-track"><span style="width: 0"></span></div>
+            {% endif %}
+
+            <dl class="score-metadata">
+                {% if item.name == "Technical" and item.detail %}
+                    <div><dt>Direction</dt><dd>{{ item.detail.prediction | title }}</dd></div>
+                    <div><dt>As of</dt><dd>{{ item.detail.latest_date }}</dd></div>
+                    <div><dt>Horizon</dt><dd>{{ item.detail.prediction_horizon | replace("_", " ") | title }}</dd></div>
+                {% elif item.name == "Sentiment" and item.detail %}
+                    <div><dt>Label</dt><dd>{{ item.detail.sentiment_label | title }}</dd></div>
+                    <div><dt>As of</dt><dd>{{ item.detail.score_date }}</dd></div>
+                    <div><dt>Articles</dt><dd>{{ item.detail.article_count }}</dd></div>
+                {% elif item.name == "Financial" and item.detail %}
+                    <div><dt>Outlook</dt><dd>{{ item.detail.prediction | title }}</dd></div>
+                    <div><dt>Period</dt><dd>{{ item.detail.period }}</dd></div>
+                    <div><dt>Confidence</dt><dd>{{ "%.1f" | format(item.detail.confidence) }}%</dd></div>
+                {% else %}
+                    <div><dt>Status</dt><dd>No prediction has been saved</dd></div>
+                {% endif %}
+            </dl>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="card price-history-panel">
+    <div class="section-title-row">
+        <div>
+            <p class="workspace-eyebrow">Recent market data</p>
+            <h2>Price history</h2>
+        </div>
+        <span class="score-scale-note">Latest 10 trading days</span>
+    </div>
+
+    {% if stock.price_history %}
+    <div class="history-table-scroll">
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Open</th>
+                    <th>High</th>
+                    <th>Low</th>
+                    <th>Close</th>
+                    <th>Volume</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in stock.price_history %}
+                <tr>
+                    <td>{{ row.trade_date }}</td>
+                    <td>${{ "%.2f" | format(row.open) }}</td>
+                    <td>${{ "%.2f" | format(row.high) }}</td>
+                    <td>${{ "%.2f" | format(row.low) }}</td>
+                    <td><strong>${{ "%.2f" | format(row.close) }}</strong></td>
+                    <td>{{ "{:,}".format(row.volume) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <p class="data-unavailable">No historical prices have been imported for this stock.</p>
+    {% endif %}
+</section>
+{% endblock %}

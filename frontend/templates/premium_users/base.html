@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Premium Dashboard - StockLens{% endblock %}</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260612-3">
 </head>
 <body class="app-page">
 
@@ -17,6 +17,9 @@
             </div>
             
             <nav class="sidebar-nav">
+                <a href="/dashboard" class="nav-item {% block nav_dashboard %}{% endblock %}">
+                    <span class="nav-icon">&#128202;</span> Dashboard
+                </a>
                 <a href="/premium/recommendations" class="nav-item {% block nav_recommendations %}{% endblock %}">
                     <span style="margin-right: 10px;">🎯</span> Recommendations
                 </a>
@@ -53,6 +56,10 @@
                 
                 <div class="topbar-actions" style="margin-left: auto; display: flex; align-items: center; gap: 1rem;">
                     <button class="btn-icon">🔔</button>
+                    <div class="user-chip">
+                        <span class="avatar-sm">{{ user_initial or "U" }}</span>
+                        <span class="text-sm font-medium">{{ user_email or "StockLens user" }}</span>
+                    </div>
                     <a href="/logout" class="btn btn-outline btn-sm">Log Out</a>
                 </div>
             </header>

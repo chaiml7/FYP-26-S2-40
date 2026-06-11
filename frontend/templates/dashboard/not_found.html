@@ -1,0 +1,14 @@
+{% extends base_layout %}
+
+{% block title %}Stock not found - StockLens{% endblock %}
+
+{% block nav_dashboard %}active{% endblock %}
+
+{% block content %}
+<section class="dashboard-not-found">
+    <p class="workspace-eyebrow">Stock unavailable</p>
+    <h1>{{ symbol }} was not found</h1>
+    <p>The symbol is not currently active in the StockLens stock database.</p>
+    <a href="/dashboard" class="btn btn-primary">Return to stocks</a>
+</section>
+{% endblock %}
