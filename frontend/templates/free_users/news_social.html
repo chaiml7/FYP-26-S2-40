@@ -1,0 +1,113 @@
+{% extends base_layout %}
+
+{% block title %}News and Social - StockLens{% endblock %}
+
+{% block nav_news %}active{% endblock %}
+
+{% block content %}
+
+<div class="page-content">
+    <h1 class="text-2xl font-bold text-main mb-6">News & Social Feed</h1>
+
+    <div class="news-feed">
+        
+        <a href="#" class="news-card">
+            <div class="news-icon-wrapper">
+                <span class="news-icon">📄</span>
+            </div>
+            <div class="news-content">
+                <div class="news-meta">
+                    <span class="ticker-badge">NVDA</span>
+                    <span class="news-source">Reuters • 2m ago</span>
+                </div>
+                <h3 class="news-title">NVIDIA beats Q1 earnings, guides higher on AI demand surge</h3>
+            </div>
+            <div class="news-action">
+                <span class="external-icon">↗</span>
+            </div>
+        </a>
+
+        <a href="#" class="news-card">
+            <div class="news-icon-wrapper">
+                <span class="news-icon">📄</span>
+            </div>
+            <div class="news-content">
+                <div class="news-meta">
+                    <span class="ticker-badge">AAPL</span>
+                    <span class="news-source">WSJ • 18m ago</span>
+                </div>
+                <h3 class="news-title">Apple exploring AI partnerships with Google for iPhone features</h3>
+            </div>
+            <div class="news-action">
+                <span class="external-icon">↗</span>
+            </div>
+        </a>
+
+        <a href="#" class="news-card">
+            <div class="news-icon-wrapper">
+                <span class="news-icon">📄</span>
+            </div>
+            <div class="news-content">
+                <div class="news-meta">
+                    <span class="ticker-badge">SPY</span>
+                    <span class="news-source">Bloomberg • 45m ago</span>
+                </div>
+                <h3 class="news-title">Fed signals no rush to cut rates amid sticky inflation data</h3>
+            </div>
+            <div class="news-action">
+                <span class="external-icon">↗</span>
+            </div>
+        </a>
+
+        <a href="#" class="news-card">
+            <div class="news-icon-wrapper">
+                <span class="news-icon">📄</span>
+            </div>
+            <div class="news-content">
+                <div class="news-meta">
+                    <span class="ticker-badge">MSFT</span>
+                    <span class="news-source">CNBC • 1h ago</span>
+                </div>
+                <h3 class="news-title">Microsoft's Azure growth re-accelerates to 31% in latest quarter</h3>
+            </div>
+            <div class="news-action">
+                <span class="external-icon">↗</span>
+            </div>
+        </a>
+
+        <a href="#" class="news-card">
+            <div class="news-icon-wrapper">
+                <span class="news-icon">📄</span>
+            </div>
+            <div class="news-content">
+                <div class="news-meta">
+                    <span class="ticker-badge">GOOGL</span>
+                    <span class="news-source">FT • 2h ago</span>
+                </div>
+                <h3 class="news-title">Alphabet antitrust ruling may reshape digital ad market landscape</h3>
+            </div>
+            <div class="news-action">
+                <span class="external-icon">↗</span>
+            </div>
+        </a>
+
+    </div>
+
+    <div class="card mt-6">
+        <div class="social-header mb-4">
+            <span class="social-icon">🐦</span>
+            <h3 class="font-bold text-main">Social Media Watchlist</h3>
+        </div>
+        
+        <div class="social-pills-container">
+            <span class="social-pill">@elonmusk</span>
+            <span class="social-pill">@jimcramer</span>
+            <span class="social-pill">@chamath</span>
+            <span class="social-pill">@cathiewood</span>
+            <button class="social-add-btn">+ Add account</button>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

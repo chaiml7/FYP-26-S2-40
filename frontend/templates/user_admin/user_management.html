@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Admin - StockLens</title>
+    <link rel="stylesheet" href="../static/css/styles.css">
+</head>
+<body class="admin-page">
+
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <span class="logo-icon">📈</span>
+                <span class="brand-name">StockLens</span>
+                <span class="badge-admin">USER ADMIN</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/admin/user_management" class="nav-item active">
+                    <span class="nav-icon">👥</span> User Management
+                </a>
+                <a href="/admin/roles_management" class="nav-item">
+                    <span class="nav-icon">🔑</span> Role Management
+                </a>
+            </nav>
+        </aside>
+
+        <main class="admin-main">
+            <header class="admin-header">
+                <div class="spacer"></div>
+                <a href="/logout" class="btn btn-outline btn-sm">Log Out</a>
+            </header>
+
+            <div class="stats-grid">
+                <div class="card stat-card">
+                    <span class="stat-title">TOTAL USERS</span>
+                    <span class="stat-value">{{ stats.total_users }}</span>
+                </div>
+                <div class="card stat-card">
+                    <span class="stat-title">PREMIUM USERS</span>
+                    <span class="stat-value">{{ stats.premium_users }}</span>
+                </div>
+                <div class="card stat-card">
+                    <span class="stat-title">SUSPENDED</span>
+                    <span class="stat-value">{{ stats.suspended_users }}</span>
+                </div>
+                <div class="card stat-card">
+                    <span class="stat-title">ACTIVE TODAY</span>
+                    <span class="stat-value">{{ stats.active_today }}</span>
+                </div>
+            </div>
+
+            <div class="table-controls">
+                <form action="/admin/search" method="GET" class="search-bar">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" name="q" placeholder="Search by name, email, or ID..." class="form-control search-input">
+                </form>
+                <div class="filter-pills">
+                    <a href="/admin/user_management?filter=all" class="pill {% if current_filter == 'all' %}active{% endif %}">All</a>
+                    <a href="/admin/user_management?filter=active" class="pill {% if current_filter == 'active' %}active{% endif %}">Active</a>
+                    <a href="/admin/user_management?filter=suspended" class="pill {% if current_filter == 'suspended' %}active{% endif %}">Suspended</a>
+                </div>
+            </div>
+
+            <div class="card table-card">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Full Name</th>
+                            <th>Plan</th> 
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td class="text-muted">#{{ user.id }}</td>
+                            <td class="font-medium text-main">{{ user.username }}</td>
+                            <td class="text-muted">{{ user.full_name }}</td>
+                            <td>
+                                <span class="plan-badge {% if 'Admin' in user.role_id %}badge-admin{% elif 'Premium' in user.role_id %}plan-premium{% else %}plan-free{% endif %}">
+                                    {{ user.role_id }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="status-text {% if user.status == 'Active' %}status-active{% else %}status-suspended{% endif %}">
+                                    {{ user.status }}
+                                </span>
+                            </td>
+                            <td class="action-cell">
+                                <a href="/admin/users/update/{{ user.id }}" class="btn-icon">✏️</a>
+                                
+                                {% if user.status == 'Active' %}
+                                    <a href="/admin/users/suspend/{{ user.id }}" class="btn-icon text-danger">⚠️</a>
+                                {% else %}
+                                    <a href="/admin/users/unsuspend/{{ user.id }}" class="btn-icon text-success">✅</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">No users found.</td> </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+</body>
+</html>

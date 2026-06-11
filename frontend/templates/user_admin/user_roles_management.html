@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Role Management - StockLens</title>
+    <link rel="stylesheet" href="../static/css/styles.css">
+</head>
+<body class="admin-page">
+
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <span class="logo-icon">📈</span>
+                <span class="brand-name">StockLens</span>
+                <span class="badge-admin">USER ADMIN</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/admin/user_management" class="nav-item">
+                    <span class="nav-icon">👥</span> User Management
+                </a>
+                <a href="/admin/roles_management" class="nav-item active">
+                    <span class="nav-icon">🔑</span> Role Management
+                </a>
+            </nav>
+        </aside>
+
+        <main class="admin-main">
+
+            <header class="admin-header">
+                <div class="spacer"></div>
+                <a href="/logout" class="btn btn-outline btn-sm">Log Out</a>
+            </header>
+
+            <div class="roles-layout">
+                
+                <div class="role-list">
+                    {% for r in roles %}
+                    <a href="/admin/roles_management?role={{ r.id }}" style="text-decoration: none; display: block;">
+                        <div class="card role-nav-card {% if selected_role.id == r.id %}active{% endif %}">
+                            <span class="role-tag {{ r.tag }} mb-2 inline-block">{{ r.name | upper }}</span>
+                            <h3 class="text-main font-bold">{{ r.name }}</h3>
+                            <p class="text-muted text-sm mt-1">{{ r.desc }}</p>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+
+                <div class="role-details">
+                    
+                    <div class="card details-header">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="role-tag badge-purple">{{ selected_role.name | upper }}</span>
+                            <h2 class="text-2xl font-bold text-main">{{ selected_role.name }}</h2>
+                        </div>
+                        <div class="info-box">
+                            <span class="text-muted">ℹ️ {{ selected_role.desc }}</span>
+                        </div>
+                    
+                        <div class="permissions-section mt-6">
+                            <h4 class="section-subtitle">PERMISSIONS</h4>
+                            <div class="permissions-grid">
+                                {% for perm in permissions %}
+                                    {% if perm.allowed %}
+                                    <div class="permission-item allowed">
+                                        <span class="icon">✓</span> {{ perm.name }}
+                                    </div>
+                                    {% else %}
+                                    <div class="permission-item denied">
+                                        <span class="icon">×</span> {{ perm.name }}
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card assign-card mt-6">
+                        <div class="    -6">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" placeholder="Search users by name or email..." class="form-control search-input">
+                        </div>
+
+                        <div class="assigned-section mb-6">
+                            <div class="section-header flex items-center gap-2 mb-2">
+                                <h5 class="text-sm font-bold text-muted uppercase">Users with this role</h5>
+                                <span class="count-badge">{{ assigned_users | length }}</span>
+                            </div>
+                            
+                            <div class="assign-user-list">
+                                {% for user in assigned_users %}
+                                <div class="user-row border-subtle">
+                                    <div class="user-info">
+                                        <div class="avatar">{{ user.full_name[:2] | upper }}</div>
+                                        <div>
+                                            <div class="font-medium text-main">{{ user.full_name }}</div>
+                                            <div class="text-sm text-muted">{{ user.email }}</div>
+                                        </div>
+                                    </div>
+                                    <form action="/admin/roles/remove" method="POST" class="m-0">
+                                        <input type="hidden" name="user_id" value="{{ user.id }}">
+                                        <input type="hidden" name="role_id" value="{{ selected_role.id }}">
+                                        <button type="submit" class="btn-icon text-danger border-danger p-1 rounded hover-bg-danger">✕</button>
+                                    </form>
+                                </div>
+                                {% else %}
+                                <div class="text-muted text-sm p-3">No users currently assigned to this role.</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="unassigned-section">
+                            <form action="/admin/roles/assign" method="POST" id="assignForm">
+                                <input type="hidden" name="role_id" value="{{ selected_role.id }}">
+                                
+                                <div class="section-header flex items-center justify-between mb-2">
+                                    <div class="section-header flex items-center justify-between mb-4">
+                                        <div class="flex items-center gap-2">
+                                            <h5 class="text-sm font-bold text-accent uppercase m-0">Unassigned Users</h5>
+                                            <span class="count-badge">{{ unassigned_users | length }}</span>
+                                        </div>
+                                        
+                                        <button type="submit" id="dynamicAssignBtn" class="btn btn-primary btn-sm" style="display: none;">
+                                            ✓ Assign {{ selected_role.name | upper }} to 0 users
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="assign-user-list">
+                                    {% for user in unassigned_users %}
+                                    <label class="user-row border-subtle cursor-pointer hover-highlight">
+                                        <div class="user-info">
+                                            <div class="avatar">{{ user.full_name[:2] | upper }}</div>
+                                            <div>
+                                                <div class="font-medium text-main">{{ user.full_name }}</div>
+                                                <div class="text-sm text-muted">{{ user.email }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="user-action">
+                                            <input type="checkbox" name="selected_users[]" value="{{ user.id }}" class="form-checkbox assign-checkbox">
+                                        </div>
+                                    </label>
+                                    {% else %}
+                                    <div class="text-muted text-sm p-3">All users have been assigned to a role.</div>
+                                    {% endfor %}
+                                </div>
+                            </form>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const checkboxes = document.querySelectorAll('.assign-checkbox');
+            const submitBtn = document.getElementById('dynamicAssignBtn');
+            const roleName = "{{ selected_role.name | upper }}";    
+
+            checkboxes.forEach(box => {
+                box.addEventListener('change', () => {
+                    const checkedCount = document.querySelectorAll('.assign-checkbox:checked').length;
+                    
+                    if (checkedCount > 0) {
+                        // SHOW the button on the right side
+                        submitBtn.style.display = 'inline-block';
+                        
+                        // Update the text grammar
+                        const plural = checkedCount === 1 ? 'user' : 'users';
+                        submitBtn.innerHTML = `✓ Assign ${roleName} to ${checkedCount} ${plural}`;
+                    } else {
+                        // HIDE the button completely when nothing is selected
+                        submitBtn.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

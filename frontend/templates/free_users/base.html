@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}User - StockLens{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="app-page">
+
+    <div class="app-layout">
+        <aside class="app-sidebar">
+            <div class="sidebar-brand">
+                <span class="logo-icon">📈</span>
+                <span class="brand-name">StockLens</span>
+                <span class="role-tag badge-subtle" style="margin-left: auto;">FREE</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/user/watchlist" class="nav-item {% block nav_watchlist %}{% endblock %}">
+                    <span class="nav-icon">⭐</span> Watchlist
+                </a>
+                <a href="/user/market_overview" class="nav-item {% block nav_market %}{% endblock %}">
+                    <span class="nav-icon">📊</span> Market Overview
+                </a>
+                <a href="/user/news_social" class="nav-item {% block nav_news %}{% endblock %}">
+                    <span class="nav-icon">📰</span> News & Social
+                </a>
+                <a href="/user/financials" class="nav-item {% block nav_financials %}{% endblock %}">
+                    <span class="nav-icon">📉</span> Financials
+                </a>
+            </nav>
+        </aside>
+
+        <main class="app-main">
+            <header class="app-topbar">
+                <form action="/search" method="GET" class="topbar-search">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" name="q" placeholder="Search ticker symbol..." class="form-control search-input bg-darker">
+                </form>
+                
+                <div class="topbar-actions">
+                    <button class="btn-icon">🔔</button>
+                    <div class="user-chip">
+                        <span class="avatar-sm">JS</span>
+                        <span class="text-sm font-medium">john.smith</span>
+                    </div>
+                    <a href="/logout" class="btn btn-outline btn-sm">Log Out</a>
+                </div>
+            </header>
+
+            <div class="page-content">
+                {% block content %}
+                {% endblock %}
+            </div>
+        </main>
+    </div>
+
+    {% block scripts %}
+    {% endblock %}
+</body>
+</html>
