@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log In - StockLens</title>
+    <link rel="stylesheet" href="static/css/styles.css">
+</head>
+<body class="auth-page">
+
+    <div class="auth-container">
+        <a href="/" class="back-link">
+            <span>&larr;</span> Back to Home
+        </a>
+
+        <a href="/" class="auth-brand">
+            <span class="logo-icon">📈</span>
+            <span class="brand-name">StockLens</span>
+        </a>
+
+        <div class="card auth-card">
+            <div class="auth-header">
+                <h2>Welcome back</h2>
+                <p>Enter your details to access your dashboard.</p>
+            </div>
+
+            <form action="/login" method="POST" class="auth-form">
+                <div class="form-group">
+                    <label for="email" class="form-label">Email Address</label>
+                    <input type="email" id="email" name="email" class="form-control" placeholder="you@example.com" required>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-label-group">
+                        <label for="password" class="form-label">Password</label>
+                        <a href="/forgot-password" class="forgot-link">Forgot password?</a>
+                    </div>
+                    <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-full">Log In</button>
+            </form>
+
+            <div class="auth-footer">
+                <p>Don't have an account? <a href="/signup" class="text-accent">Sign up</a></p>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

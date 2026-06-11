@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Premium Dashboard - StockLens{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="app-page">
+
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <span class="logo-icon">📈</span>
+                <span class="brand-name">StockLens</span>
+                <span class="badge-premium" style="margin-left: auto;">PREMIUM</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/premium/recommendations" class="nav-item {% block nav_recommendations %}{% endblock %}">
+                    <span style="margin-right: 10px;">🎯</span> Recommendations
+                </a>
+                <a href="/premium/prediction_breakdown" class="nav-item {% block nav_breakdown %}{% endblock %}">
+                    <span style="margin-right: 10px;">🧠</span> Prediction Breakdown
+                </a>
+                <a href="/premium/weightages" class="nav-item {% block nav_weightages %}{% endblock %}">
+                    <span style="margin-right: 10px;">⚖️</span> Model Weightages
+                </a>
+                
+                <div style="height: 1px; background-color: var(--border-color); margin: 1rem 1.5rem;"></div>
+                
+                <a href="/user/watchlist" class="nav-item {% block nav_watchlist %}{% endblock %}">
+                    <span class="nav-icon">⭐</span> Watchlist
+                </a>
+                <a href="/user/market_overview" class="nav-item {% block nav_market %}{% endblock %}">
+                    <span class="nav-icon">📊</span> Market Overview
+                </a>
+                <a href="/user/news_social" class="nav-item {% block nav_news %}{% endblock %}">
+                    <span class="nav-icon">📰</span> News & Social
+                </a>
+                <a href="/user/financials" class="nav-item">
+                    <span class="nav-icon">📉</span> Financials
+                </a>
+            </nav>
+        </aside>
+
+        <main class="app-main">
+            <header class="app-topbar" style="justify-content: flex-start; gap: 1.5rem;">
+                <form action="/premium/prediction_breakdown" method="GET" class="topbar-search" style="width: 100%; max-width: 500px; display: flex; align-items: center;">
+                    <span class="search-icon" style="position: absolute; margin-left: 12px; color: var(--text-muted);">🔍</span>
+                    <input type="text" name="symbol" class="form-control search-input bg-darker" placeholder="Global symbol analysis look-up... (e.g. PLTR)" style="padding-left: 36px; text-transform: uppercase; width: 100%;">
+                </form>
+                
+                <div class="topbar-actions" style="margin-left: auto; display: flex; align-items: center; gap: 1rem;">
+                    <button class="btn-icon">🔔</button>
+                    <a href="/logout" class="btn btn-outline btn-sm">Log Out</a>
+                </div>
+            </header>
+
+            <div class="page-content" style="max-width: 1100px; margin: 0 auto; width: 100%;">
+                {% block content %}
+                {% endblock %}
+            </div>
+        </main>
+    </div>
+
+    {% block scripts %}
+    {% endblock %}
+</body>
+</html>

@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Model Weightages - StockLens{% endblock %}
+
+{% block nav_weights %}active{% endblock %}
+
+{% block content %}
+<div id="db-defaults" 
+     data-technical="{{ defaults.technical if defaults else 40 }}" 
+     data-sentiment="{{ defaults.sentiment if defaults else 30 }}" 
+     data-financial="{{ defaults.financial if defaults else 30 }}" 
+     style="display: none;">
+</div>
+
+<header style="margin-top: 2rem; margin-bottom: 1.5rem;">
+    <h1 class="text-2xl font-bold text-main m-0 mb-2">Default Model Weightages</h1>
+    <p class="text-muted text-sm m-0" style="max-width: 600px;">
+        These values set the baseline for all users' predictions. Premium users can override on their own accounts.
+    </p>
+</header>
+
+<div class="table-card" style="border: 1px solid var(--border-color); border-radius: 8px; max-width: 750px;">
+    <form action="/backend_admin/weightages" method="POST" id="weightForm">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Factor</th>
+                    <th style="width: 55%;">Description</th>
+                    <th style="text-align: right; width: 20%;">Weight (%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="font-bold text-main">Technical Analysis</td>
+                    <td class="text-muted text-sm">Price action, volume, moving averages, oscillators</td>
+                    <td style="text-align: right;">
+                        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px;">
+                            <input type="number" name="technical" class="form-control weight-input" 
+                                   value="{{ defaults.technical if defaults else 40 }}" min="0" max="100" style="width: 70px; text-align: center; padding: 0.5rem;"> 
+                            <span class="text-muted">%</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="font-bold text-main">Sentiment Analysis</td>
+                    <td class="text-muted text-sm">News sentiment, social media, analyst ratings</td>
+                    <td style="text-align: right;">
+                        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px;">
+                            <input type="number" name="sentiment" class="form-control weight-input" 
+                                   value="{{ defaults.sentiment if defaults else 30 }}" min="0" max="100" style="width: 70px; text-align: center; padding: 0.5rem;"> 
+                            <span class="text-muted">%</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="font-bold text-main">Financial Analysis</td>
+                    <td class="text-muted text-sm">Earnings, revenue, margins, balance sheet</td>
+                    <td style="text-align: right;">
+                        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px;">
+                            <input type="number" name="financial" class="form-control weight-input" 
+                                   value="{{ defaults.financial if defaults else 30 }}" min="0" max="100" style="width: 70px; text-align: center; padding: 0.5rem;"> 
+                            <span class="text-muted">%</span>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr style="background-color: rgba(30, 41, 59, 0.3);">
+                    <td colspan="2" class="font-bold text-muted" style="letter-spacing: 1px;">TOTAL</td>
+                    <td style="text-align: right; font-weight: bold; font-size: 1.1rem;" id="total-weight" class="status-active">
+                        100%
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+        
+        <div style="padding: 1.5rem; display: flex; gap: 1rem; border-top: 1px solid var(--border-color);">
+            <button type="submit" class="btn btn-primary" id="saveBtn">Save as Default</button>
+            <button type="button" class="btn btn-outline" id="resetBtn">Reset</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const inputs = document.querySelectorAll('.weight-input');
+    const totalDisplay = document.getElementById('total-weight');
+    const saveBtn = document.getElementById('saveBtn');
+    const dbDefaultsDiv = document.getElementById('db-defaults');
+
+    function calculateTotal() {
+        let sum = 0;
+        inputs.forEach(input => {
+            sum += parseInt(input.value) || 0;
+        });
+
+        totalDisplay.innerText = sum + '%';
+
+        if (sum === 100) {
+            totalDisplay.className = 'status-active'; 
+            saveBtn.disabled = false;
+            saveBtn.style.opacity = '1';
+        } else {
+            totalDisplay.className = 'status-suspended'; 
+            saveBtn.disabled = true; 
+            saveBtn.style.opacity = '0.5';
+        }
+    }
+
+    inputs.forEach(input => {
+        input.addEventListener('input', calculateTotal);
+    });
+
+    // Dynamically reads the original record pulled straight from the DB
+    document.getElementById('resetBtn').addEventListener('click', () => {
+        inputs[0].value = dbDefaultsDiv.getAttribute('data-technical') || 40;
+        inputs[1].value = dbDefaultsDiv.getAttribute('data-sentiment') || 30;
+        inputs[2].value = dbDefaultsDiv.getAttribute('data-financial') || 30;
+        calculateTotal();
+    });
+
+    // Initialize calculation state on DOM load
+    calculateTotal();
+</script>
+{% endblock %}

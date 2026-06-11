@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import RedirectResponse
 
-from schemas import (
+from backend.schemas import (
     AccountCreate,
     EmailUpdate,
     LoginRequest,
@@ -10,7 +12,7 @@ from schemas import (
     UserStatusUpdate,
     WatchlistAdd,
 )
-from services.auth_service import (
+from backend.services.auth_service import (
     AuthServiceError,
     admin_get_user,
     admin_list_users,
@@ -21,24 +23,25 @@ from services.auth_service import (
     update_email,
     update_password,
 )
-from services.stock_list_service import get_stock_by_symbol
-from services.stock_history_service import get_latest_stock_price
-from services.prediction_service import get_latest_prediction_by_symbol
-from services.sentiment.sentiment_aggregator import get_sentiment_summary
-from services.user_profile_service import (
+from backend.services.stock_list_service import get_stock_by_symbol
+from backend.services.stock_history_service import get_latest_stock_price
+from backend.services.prediction_service import get_latest_prediction_by_symbol
+from backend.services.sentiment.sentiment_aggregator import get_sentiment_summary
+from backend.services.user_profile_service import (
     get_profile,
     get_profiles,
     update_profile,
     update_user_role,
     update_user_status,
 )
-from services.user_watchlist_service import (
+from backend.services.user_watchlist_service import (
     add_user_watchlist_stock,
     get_user_watchlist,
     remove_user_watchlist_stock,
 )
 
 router = APIRouter()
+templates = Jinja2Templates(directory="frontend/templates")
 
 
 def _payload(model, exclude_none: bool = False):
@@ -233,6 +236,9 @@ def view_current_user_watchlist_summary(authorization: str = Header(default=None
         except Exception:
             sentiment = {}
 
+        weighted_scores = sentiment.get("weighted_scores") or []
+        legacy_daily_scores = sentiment.get("daily_scores") or []
+
         summary.append({
             "watchlist_id": item["id"],
             "stock_id": item["stock_id"],
@@ -242,11 +248,9 @@ def view_current_user_watchlist_summary(authorization: str = Header(default=None
             "latest_price": latest_price[0] if len(latest_price) > 0 else None,
             "latest_prediction": latest_prediction[0] if len(latest_prediction) > 0 else None,
             "sentiment": {
-                "latest_daily_score": (
-                    sentiment.get("daily_scores", [None])[0]
-                    if sentiment.get("daily_scores")
-                    else None
-                )
+                "latest_daily_score": weighted_scores[0]
+                if weighted_scores
+                else (legacy_daily_scores[0] if legacy_daily_scores else None)
             },
             "added_at": item["created_at"],
         })
@@ -361,3 +365,60 @@ def edit_admin_user_status(
         raise HTTPException(status_code=404, detail="Profile not found")
 
     return updated[0]
+
+
+# ==========================================
+# Shared User Routes (Free & Premium)
+# ==========================================
+
+@router.get("/user/watchlist")
+async def watchlist(request: Request):
+    role = request.session.get("user_role")
+    if not role:
+        return RedirectResponse(url="/login", status_code=303)
+
+    # DYNAMIC LAYOUT SELECTOR: Chooses the shell based on the user's role
+    layout = "premium_users/base.html" if role == "premium_user" else "free_users/base.html"
+
+    return templates.TemplateResponse(
+        request=request, 
+        name="free_users/watchlist.html",
+        context={
+            "request": request,
+            "base_layout": layout  # Passes the chosen layout to Jinja2
+        }
+    )
+
+@router.get("/user/market_overview")
+async def market_overview(request: Request):
+    role = request.session.get("user_role")
+    if not role:
+        return RedirectResponse(url="/login", status_code=303)
+
+    layout = "premium_users/base.html" if role == "premium_user" else "free_users/base.html"
+
+    return templates.TemplateResponse(
+        request=request, 
+        name="free_users/user_market_overview.html",
+        context={
+            "request": request,
+            "base_layout": layout
+        }
+    )
+
+@router.get("/user/news_social")
+async def news_social(request: Request):
+    role = request.session.get("user_role")
+    if not role:
+        return RedirectResponse(url="/login", status_code=303)
+
+    layout = "premium_users/base.html" if role == "premium_user" else "free_users/base.html"
+
+    return templates.TemplateResponse(
+        request=request, 
+        name="free_users/news_social.html",
+        context={
+            "request": request,
+            "base_layout": layout
+        }
+    )

@@ -1,0 +1,82 @@
+{% extends base_layout %}
+
+{% block title %}Market Overview - StockLens{% endblock %}
+
+{% block nav_market %}active{% endblock %}
+
+{% block content %}
+
+<div class="page-content">
+    <h1 class="text-2xl font-bold text-main mb-6">Market Overview</h1>
+
+    <div class="grid-2">
+        
+        <div class="card movers-card border-t-success">
+            <div class="movers-header text-success">
+                <span class="icon">↗</span> TOP GAINERS
+            </div>
+            <div class="movers-list">
+                <a href="/quote?symbol=smci" class="movers-row">
+                    <span class="font-bold text-accent ticker-col">SMCI</span>
+                    <span class="text-main price-col">$48.90</span>
+                    <span class="trend-badge badge-success">▲ 12.4%</span>
+                </a>
+                <a href="/quote?symbol=arm" class="movers-row">
+                    <span class="font-bold text-accent ticker-col">ARM</span>
+                    <span class="text-main price-col">$135.50</span>
+                    <span class="trend-badge badge-success">▲ 8.7%</span>
+                </a>
+                <a href="/quote?symbol=pltr" class="movers-row">
+                    <span class="font-bold text-accent ticker-col">PLTR</span>
+                    <span class="text-main price-col">$25.80</span>
+                    <span class="trend-badge badge-success">▲ 7.2%</span>
+                </a>
+                <a href="/quote?symbol=rivn" class="movers-row">
+                    <span class="font-bold text-accent ticker-col">RIVN</span>
+                    <span class="text-main price-col">$14.30</span>
+                    <span class="trend-badge badge-success">▲ 6.5%</span>
+                </a>
+                <a href="/quote?symbol=coin" class="movers-row">
+                    <span class="font-bold text-accent ticker-col">COIN</span>
+                    <span class="text-main price-col">$245.60</span>
+                    <span class="trend-badge badge-success">▲ 5.9%</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="card movers-card border-t-danger">
+            <div class="movers-header text-danger">
+                <span class="icon">↘</span> TOP LOSERS
+            </div>
+            <div class="movers-list">
+                <a href="/quote?symbol=intc" class="movers-row">
+                    <span class="font-bold text-accent ticker-col">INTC</span>
+                    <span class="text-main price-col">$31.20</span>
+                    <span class="trend-badge badge-danger">▼ 6.8%</span>
+                </a>
+                <a href="/quote?symbol=snap" class="movers-row">
+                    <span class="font-bold text-accent ticker-col">SNAP</span>
+                    <span class="text-main price-col">$11.40</span>
+                    <span class="trend-badge badge-danger">▼ 5.2%</span>
+                </a>
+                <a href="/quote?symbol=lyft" class="movers-row">
+                    <span class="font-bold text-accent ticker-col">LYFT</span>
+                    <span class="text-main price-col">$13.70</span>
+                    <span class="trend-badge badge-danger">▼ 4.1%</span>
+                </a>
+                <a href="/quote?symbol=hood" class="movers-row">
+                    <span class="font-bold text-accent ticker-col">HOOD</span>
+                    <span class="text-main price-col">$18.90</span>
+                    <span class="trend-badge badge-danger">▼ 3.6%</span>
+                </a>
+                <a href="/quote?symbol=amc" class="movers-row">
+                    <span class="font-bold text-accent ticker-col">AMC</span>
+                    <span class="text-main price-col">$4.20</span>
+                    <span class="trend-badge badge-danger">▼ 3.1%</span>
+                </a>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

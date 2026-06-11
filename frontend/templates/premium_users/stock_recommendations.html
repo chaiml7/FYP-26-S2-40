@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Recommendations - StockLens{% endblock %}
+
+{% block nav_recommendations %}active{% endblock %}
+
+{% block content %}
+<div class="page-content" style="max-width: 1100px; margin: 0 auto; width: 100%;">
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1 class="text-2xl font-bold text-main m-0">Stock Recommendations</h1>
+        
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <span class="text-sm text-muted">Risk profile:</span>
+            <div class="filter-pills">
+                <button class="pill" style="border:none; background:transparent;">Conservative</button>
+                <button class="pill active" style="border:none;">Moderate</button>
+                <button class="pill" style="border:none; background:transparent;">Aggressive</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="recommendations-container">
+        
+        {% for rec in recommendations %}
+        <div class="recommendation-card">
+            <div>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                    <span class="text-accent font-bold" style="font-size: 1.1rem;">{{ rec.ticker }}</span>
+                    
+                    {% if rec.action == 'STRONG BUY' or rec.action == 'BUY' %}
+                        <span class="rating-buy">{{ rec.action }}</span>
+                    {% elif rec.action == 'SELL' or rec.action == 'STRONG SELL' %}
+                        <span class="badge-danger">{{ rec.action }}</span>
+                    {% else %}
+                        <span class="risk-badge">{{ rec.action }}</span>
+                    {% endif %}
+                    
+                    <span class="risk-badge">Risk: Medium</span>
+                </div>
+                <div class="text-muted text-sm mb-2">{{ rec.company_name }}</div>
+                <div class="text-main font-medium">{{ rec.rationale }}</div>
+            </div>
+            <div style="text-align: right;">
+                <div class="text-muted text-sm" style="letter-spacing: 1px;">TARGET</div>
+                <div style="color: #10b981; font-size: 1.5rem; font-weight: 800; margin-bottom: 4px;">${{ rec.target_price }}</div>
+                <div style="display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
+                    <span class="text-sm text-muted">Confidence <span class="text-main font-bold">{{ rec.confidence }}%</span></span>
+                </div>
+                <div class="confidence-container" style="margin-left: auto;">
+                <div class="confidence-bg">
+                    <div class="confidence-fill" style="width: {{ rec.confidence }}%;"></div>
+                </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="panel-card" style="text-align: center; padding: 3rem;">
+            <p class="text-muted">No stock predictions have been generated yet. Please check back later.</p>
+        </div>
+        {% endfor %}
+        <div class="panel-card">
+            <div class="panel-header">Signal Breakdown</div>
+            
+            <div class="dashboard-grid" style="margin-bottom: 0;">
+                <div class="signal-column">
+                    <div class="signal-row">
+                        <span class="text-muted text-sm">RSI (14)</span>
+                        <span class="text-main font-bold text-sm">62.4</span>
+                    </div>
+                    <div class="signal-row">
+                        <span class="text-muted text-sm">Volume</span>
+                        <span style="color: #10b981; font-weight: bold; font-size: 0.875rem;">+34% above avg</span>
+                    </div>
+                    <div class="signal-row">
+                        <span class="text-muted text-sm">Insider activity</span>
+                        <span class="text-main font-bold text-sm">No recent sales</span>
+                    </div>
+                </div>
+                
+                <div class="signal-column">
+                    <div class="signal-row">
+                        <span class="text-muted text-sm">MACD</span>
+                        <span style="color: #10b981; font-weight: bold; font-size: 0.875rem;">Bullish crossover</span>
+                    </div>
+                    <div class="signal-row">
+                        <span class="text-muted text-sm">Social sentiment</span>
+                        <span style="color: #10b981; font-weight: bold; font-size: 0.875rem;">Very positive (0.82)</span>
+                    </div>
+                    <div class="signal-row">
+                        <span class="text-muted text-sm">Analyst consensus</span>
+                        <span style="color: #10b981; font-weight: bold; font-size: 0.875rem;">18 Buy / 3 Hold</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

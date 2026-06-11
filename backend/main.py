@@ -3,6 +3,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
+from routes.financial_routes import router as financial_router
 from routes.stock_routes import router as stock_router
 from routes.user_routes import router as user_router
 from services.sentiment.sentiment_pipeline import run_pipeline
@@ -43,3 +44,4 @@ def home():
 
 app.include_router(stock_router, prefix="/api")
 app.include_router(user_router, prefix="/api")
+app.include_router(financial_router, prefix="/api")

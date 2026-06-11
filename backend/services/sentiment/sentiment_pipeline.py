@@ -2,10 +2,10 @@ import time
 import logging
 from datetime import date
 
-from services.sentiment.finnhub_service import fetch_news as fetch_finnhub
-from services.sentiment.news_scraper_service import fetch_news as fetch_newsapi
-from services.sentiment.finbert_service import score_headlines
-from services.sentiment.sentiment_aggregator import save_scores, has_data_for_today
+from backend.services.sentiment.finnhub_service import fetch_news as fetch_finnhub
+from backend.services.sentiment.news_scraper_service import fetch_news as fetch_newsapi
+from backend.services.sentiment.finbert_service import score_headlines
+from backend.services.sentiment.sentiment_aggregator import (save_daily_sentiment_score,save_scores,has_data_for_today)
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,13 @@ def run_pipeline() -> dict:
             scores = score_headlines([h["headline"] for h in headlines])
             scored = [{**headlines[i], **scores[i]} for i in range(len(headlines))]
             save_scores(symbol, scored)
-            results.append({"symbol": symbol, "headlines_scored": len(scored), "status": "ok"})
+            daily_score_result = save_daily_sentiment_score(symbol, from_date)
+            results.append({
+                "symbol": symbol,
+                "headlines_scored": len(scored),
+                "daily_score_saved": daily_score_result["rows_saved"],
+                "status": "ok",
+            })
         except Exception as e:
             logger.error("Pipeline failed for %s: %s", symbol, e)
             results.append({"symbol": symbol, "headlines_scored": 0, "status": "error", "reason": str(e)})

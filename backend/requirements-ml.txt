@@ -1,2 +1,4 @@
 transformers
 torch
+xgboost>=2.1,<4
+scikit-learn>=1.5,<2

@@ -1,7 +1,7 @@
 from datetime import date
 
 from fastapi import APIRouter, HTTPException
-from services.stock_list_service import (
+from backend.services.stock_list_service import (
     get_all_stocks,
     get_active_stocks,
     get_inactive_stocks,
@@ -12,22 +12,22 @@ from services.stock_list_service import (
     deactivate_stock,
     update_last_imported_at
 )
-from services.yfinance_service import fetch_stock_history
-from services.stock_history_service import (
+from backend.services.yfinance_service import fetch_stock_history
+from backend.services.stock_history_service import (
     save_stock_history,
     get_stock_history,
     get_latest_stock_price,
     get_stock_history_by_date_range,
     delete_stock_history
 )
-from services.sentiment.sentiment_aggregator import get_sentiment_summary
-from services.sentiment.sentiment_pipeline import run_pipeline as run_sentiment_pipeline
-from services.prediction_service import (
+from backend.services.sentiment.sentiment_aggregator import (get_weighted_sentiment_score, save_daily_sentiment_score)
+from backend.services.sentiment.sentiment_pipeline import run_pipeline as run_sentiment_pipeline
+from backend.services.prediction_service import (
     save_prediction,
     get_predictions_by_symbol,
     get_latest_prediction_by_symbol
 )
-from schemas import StockCreate, StockUpdate, PredictionCreate
+from backend.schemas import StockCreate, StockUpdate, PredictionCreate
 
 router = APIRouter()
 
@@ -284,11 +284,51 @@ def view_latest_stock_prediction(symbol: str):
 
 
 @router.get("/stocks/{symbol}/sentiment")
-def get_stock_sentiment(symbol: str):
-    data = get_sentiment_summary(symbol)
-    if not data["daily_scores"] and not data["headlines"]:
+def get_stock_sentiment(symbol: str, score_date: date = None):
+    stock = get_stock_by_symbol(symbol)
+
+    if len(stock) == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=f"{symbol.upper()} is not in the stocks table"
+        )
+
+    selected_date = score_date or date.today()
+    score = get_weighted_sentiment_score(symbol, selected_date)
+
+    if score is None:
         raise HTTPException(status_code=404, detail=f"No sentiment data found for {symbol.upper()}")
-    return {"symbol": symbol.upper(), **data}
+
+    return {
+        "symbol": symbol.upper(),
+        "score_date": selected_date.isoformat(),
+        "sentiment": score,
+    }
+
+
+@router.post("/stocks/{symbol}/sentiment/daily-score")
+def create_stock_daily_sentiment_score(symbol: str, score_date: date = None):
+    stock = get_stock_by_symbol(symbol)
+
+    if len(stock) == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=f"{symbol.upper()} is not in the stocks table"
+        )
+
+    result = save_daily_sentiment_score(symbol, score_date)
+
+    if result["rows_saved"] == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=result.get("reason", "No sentiment rows found")
+        )
+
+    return {
+        "symbol": symbol.upper(),
+        "score_date": score_date.isoformat() if score_date else date.today().isoformat(),
+        **result,
+    }
 
 
 @router.post("/sentiment/run-pipeline")
