@@ -1,15 +1,28 @@
 from typing import Any
 
+import logging
 import numpy as np
 import pandas as pd
 
 from database.supabase_client import supabase
-from services.technical.price_service import MARKET_CONTEXT_COLUMNS, _to_json_value
+from services.technical.price_service import (
+    MARKET_CONTEXT_COLUMNS,
+    MARKET_CONTEXT_INTEGER_COLUMNS,
+    SUPABASE_SELECT_BATCH_SIZE,
+    get_stocks_from_supabase,
+    _to_json_value,
+)
+
+logger = logging.getLogger(__name__)
 
 INDICATOR_UPSERT_BATCH_SIZE = 500
+INDICATOR_META_COLUMNS = ["stock_id", "symbol"]
 
 INDICATOR_COLUMNS = [
     "date",
+    "open",
+    "high",
+    "low",
     "close",
     "volume",
     "return_1d",
@@ -58,6 +71,13 @@ INDICATOR_COLUMNS = [
     "close_lag_5",
     *MARKET_CONTEXT_COLUMNS,
 ]
+
+INDICATOR_INTEGER_COLUMNS = {
+    "trend_filter_50_200",
+    "breakout_indicator",
+    "breakdown_indicator",
+    *MARKET_CONTEXT_INTEGER_COLUMNS,
+}
 
 
 def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
@@ -177,7 +197,10 @@ def upsert_technical_indicators(stock_id: int, symbol: str, df: pd.DataFrame) ->
         }
         for column in INDICATOR_COLUMNS:
             if column in row:
-                payload[column] = _to_json_value(row[column])
+                value = row[column]
+                if column in INDICATOR_INTEGER_COLUMNS and not pd.isna(value):
+                    value = int(value)
+                payload[column] = _to_json_value(value)
         rows.append(payload)
 
     saved_rows = 0
@@ -192,5 +215,94 @@ def upsert_technical_indicators(stock_id: int, symbol: str, df: pd.DataFrame) ->
     return {"rows_saved": saved_rows}
 
 
+def get_technical_indicators_from_supabase(
+    stock_id: int,
+    symbol: str | None = None,
+) -> pd.DataFrame:
+    """Read stored technical indicators from Supabase for model training."""
+    rows = []
+    offset = 0
+    while True:
+        response = (
+            supabase.table("technical_indicators")
+            .select("*")
+            .eq("stock_id", stock_id)
+            .order("date", desc=False)
+            .range(offset, offset + SUPABASE_SELECT_BATCH_SIZE - 1)
+            .execute()
+        )
+        batch = response.data or []
+        rows.extend(batch)
+        if len(batch) < SUPABASE_SELECT_BATCH_SIZE:
+            break
+        offset += SUPABASE_SELECT_BATCH_SIZE
+
+    if not rows:
+        logger.warning(
+            "No technical_indicators rows found for stock_id=%s symbol=%s",
+            stock_id,
+            symbol,
+        )
+        return pd.DataFrame(columns=INDICATOR_META_COLUMNS + INDICATOR_COLUMNS)
+
+    return _normalize_indicator_dataframe(
+        pd.DataFrame(rows),
+        stock_id=stock_id,
+        symbol=symbol,
+    )
+
+
+def get_all_technical_indicators_from_supabase() -> pd.DataFrame:
+    """Read stored technical indicators for every prediction-target stock."""
+    frames = []
+    for stock in get_stocks_from_supabase():
+        stock_id = stock["id"]
+        symbol = stock["symbol"]
+        stock_df = get_technical_indicators_from_supabase(stock_id, symbol)
+        if not stock_df.empty:
+            frames.append(stock_df)
+
+    if not frames:
+        return pd.DataFrame(columns=INDICATOR_META_COLUMNS + INDICATOR_COLUMNS)
+
+    result = pd.concat(frames, ignore_index=True)
+    return result.sort_values(["date", "symbol"], ascending=True).reset_index(drop=True)
+
+
 def _chunks(rows: list[dict[str, Any]], size: int) -> list[list[dict[str, Any]]]:
     return [rows[index : index + size] for index in range(0, len(rows), size)]
+
+
+def _normalize_indicator_dataframe(
+    df: pd.DataFrame,
+    stock_id: int | None = None,
+    symbol: str | None = None,
+) -> pd.DataFrame:
+    if df is None or df.empty:
+        return pd.DataFrame(columns=INDICATOR_META_COLUMNS + INDICATOR_COLUMNS)
+
+    result = df.copy()
+    if "stock_id" not in result.columns:
+        result["stock_id"] = stock_id
+    if "symbol" not in result.columns:
+        result["symbol"] = symbol
+
+    missing_columns = [column for column in INDICATOR_COLUMNS if column not in result.columns]
+    if missing_columns:
+        logger.warning("Supabase indicator data missing columns: %s", missing_columns)
+        for column in missing_columns:
+            result[column] = np.nan
+
+    result = result[INDICATOR_META_COLUMNS + INDICATOR_COLUMNS].copy()
+    result["date"] = pd.to_datetime(result["date"], errors="coerce", utc=True).dt.date
+
+    numeric_columns = [column for column in INDICATOR_COLUMNS if column != "date"]
+    for column in numeric_columns:
+        result[column] = pd.to_numeric(result[column], errors="coerce")
+    result["stock_id"] = pd.to_numeric(result["stock_id"], errors="coerce")
+    result["symbol"] = result["symbol"].astype(str).str.upper()
+
+    result = result.dropna(subset=["stock_id", "symbol", "date", "close", "volume"])
+    result["stock_id"] = result["stock_id"].astype(int)
+    result["date"] = result["date"].astype(str)
+    return result.sort_values(["date", "symbol"], ascending=True).reset_index(drop=True)

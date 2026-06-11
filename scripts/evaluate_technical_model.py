@@ -4,9 +4,9 @@ Evaluate the technical-analysis direction classifier for one ticker.
 Run from repo root:
     python scripts/evaluate_technical_model.py --symbol AAPL
 
-This script does not write to Supabase. It fetches historical prices from
-yfinance, calculates the same technical indicators as the backend pipeline,
-and reports walk-forward classification metrics.
+By default this script writes the yfinance price data into Supabase, stores
+stock_prices and technical_indicators rows, then evaluates from stored
+technical_indicators data. Use --no-supabase for a local-only experiment.
 """
 import argparse
 import math
@@ -22,7 +22,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "backend", ".env"))
 
-from services.technical.indicator_service import add_technical_indicators
+from services.technical.indicator_service import (
+    add_technical_indicators,
+    get_technical_indicators_from_supabase,
+    upsert_technical_indicators,
+)
 from services.technical.model_service import (
     DEFAULT_MAX_FEATURES,
     FEATURES,
@@ -34,7 +38,15 @@ from services.technical.model_service import (
     tune_lightgbm_params,
     walk_forward_validation,
 )
-from services.technical.price_service import add_market_context_features, fetch_price_history
+from services.technical.price_service import (
+    add_market_context_features,
+    fetch_price_history,
+    get_daily_ohlcv_from_supabase,
+    get_stock_by_symbol,
+    get_stock_prices_from_supabase,
+    upsert_daily_ohlcv,
+    upsert_stock_prices,
+)
 
 
 METRIC_KEYS = [
@@ -63,13 +75,7 @@ def main() -> int:
         print(f"\nNo yfinance data returned for {symbol}.")
         return 1
 
-    enriched_price_df = add_market_context_features(
-        price_df,
-        symbol=symbol,
-        period=args.period,
-        interval=args.interval,
-    )
-    indicator_df = add_technical_indicators(enriched_price_df)
+    indicator_df = prepare_indicator_data(args, symbol, price_df)
     X, y, clean_df = prepare_training_data(
         indicator_df,
         target_return_threshold=args.target_threshold,
@@ -185,7 +191,63 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Use all features instead of selecting by LightGBM feature importance.",
     )
+    parser.add_argument(
+        "--no-supabase",
+        action="store_true",
+        help="Skip Supabase sync/readback and evaluate directly from yfinance data.",
+    )
     return parser.parse_args()
+
+
+def prepare_indicator_data(
+    args: argparse.Namespace,
+    symbol: str,
+    price_df: pd.DataFrame,
+) -> pd.DataFrame:
+    if args.no_supabase:
+        print("\nUsing local yfinance data directly because --no-supabase was provided.")
+        training_price_df = add_market_context_features(
+            price_df,
+            symbol=symbol,
+            period=args.period,
+            interval=args.interval,
+        )
+        return add_technical_indicators(training_price_df)
+
+    stock = get_stock_by_symbol(symbol)
+    if stock is None:
+        print(f"\n{symbol} was not found in the stocks table; falling back to local yfinance data.")
+        training_price_df = add_market_context_features(
+            price_df,
+            symbol=symbol,
+            period=args.period,
+            interval=args.interval,
+        )
+        return add_technical_indicators(training_price_df)
+
+    stock_id = stock["id"]
+    raw_result = upsert_daily_ohlcv(stock_id, symbol, price_df)
+    raw_price_df = get_daily_ohlcv_from_supabase(stock_id, symbol)
+    enriched_price_df = add_market_context_features(
+        raw_price_df,
+        symbol=symbol,
+        period=args.period,
+        interval=args.interval,
+    )
+    stock_prices_result = upsert_stock_prices(stock_id, symbol, enriched_price_df)
+    training_price_df = get_stock_prices_from_supabase(stock_id, symbol)
+    indicator_df = add_technical_indicators(training_price_df)
+    indicator_result = upsert_technical_indicators(stock_id, symbol, indicator_df)
+    stored_indicator_df = get_technical_indicators_from_supabase(stock_id, symbol)
+
+    print_header("Supabase Source")
+    print(f"daily_ohlcv rows upserted: {raw_result['rows_saved']}")
+    print(f"stock_prices rows upserted: {stock_prices_result['rows_saved']}")
+    print(f"stock_prices rows read for training: {len(training_price_df)}")
+    print(f"technical_indicators rows upserted: {indicator_result['rows_saved']}")
+    print(f"technical_indicators rows read for training: {len(stored_indicator_df)}")
+
+    return stored_indicator_df
 
 
 def print_data_summary(

@@ -6,6 +6,7 @@ yfinance
 pandas
 numpy
 scikit-learn
+joblib
 lightgbm
 xgboost
 transformers

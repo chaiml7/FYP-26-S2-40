@@ -1,5 +1,8 @@
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
+import joblib
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
@@ -15,6 +18,11 @@ from sklearn.metrics import (
 TARGET_RETURN_THRESHOLD = 0.002
 DEFAULT_DECISION_THRESHOLD = 0.5
 DEFAULT_MAX_FEATURES = 40
+MODEL_ARTIFACT_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "artifacts"
+    / "technical_direction_model.joblib"
+)
 
 MARKET_CONTEXT_FEATURES = [
     "market_spy_return_1d",
@@ -186,16 +194,29 @@ def prepare_training_data(
     if missing_features:
         raise ValueError(f"Missing feature columns: {', '.join(missing_features)}")
 
-    clean_df = df.copy()
-    clean_df["next_day_return"] = clean_df["close"].shift(-1) / clean_df["close"] - 1
+    clean_df = _sort_for_target_creation(df)
+    group_columns = _target_group_columns(clean_df)
+    if group_columns:
+        next_close = clean_df.groupby(group_columns, sort=False)["close"].shift(-1)
+    else:
+        next_close = clean_df["close"].shift(-1)
+
+    clean_df["next_day_return"] = next_close / clean_df["close"] - 1
     clean_df["target_direction"] = (
         clean_df["next_day_return"] > target_return_threshold
     ).astype(int)
     clean_df.loc[clean_df["next_day_return"].isna(), "target_direction"] = pd.NA
+    clean_df = _sort_for_chronological_training(clean_df)
 
     clean_df = clean_df.replace([np.inf, -np.inf], np.nan)
     clean_df = clean_df.dropna(subset=feature_names + ["target_direction"]).copy()
     clean_df["target_direction"] = clean_df["target_direction"].astype(int)
+    if group_columns:
+        clean_df["previous_direction_baseline"] = (
+            clean_df.groupby(group_columns, sort=False)["target_direction"].shift(1)
+        )
+    else:
+        clean_df["previous_direction_baseline"] = clean_df["target_direction"].shift(1)
     clean_df = clean_df.reset_index(drop=True)
 
     X = clean_df[feature_names].copy()
@@ -356,7 +377,9 @@ def walk_forward_validation(
         majority_class = int(y_train.mode().iloc[0])
         majority_pred = np.full(len(y_test), majority_class, dtype=int)
 
-        previous_direction_pred = y.shift(1).iloc[test_start:test_end]
+        previous_direction_pred = clean_df["previous_direction_baseline"].iloc[
+            test_start:test_end
+        ]
         previous_direction_pred = previous_direction_pred.fillna(majority_class).astype(int)
 
         window_payloads.append(
@@ -473,6 +496,30 @@ def train_final_model(
 def get_feature_importance(model: Any, limit: int = 15) -> list[dict[str, float]]:
     importance = getattr(model, "feature_importances_", [])
     return importance[:limit]
+
+
+def save_model_artifact(
+    model: Any,
+    metadata: dict[str, Any],
+    path: Path | str = MODEL_ARTIFACT_PATH,
+) -> Path:
+    """Persist the trained model and training metadata locally."""
+    artifact_path = Path(path)
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "model": model,
+        "metadata": {
+            **metadata,
+            "saved_at": datetime.now(UTC).isoformat(),
+        },
+    }
+    joblib.dump(payload, artifact_path)
+    return artifact_path
+
+
+def load_model_artifact(path: Path | str = MODEL_ARTIFACT_PATH) -> dict[str, Any]:
+    """Load a locally saved technical model artifact."""
+    return joblib.load(Path(path))
 
 
 def _fit_window_model(
@@ -608,3 +655,32 @@ def _base_model_name(model: Any) -> str:
     if isinstance(model, FeatureSelectedClassifier):
         return model.model.__class__.__name__
     return model.__class__.__name__
+
+
+def _sort_for_target_creation(df: pd.DataFrame) -> pd.DataFrame:
+    result = df.copy()
+    result["_date_sort"] = pd.to_datetime(result["date"], errors="coerce", utc=True)
+    sort_columns = [*_target_group_columns(result), "_date_sort"]
+    return result.sort_values(sort_columns, ascending=True).reset_index(drop=True)
+
+
+def _sort_for_chronological_training(df: pd.DataFrame) -> pd.DataFrame:
+    result = df.copy()
+    if "_date_sort" not in result.columns:
+        result["_date_sort"] = pd.to_datetime(result["date"], errors="coerce", utc=True)
+
+    sort_columns = ["_date_sort"]
+    for column in ["symbol", "stock_id"]:
+        if column in result.columns:
+            sort_columns.append(column)
+
+    result = result.sort_values(sort_columns, ascending=True).reset_index(drop=True)
+    return result.drop(columns=["_date_sort"], errors="ignore")
+
+
+def _target_group_columns(df: pd.DataFrame) -> list[str]:
+    if "stock_id" in df.columns:
+        return ["stock_id"]
+    if "symbol" in df.columns:
+        return ["symbol"]
+    return []

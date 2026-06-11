@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from database.supabase_client import supabase
 from services.technical.prediction_pipeline import (
+    predict_trends_with_saved_model,
     run_daily_technical_pipeline,
     run_technical_pipeline_for_stock,
 )
@@ -29,6 +30,29 @@ def trigger_single_symbol_technical_pipeline(symbol: str):
 
     try:
         return run_technical_pipeline_for_stock(stock["id"], stock["symbol"])
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/technical/predict-trends")
+def trigger_saved_model_predictions():
+    try:
+        return predict_trends_with_saved_model()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post("/technical/predict-trends/{symbol}")
+def trigger_saved_model_prediction_for_symbol(symbol: str):
+    stock = get_stock_by_symbol(symbol)
+    if stock is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"{symbol.upper()} is not in the stocks table",
+        )
+
+    try:
+        return predict_trends_with_saved_model(symbol=stock["symbol"])
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 

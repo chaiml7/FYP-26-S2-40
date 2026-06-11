@@ -175,9 +175,23 @@ except Exception as e:
 
 
 # Step 7: Supabase prediction row check
-step(7, "Supabase prediction row check")
+step(7, "Supabase storage and prediction row check")
 try:
     stock_id = selected_stock["id"] if selected_stock else None
+    daily_rows_response = (
+        supabase.table("daily_ohlcv")
+        .select("id")
+        .eq("stock_id", stock_id)
+        .limit(1)
+        .execute()
+    )
+    stock_prices_response = (
+        supabase.table("stock_prices")
+        .select("id")
+        .eq("stock_id", stock_id)
+        .limit(1)
+        .execute()
+    )
     response = (
         supabase.table("direction_predictions")
         .select("*")
@@ -187,6 +201,8 @@ try:
         .execute()
     )
     prediction_rows = response.data or []
+    check("daily_ohlcv has yfinance rows", len(daily_rows_response.data or []) > 0)
+    check("stock_prices has technical-ready rows", len(stock_prices_response.data or []) > 0)
     check("direction_predictions has at least one row", len(prediction_rows) > 0)
     if prediction_rows:
         pipeline_response.setdefault("latest_date", prediction_rows[0]["latest_date"])

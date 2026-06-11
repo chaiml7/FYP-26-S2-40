@@ -122,3 +122,159 @@ Top features:
 - The model predicts next-day direction, which is naturally noisy. Accuracy should be compared against baselines rather than expected to be very high.
 - If the Supabase SQL has already been run before, rerun `technical_analysis/create_technical_tables.sql` so the newer indicator and prediction metadata columns are added.
 - The Supabase key that appeared in `.env.example` should be considered exposed and rotated in Supabase.
+
+---
+
+# Session Update 11/06/2026
+
+## Pipeline Updates Completed
+
+- Added raw yfinance storage into `daily_ohlcv`.
+- Updated the technical pipeline so data is read back from Supabase before later steps:
+  - yfinance data is inserted into `daily_ohlcv`
+  - `daily_ohlcv` is read from Supabase
+  - market-context columns are added and inserted into `stock_prices`
+  - `stock_prices` is read from Supabase
+  - technical indicators are calculated and inserted into `technical_indicators`
+  - `technical_indicators` is read from Supabase for model training
+- Added paginated Supabase reads so 10 years of rows are not cut off by the default 1,000-row response limit.
+- Updated `stock_prices`, `technical_indicators`, and `daily_ohlcv` SQL definitions to use UUID primary keys.
+- Added `open`, `high`, and `low` to `technical_indicators` because these are model features.
+- Kept SPY, QQQ, VIX, and sector ETF values as market-context columns, not separate prediction rows in `stock_prices` or `technical_indicators`.
+- Added market-context columns for:
+  - SPY returns and 200 SMA flag
+  - QQQ returns and 200 SMA flag
+  - VIX level and returns
+  - mapped sector ETF returns and 200 SMA flag
+- Updated `--all` stock selection to skip market-context symbols such as `SPY`, `QQQ`, `^VIX`, `XLK`, `XLC`, and `XLY`.
+- Updated target creation so pooled training does not leak next-day labels between tickers.
+- Split model workflow into separate train and predict scripts.
+- Added model training modes:
+  - train on all target tickers
+  - train on one specified ticker
+- Added local model artifact saving at:
+
+```text
+backend/artifacts/technical_direction_model.joblib
+```
+
+- Added `.joblib` and `backend/artifacts/` to `.gitignore` so saved models stay local.
+- Added prediction script that loads the saved model and writes predictions into `direction_predictions`.
+- Added API functions/routes for saved-model prediction:
+  - `POST /technical/predict-trends`
+  - `POST /technical/predict-trends/{symbol}`
+
+## Current Table Flow
+
+```text
+yfinance
+-> daily_ohlcv
+-> stock_prices
+-> technical_indicators
+-> saved local model
+-> direction_predictions
+```
+
+## Table Changes
+
+Run `technical_analysis/create_technical_tables.sql` in Supabase to apply the latest schema.
+
+Important changes:
+
+- `daily_ohlcv.id` uses UUID.
+- `stock_prices.id` uses UUID.
+- `technical_indicators.id` uses UUID.
+- `technical_indicators` includes:
+  - `open`
+  - `high`
+  - `low`
+- `stock_prices` and `technical_indicators` include market-context columns for SPY, QQQ, VIX, and sector ETF features.
+
+## Commands To Run
+
+Run these from the project root:
+
+```powershell
+cd C:\Users\ianch\Schoolwork\fyp\FYP-26-S2-40
+```
+
+Install/update backend dependencies:
+
+```powershell
+pip install -r backend\requirements.txt
+```
+
+Sync all prediction-target stocks:
+
+```powershell
+python scripts\sync_technical_prices.py --all
+```
+
+Sync one stock:
+
+```powershell
+python scripts\sync_technical_prices.py --symbol NVDA
+```
+
+Train one model using all target tickers:
+
+```powershell
+python scripts\train_technical_model.py --all
+```
+
+Train one model using a single ticker:
+
+```powershell
+python scripts\train_technical_model.py --symbol NVDA
+```
+
+Sync first, then train on all target tickers:
+
+```powershell
+python scripts\train_technical_model.py --all --sync-first
+```
+
+Sync first, then train on one ticker:
+
+```powershell
+python scripts\train_technical_model.py --symbol NVDA --sync-first
+```
+
+Predict trends using the saved model:
+
+```powershell
+python scripts\predict_technical_trends.py
+```
+
+Predict one symbol using the saved model:
+
+```powershell
+python scripts\predict_technical_trends.py --symbol NVDA
+```
+
+Evaluate the technical model:
+
+```powershell
+python scripts\evaluate_technical_model.py --symbol NVDA
+```
+
+Run the manual technical pipeline test:
+
+```powershell
+python scripts\test_technical_manual.py
+```
+
+## Current Model Behavior
+
+- The model predicts next-day direction, not exact next-day price.
+- Target:
+
+```python
+target_direction = 1 if next_day_return > 0.002 else 0
+```
+
+- `--all` training learns from all prediction-target tickers in `technical_indicators`.
+- `--symbol NVDA` training learns only from NVDA rows in `technical_indicators`.
+- A single-ticker saved model defaults to predicting that same ticker.
+- An all-ticker saved model predicts all tickers unless `--symbol` is provided.
+- Metrics saved into `direction_predictions` are model-level validation metrics for the saved model.
