@@ -3,7 +3,7 @@ from backend.database import get_client
  
 # Maps stock symbol in Supabase stocks table → Yahoo Finance ticker
 SYMBOL_TO_YFINANCE = {
-    "PLTTR": "PLTR",
+    
 }
  
  
@@ -54,4 +54,3 @@ def load_statements_by_ticker(ticker: str) -> pd.DataFrame:
         .execute()
     )
     return pd.DataFrame(resp.data)
- 

@@ -394,3 +394,67 @@ Chai (PM) pushed a major backend refactor focused on frontend-readiness and serv
 | positive | 74.42% | 96.97% | 84.21% | 33 |
 
 ---
+
+## Run — 2026-06-10 09:37 UTC
+
+| Metric | Value |
+|--------|-------|
+| Samples | 51 |
+| CV Folds | 3 |
+| CV Accuracy | 74.51% |
+| Train/Test Accuracy | 72.73% |
+| Best Accuracy | 74.51% |
+
+**Label distribution:** {'negative': 3, 'neutral': 15, 'positive': 33}
+
+**Per-class metrics:**
+
+| Class | Precision | Recall | F1-score | Support |
+|-------|-----------|--------|----------|---------|
+| negative | 0.00% | 0.00% | 0.00% | 3 |
+| neutral | 75.00% | 40.00% | 52.17% | 15 |
+| positive | 74.42% | 96.97% | 84.21% | 33 |
+
+---
+
+## Run — 2026-06-10 14:26 UTC
+
+| Metric | Value |
+|--------|-------|
+| Samples | 51 |
+| CV Folds | 3 |
+| CV Accuracy | 74.51% |
+| Train/Test Accuracy | 72.73% |
+| Best Accuracy | 74.51% |
+
+**Label distribution:** {'negative': 3, 'neutral': 15, 'positive': 33}
+
+**Per-class metrics:**
+
+| Class | Precision | Recall | F1-score | Support |
+|-------|-----------|--------|----------|---------|
+| negative | 0.00% | 0.00% | 0.00% | 3 |
+| neutral | 75.00% | 40.00% | 52.17% | 15 |
+| positive | 74.42% | 96.97% | 84.21% | 33 |
+
+---
+
+## Run — 2026-06-11 02:52 UTC
+ 
+| Metric | Value |
+|--------|-------|
+| Samples | 50 |
+| Train/Test Accuracy | 60.00% |
+| Best Accuracy | 98.00% |
+ 
+**Label distribution:** {'negative': 2, 'neutral': 15, 'positive': 33}
+ 
+**Per-class metrics:**
+
+| Class | Precision | Recall | F1-score | Support |
+|-------|-----------|--------|----------|---------|
+| negative | 100.00% | 50.00% | 66.67% | 2 |
+| neutral | 93.75% | 100.00% | 96.77% | 15 |
+| positive | 100.00% | 100.00% | 100.00% | 33 |
+
+---
