@@ -15,6 +15,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "backend", ".env"))
 
+# Bridge env var name mismatch: .env has SUPABASE_SECRET_KEY, client reads SUPABASE_KEY
+if not os.getenv("SUPABASE_KEY") and os.getenv("SUPABASE_SECRET_KEY"):
+    os.environ["SUPABASE_KEY"] = os.getenv("SUPABASE_SECRET_KEY")
+
 from database.supabase_client import supabase
 
 MODEL_VERSION = "balibpt/finbert-stocklens"
@@ -226,12 +230,9 @@ def insert_new_data(scored, stock_ids):
             }
             for h in headlines
         ]
-        # Upsert in chunks to avoid payload limits
         for i in range(0, len(rows), 100):
             chunk = rows[i:i + 100]
-            supabase.table("sentiment_scores").upsert(
-                chunk, on_conflict="symbol,headline,published_at"
-            ).execute()
+            supabase.table("sentiment_scores").insert(chunk).execute()
         total_inserted += len(rows)
         print(f"  {symbol}: upserted {len(rows)} rows")
     print(f"  Total: {total_inserted} rows upserted into sentiment_scores")
@@ -294,9 +295,7 @@ def compute_daily_scores(scored, stock_ids):
             })
 
         if rows:
-            supabase.table("sentiment_daily_scores").upsert(
-                rows, on_conflict="stock_id,score_date"
-            ).execute()
+            supabase.table("sentiment_daily_scores").insert(rows).execute()
             total_days += len(rows)
             print(f"  {symbol}: {len(rows)} daily scores")
 
