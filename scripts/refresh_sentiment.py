@@ -21,19 +21,19 @@ MODEL_VERSION = "balibpt/finbert-stocklens"
 DAYS_BACK = 7
 BATCH_SIZE = 16
 
-WATCHLIST = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "JPM", "V", "JNJ"]
+WATCHLIST = ["AAPL", "TSLA", "NVDA", "MSFT", "AMZN", "META", "GOOGL", "NFLX", "AMD", "BABA"]
 
 COMPANY_NAMES = {
     "AAPL": "Apple",
-    "MSFT": "Microsoft",
-    "GOOGL": "Google",
-    "AMZN": "Amazon",
     "TSLA": "Tesla",
-    "NVDA": "Nvidia",
+    "NVDA": "NVIDIA",
+    "MSFT": "Microsoft",
+    "AMZN": "Amazon",
     "META": "Meta",
-    "JPM": "JPMorgan",
-    "V": "Visa",
-    "JNJ": "Johnson & Johnson",
+    "GOOGL": "Google",
+    "NFLX": "Netflix",
+    "AMD": "AMD",
+    "BABA": "Alibaba",
 }
 
 
