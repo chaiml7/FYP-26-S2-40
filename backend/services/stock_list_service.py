@@ -1,17 +1,21 @@
-from database.supabase_client import supabase
+from backend.database.supabase_client import supabase
 from datetime import datetime, timezone
 
 
 def get_all_stocks():
-    response = (
-        supabase
-        .table("stocks")
-        .select("*")
-        .order("symbol")
-        .execute()
-    )
-
-    return response.data
+    try:
+        response = (
+            supabase
+            .table("stocks")
+            .select("*")
+            .order("symbol")
+            .execute()
+        )
+        return response.data if response.data else []
+        
+    except Exception as e:
+        print(f"Database Exception in get_all_stocks service: {e}")
+        return []
 
 
 def get_active_stocks():

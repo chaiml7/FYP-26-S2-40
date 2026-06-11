@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Backend Admin - StockLens{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="admin-page">
+
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <span class="logo-icon">📈</span>
+                <span class="brand-name">StockLens</span>
+                <span class="badge-admin">BACKEND ADMIN</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="/backend_admin/stocks" class="nav-item {% block nav_stocks %}{% endblock %}">Stock Database</a>
+                <a href="/backend_admin/weightages" class="nav-item {% block nav_weights %}{% endblock %}">Default Weightages</a>
+                <a href="/backend_admin/sentiment" class="nav-item {% block nav_sentiment %}{% endblock %}">Sentiment Watchlist</a>
+                <a href="/backend_admin/reports" class="nav-item {% block nav_reports %}{% endblock %}">Performance Reports</a>
+            </nav>
+        </aside>
+
+        <main class="admin-main">
+            <header class="admin-header">
+                <div class="spacer"></div>
+                <a href="/logout" class="btn btn-outline btn-sm">Log Out</a>
+            </header>
+
+            {% block content %}
+            {% endblock %}
+        </main>
+    </div>
+
+    {% block scripts %}
+    {% endblock %}
+</body>
+</html>

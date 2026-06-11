@@ -2,14 +2,10 @@ import time
 import logging
 from datetime import date
 
-from services.sentiment.finnhub_service import fetch_news as fetch_finnhub
-from services.sentiment.news_scraper_service import fetch_news as fetch_newsapi
-from services.sentiment.finbert_service import score_headlines
-from services.sentiment.sentiment_aggregator import (
-    save_daily_sentiment_score,
-    save_scores,
-    has_data_for_today,
-)
+from backend.services.sentiment.finnhub_service import fetch_news as fetch_finnhub
+from backend.services.sentiment.news_scraper_service import fetch_news as fetch_newsapi
+from backend.services.sentiment.finbert_service import score_headlines
+from backend.services.sentiment.sentiment_aggregator import (save_daily_sentiment_score,save_scores,has_data_for_today)
 
 logger = logging.getLogger(__name__)
 

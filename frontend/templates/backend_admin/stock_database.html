@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Stock Database - StockLens{% endblock %}
+
+{% block nav_stocks %}active{% endblock %}
+
+{% block content %}
+<header class="table-controls" style="margin-top: 2rem;">
+    <h1 class="text-2xl font-bold text-main m-0">Stock Database</h1>
+    <a href="/backend_admin/stocks/new" class="btn btn-primary" style="text-decoration: none;">+ Add Stock</a>
+</header>
+
+<div class="table-card" style="border: 1px solid var(--border-color); border-radius: 8px;">
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>Ticker</th>
+                <th>Company</th>
+                <th>Exchange</th>
+                <th>Added On</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stock in stocks %}
+            <tr>
+                <td class="text-accent font-bold">{{ stock.ticker }}</td>
+                <td class="text-main">{{ stock.company_name }}</td>
+                <td>{{ stock.exchange }}</td>
+                <td>{{ stock.created_at[:10] }}</td> 
+                <td>
+                    {% if stock.status == 'Active' %}
+                        <span class="status-active status-text bg-opacity-10 px-2 py-1 rounded-full">Active</span>
+                    {% else %}
+                        <span class="status-delisted">{{ stock.status }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <button class="btn-delete" 
+                            data-symbol="{{ stock.ticker }}" 
+                            data-status="{{ stock.status }}" 
+                            title="Toggle Status">
+                        {% if stock.status == 'Active' %}
+                            🗑️
+                        {% else %}
+                            🔄
+                        {% endif %}
+                    </button>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 3rem;">
+                    No stocks found in the database. Click "+ Add Stock" to begin.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const actionButtons = document.querySelectorAll('.btn-delete');
+
+        actionButtons.forEach(button => {
+            button.addEventListener('click', async (e) => {
+                const symbol = e.currentTarget.getAttribute('data-symbol');
+                const currentStatus = e.currentTarget.getAttribute('data-status');
+                
+                const isActive = currentStatus === 'Active';
+                const actionText = isActive ? "delist" : "reactivate";
+
+                if (!confirm(`Are you sure you want to ${actionText} ${symbol}?`)) {
+                    return; 
+                }
+
+                try {
+                    let url = `/stocks/${symbol}`;
+                    let options = {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' }
+                    };
+
+                    if (isActive) {
+                        url = `/stocks/${symbol}/deactivate`;
+                    } else {
+                        options.body = JSON.stringify({ is_active: true });
+                    }
+
+                    const response = await fetch(url, options);
+
+                    if (response.ok) {
+                        window.location.reload();
+                    } else {
+                        const errorData = await response.json();
+                        alert(`Error trying to ${actionText} stock: ` + (errorData.detail || "Unknown error"));
+                    }
+                } catch (error) {
+                    console.error("Fetch error:", error);
+                    alert("Network error. Could not reach the server.");
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

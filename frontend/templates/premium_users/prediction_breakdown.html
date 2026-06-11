@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Prediction Breakdown - StockLens{% endblock %}
+
+{% block nav_breakdown %}active{% endblock %}
+
+{% block content %}
+<div class="page-content" style="max-width: 1400px; margin: 0 auto; width: 100%;">
+    
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 1.5rem;">
+        <h1 class="text-xl font-bold text-main m-0">Prediction Breakdown</h1>
+        <span class="text-accent font-bold" style="font-size: 0.85rem; letter-spacing: 1px;">{{ data.symbol }}</span>
+        
+        {% if data.action in ['STRONG BUY', 'BUY'] %}
+            <span style="background-color: rgba(16, 185, 129, 0.15); color: #10b981; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px;">BULLISH</span>
+        {% elif data.action in ['STRONG SELL', 'SELL'] %}
+            <span style="background-color: rgba(239, 68, 68, 0.15); color: #ef4444; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px;">BEARISH</span>
+        {% else %}
+            <span style="background-color: rgba(148, 163, 184, 0.15); color: var(--text-muted); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px;">NEUTRAL</span>
+        {% endif %}
+    </div>
+
+    <div class="panel-card" style="margin-bottom: 1.5rem;">
+        <div class="panel-header">Weighted Factor Analysis</div>
+        
+        <div style="display: flex; flex-direction: column; gap: 1.25rem; margin-bottom: 2rem;">
+            <div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.85rem;">
+                    <span class="text-main font-bold">Technical</span>
+                    <span class="text-muted">{{ data.tech_weight }}% weight &nbsp; 
+                        <span class="font-bold {% if data.technical_score > 5 %}text-success{% elif data.technical_score == 5 %}text-muted{% else %}text-danger{% endif %}">{{ data.technical_score }}/10</span>
+                    </span>
+                </div>
+                <div class="confidence-bg" style="height: 6px; width: 100%;">
+                    <div class="confidence-fill {% if data.technical_score > 5 %}fill-success{% elif data.technical_score == 5 %}fill-neutral{% else %}fill-danger{% endif %}" style="width: {{ data.technical_score * 10 }}%;"></div>
+                </div>
+            </div>
+            
+            <div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.85rem;">
+                    <span class="text-main font-bold">Sentiment</span>
+                    <span class="text-muted">{{ data.sent_weight }}% weight &nbsp;
+                        <span class="font-bold {% if data.sentiment_score > 5 %}text-success{% elif data.sentiment_score == 5 %}text-muted{% else %}text-danger{% endif %}">{{ data.sentiment_score }}/10</span>
+                    </span>
+                </div>
+                <div class="confidence-bg" style="height: 6px; width: 100%;">
+                    <div class="confidence-fill {% if data.sentiment_score > 5 %}fill-success{% elif data.sentiment_score == 5 %}fill-neutral{% else %}fill-danger{% endif %}" style="width: {{ data.sentiment_score * 10 }}%;"></div>
+                </div>
+            </div>
+            
+            <div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.85rem;">
+                    <span class="text-main font-bold">Financial Analysis</span>
+                    <span class="text-muted">{{ data.fin_weight }}% weight &nbsp;
+                        <span class="font-bold {% if data.financial_score > 5 %}text-success{% elif data.financial_score == 5 %}text-muted{% else %}text-danger{% endif %}">{{ data.financial_score }}/10</span>
+                    </span>
+                </div>
+                <div class="confidence-bg" style="height: 6px; width: 100%;">
+                    <div class="confidence-fill {% if data.financial_score > 5 %}fill-success{% elif data.financial_score == 5 %}fill-neutral{% else %}fill-danger{% endif %}" style="width: {{ data.financial_score * 10 }}%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div style="border-top: 1px solid var(--border-color); padding-top: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+            <span class="panel-header" style="margin: 0;">Composite Confidence</span>
+            <span style="font-size: 2rem; font-weight: 800; line-height: 1;" class="{% if data.composite > 5 %}text-success{% elif data.composite == 5 %}text-muted{% else %}text-danger{% endif %}">
+                {{ data.composite }}/10
+            </span>
+        </div>
+    </div>
+    
+    <div class="panel-card" style="margin-bottom: 1.5rem;">
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 1.5rem;">
+            <span class="panel-header" style="margin: 0;">Actual vs Predicted - 30D</span>
+            <div style="display: flex; gap: 15px; font-size: 0.8rem; font-weight: 600;">
+                <span style="color: var(--text-main);"><span style="color: #3b82f6;">—</span> Actual</span>
+                <span style="color: var(--text-main);"><span style="color: #f59e0b;">- -</span> Predicted</span>
+            </div>
+        </div>
+        
+        <div style="height: 150px; width: 100%; position: relative;">
+            <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 1000 100">
+                <path d="M 0 80 Q 150 20, 300 80 T 600 80 T 1000 20" fill="none" stroke="#3b82f6" stroke-width="2"/>
+                <path d="M 0 80 Q 150 20, 300 80 T 600 80 T 1000 20" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5,5"/>
+            </svg>
+        </div>
+    </div>
+
+    <div class="panel-card">
+        <div class="panel-header">Signal Breakdown</div>
+        
+        <div class="dashboard-grid" style="margin-bottom: 0;">
+            <div>
+                <div class="signal-row">
+                    <span class="text-muted text-sm">RSI (14)</span>
+                    <span class="text-main font-bold text-sm">62.4</span>
+                </div>
+                <div class="signal-row">
+                    <span class="text-muted text-sm">Volume</span>
+                    <span style="color: #10b981; font-weight: bold; font-size: 0.875rem;">+34% above avg</span>
+                </div>
+                <div class="signal-row">
+                    <span class="text-muted text-sm">Insider activity</span>
+                    <span class="text-main font-bold text-sm">No recent sales</span>
+                </div>
+            </div>
+            
+            <div>
+                <div class="signal-row">
+                    <span class="text-muted text-sm">MACD</span>
+                    <span style="color: #10b981; font-weight: bold; font-size: 0.875rem;">Bullish crossover</span>
+                </div>
+                <div class="signal-row">
+                    <span class="text-muted text-sm">Social sentiment</span>
+                    <span style="color: #10b981; font-weight: bold; font-size: 0.875rem;">Very positive (0.82)</span>
+                </div>
+                <div class="signal-row">
+                    <span class="text-muted text-sm">Analyst consensus</span>
+                    <span style="color: #10b981; font-weight: bold; font-size: 0.875rem;">18 Buy / 3 Hold</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Sentiment Watchlist - StockLens{% endblock %}
+
+{% block nav_sentiment %}active{% endblock %}
+
+{% block content %}
+
+        <header class="table-controls" style="margin-top: 2rem;">
+            <h1 class="text-2xl font-bold text-main m-0">Sentiment Watchlist</h1>
+            <button class="btn btn-primary">+ Add Source</button>
+        </header>
+
+        <div class="table-card" style="border: 1px solid var(--border-color); border-radius: 8px;">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th style="width: 10%;">Type</th>
+                        <th style="width: 25%;">Account / Source</th>
+                        <th style="width: 25%;">Relevance</th>
+                        <th style="width: 15%;">Status</th>
+                        <th style="width: 15%; text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for source in sources %}
+                    <tr>
+                        <td>
+                            <span style="background-color: rgba(148, 163, 184, 0.1); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; color: var(--text-muted);">
+                                {{ source.type }}
+                            </span>
+                        </td>
+                        <td class="font-bold text-main">{{ source.account }}</td>
+                        <td class="text-muted text-sm">{{ source.relevance }}</td>
+                        <td>
+                            {% if source.status == 'Active' %}
+                                <span class="status-active status-text bg-opacity-10 px-2 py-1 rounded-full">Active</span>
+                            {% else %}
+                                <span class="status-suspended status-text bg-opacity-10 px-2 py-1 rounded-full">{{ source.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: right;">
+                            <div class="action-cell" style="justify-content: flex-end;">
+                                <button class="btn-icon" title="Toggle Status" style="color: var(--text-muted);">
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>
+                                </button>
+                                <button class="btn-icon hover-danger" title="Delete Source" style="color: var(--text-muted);">
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                            No sentiment sources found. Click "+ Add Source" to begin tracking.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+{% endblock %}

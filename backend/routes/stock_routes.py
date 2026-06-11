@@ -1,7 +1,7 @@
 from datetime import date
 
 from fastapi import APIRouter, HTTPException
-from services.stock_list_service import (
+from backend.services.stock_list_service import (
     get_all_stocks,
     get_active_stocks,
     get_inactive_stocks,
@@ -12,25 +12,22 @@ from services.stock_list_service import (
     deactivate_stock,
     update_last_imported_at
 )
-from services.yfinance_service import fetch_stock_history
-from services.stock_history_service import (
+from backend.services.yfinance_service import fetch_stock_history
+from backend.services.stock_history_service import (
     save_stock_history,
     get_stock_history,
     get_latest_stock_price,
     get_stock_history_by_date_range,
     delete_stock_history
 )
-from services.sentiment.sentiment_aggregator import (
-    get_weighted_sentiment_score,
-    save_daily_sentiment_score,
-)
-from services.sentiment.sentiment_pipeline import run_pipeline as run_sentiment_pipeline
-from services.prediction_service import (
+from backend.services.sentiment.sentiment_aggregator import (get_weighted_sentiment_score, save_daily_sentiment_score)
+from backend.services.sentiment.sentiment_pipeline import run_pipeline as run_sentiment_pipeline
+from backend.services.prediction_service import (
     save_prediction,
     get_predictions_by_symbol,
     get_latest_prediction_by_symbol
 )
-from schemas import StockCreate, StockUpdate, PredictionCreate
+from backend.schemas import StockCreate, StockUpdate, PredictionCreate
 
 router = APIRouter()
 

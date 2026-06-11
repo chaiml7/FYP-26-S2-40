@@ -1,0 +1,88 @@
+{% extends base_layout %}
+
+{% block title %}My Watchlist - StockLens{% endblock %}
+
+{% block nav_watchlist %}active{% endblock %}
+
+{% block content %}
+
+<div class="page-content">
+    <h1 class="text-2xl font-bold text-main mb-6">My Watchlist</h1>
+
+    <div class="card table-card mb-6">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Ticker</th>
+                    <th>Name</th>
+                    <th>Price</th>
+                    <th>Change</th>
+                    <th>% Change</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="font-bold text-accent">AAPL</td>
+                    <td class="text-muted">Apple Inc.</td>
+                    <td class="font-medium text-main">$192.45</td>
+                    <td class="text-success">+1.23</td>
+                    <td><span class="trend-badge badge-success">▲ 0.64%</span></td>
+                    <td><a href="/watchlist/remove?symbol=aapl" class="text-muted hover-danger">✕</a></td>
+                </tr>
+                <tr>
+                    <td class="font-bold text-accent">NVDA</td>
+                    <td class="text-muted">NVIDIA Corp.</td>
+                    <td class="font-medium text-main">$875.28</td>
+                    <td class="text-success">+29.10</td>
+                    <td><span class="trend-badge badge-success">▲ 3.41%</span></td>
+                    <td><a href="/watchlist/remove?symbol=nvda" class="text-muted hover-danger">✕</a></td>
+                </tr>
+                <tr>
+                    <td class="font-bold text-accent">PLTR</td>
+                    <td class="text-muted">Palantir Technologies</td>
+                    <td class="font-medium text-main">$21.40</td>
+                    <td class="text-success">+0.85</td>
+                    <td><span class="trend-badge badge-success">▲ 4.13%</span></td>
+                    <td><a href="/watchlist/remove?symbol=pltr" class="text-muted hover-danger">✕</a></td>
+                </tr>
+                <tr>
+                    <td class="font-bold text-accent">MSFT</td>
+                    <td class="text-muted">Microsoft Corp.</td>
+                    <td class="font-medium text-main">$415.80</td>
+                    <td class="text-success">+2.25</td>
+                    <td><span class="trend-badge badge-success">▲ 0.54%</span></td>
+                    <td><a href="/watchlist/remove?symbol=msft" class="text-muted hover-danger">✕</a></td>
+                </tr>
+                <tr>
+                    <td class="font-bold text-accent">GOOGL</td>
+                    <td class="text-muted">Alphabet Inc.</td>
+                    <td class="font-medium text-main">$178.30</td>
+                    <td class="text-danger">-1.10</td>
+                    <td><span class="trend-badge badge-danger">▼ 0.61%</span></td>
+                    <td><a href="/watchlist/remove?symbol=googl" class="text-muted hover-danger">✕</a></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card chart-card">
+        <div class="chart-header">
+            <span class="text-muted text-sm tracking-wide uppercase">AAPL • 30D CHART</span>
+            <div class="chart-price-row mt-1">
+                <span class="text-2xl font-bold text-main">$192.45</span>
+                <span class="text-success text-sm ml-2">+1.23 (+0.64%)</span>
+            </div>
+        </div>
+        
+        <div class="chart-container mt-6">
+            <svg viewBox="0 0 1000 200" preserveAspectRatio="none" class="mock-chart-line">
+                <path d="M0,150 C100,140 200,80 300,100 C400,120 500,180 600,140 C700,100 800,40 900,90 C950,110 1000,100 1000,100" 
+                        fill="none" stroke="var(--accent-blue)" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,6 +1,6 @@
 import time
 from datetime import date, timedelta
-from database.supabase_client import supabase
+from backend.database.supabase_client import supabase
 
 MAX_RETRIES = 3
 BACKOFF_BASE = 2
