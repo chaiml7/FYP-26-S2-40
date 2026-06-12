@@ -1767,8 +1767,13 @@ a {
     margin-bottom: 1rem;
 }
 
+.stock-toolbar-dated {
+    grid-template-columns: minmax(240px, 1fr) 190px minmax(290px, auto);
+}
+
 .stock-search,
-.sector-filter {
+.sector-filter,
+.dashboard-date-form label {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
@@ -1779,7 +1784,8 @@ a {
 }
 
 .stock-search input,
-.sector-filter select {
+.sector-filter select,
+.dashboard-date-form input {
     width: 100%;
     min-height: 42px;
     box-sizing: border-box;
@@ -1795,9 +1801,42 @@ a {
 }
 
 .stock-search input:focus,
-.sector-filter select:focus {
+.sector-filter select:focus,
+.dashboard-date-form input:focus {
     outline: 2px solid rgba(74, 144, 226, 0.35);
     border-color: #4a90e2;
+}
+
+.dashboard-date-form {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+}
+
+.dashboard-date-form label {
+    flex: 1;
+}
+
+.dashboard-date-form .btn {
+    min-height: 42px;
+    box-sizing: border-box;
+    white-space: nowrap;
+}
+
+.stock-detail-actions {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.stock-detail-actions .back-to-stocks {
+    margin-bottom: 0.7rem;
+}
+
+.detail-date-form {
+    min-width: 380px;
 }
 
 .stock-table-shell,
@@ -2229,8 +2268,18 @@ a {
     }
 
     .stock-toolbar,
+    .stock-toolbar-dated,
     .score-grid {
         grid-template-columns: 1fr;
+    }
+
+    .stock-detail-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .detail-date-form {
+        min-width: 0;
     }
 
     .stock-quote {
@@ -2243,6 +2292,15 @@ a {
 }
 
 @media (max-width: 640px) {
+    .dashboard-date-form {
+        align-items: stretch;
+        flex-wrap: wrap;
+    }
+
+    .dashboard-date-form label {
+        flex-basis: 100%;
+    }
+
     .stock-table-shell {
         border: 0;
         background: transparent;

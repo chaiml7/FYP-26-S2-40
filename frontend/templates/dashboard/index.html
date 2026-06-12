@@ -9,7 +9,13 @@
     <div>
         <p class="workspace-eyebrow">Market workspace</p>
         <h1>Stocks</h1>
-        <p>Review every tracked company and open its latest analysis.</p>
+        <p>
+            {% if selected_date %}
+                Showing market data and predictions for {{ selected_date }}.
+            {% else %}
+                Showing the latest available data for every tracked stock.
+            {% endif %}
+        </p>
     </div>
     <div class="market-count">
         <strong>{{ stocks | length }}</strong>
@@ -17,7 +23,7 @@
     </div>
 </section>
 
-<section class="stock-toolbar" aria-label="Stock filters">
+<section class="stock-toolbar stock-toolbar-dated" aria-label="Stock filters">
     <label class="stock-search">
         <span>Search</span>
         <input
@@ -36,6 +42,16 @@
             {% endfor %}
         </select>
     </label>
+    <form method="GET" action="/dashboard" class="dashboard-date-form">
+        <label>
+            <span>Analysis date</span>
+            <input type="date" name="selected_date" value="{{ selected_date }}">
+        </label>
+        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+        {% if selected_date %}
+            <a href="/dashboard" class="btn btn-outline btn-sm">Latest</a>
+        {% endif %}
+    </form>
 </section>
 
 <div class="card table-card stock-table-shell">
@@ -55,10 +71,10 @@
                 class="stock-browser-row"
                 data-search="{{ stock.symbol | lower }} {{ stock.company_name | lower }}"
                 data-sector="{{ (stock.sector or '') | lower }}"
-                onclick="window.location='/stocks/{{ stock.symbol }}/view'"
+                onclick="window.location='/stocks/{{ stock.symbol }}/view{% if selected_date %}?selected_date={{ selected_date }}{% endif %}'"
             >
                 <td>
-                    <a class="company-cell" href="/stocks/{{ stock.symbol }}/view">
+                    <a class="company-cell" href="/stocks/{{ stock.symbol }}/view{% if selected_date %}?selected_date={{ selected_date }}{% endif %}">
                         <span class="ticker-tile">{{ stock.symbol[:2] }}</span>
                         <span>
                             <strong>{{ stock.symbol }}</strong>
@@ -84,7 +100,7 @@
                         <span class="data-unavailable">Unavailable</span>
                     {% endif %}
                 </td>
-                <td><a class="row-action" href="/stocks/{{ stock.symbol }}/view" aria-label="View {{ stock.symbol }}">View</a></td>
+                <td><a class="row-action" href="/stocks/{{ stock.symbol }}/view{% if selected_date %}?selected_date={{ selected_date }}{% endif %}" aria-label="View {{ stock.symbol }}">View</a></td>
             </tr>
             {% endfor %}
         </tbody>

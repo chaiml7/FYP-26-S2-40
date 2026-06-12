@@ -1,5 +1,7 @@
 """Authenticated dashboard pages shared by all user roles."""
 
+from datetime import date
+
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -34,12 +36,12 @@ def _session_context(request: Request) -> dict | None:
 
 
 @router.get("/dashboard")
-async def dashboard(request: Request):
+async def dashboard(request: Request, selected_date: date = None):
     session = _session_context(request)
     if session is None:
         return RedirectResponse(url="/login", status_code=303)
 
-    stocks = get_dashboard_stocks()
+    stocks = get_dashboard_stocks(selected_date)
     sectors = sorted({
         stock["sector"]
         for stock in stocks
@@ -52,22 +54,35 @@ async def dashboard(request: Request):
             **session,
             "stocks": stocks,
             "sectors": sectors,
+            "selected_date": (
+                selected_date.isoformat() if selected_date else ""
+            ),
         },
     )
 
 
 @router.get("/stocks/{symbol}/view")
-async def stock_detail(request: Request, symbol: str):
+async def stock_detail(
+    request: Request,
+    symbol: str,
+    selected_date: date = None,
+):
     session = _session_context(request)
     if session is None:
         return RedirectResponse(url="/login", status_code=303)
 
-    stock = get_stock_dashboard(symbol)
+    stock = get_stock_dashboard(symbol, selected_date)
     if stock is None:
         return templates.TemplateResponse(
             request=request,
             name="dashboard/not_found.html",
-            context={**session, "symbol": symbol.upper()},
+            context={
+                **session,
+                "symbol": symbol.upper(),
+                "selected_date": (
+                    selected_date.isoformat() if selected_date else ""
+                ),
+            },
             status_code=404,
         )
 

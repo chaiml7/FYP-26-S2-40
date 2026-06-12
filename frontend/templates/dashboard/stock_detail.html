@@ -5,7 +5,19 @@
 {% block nav_dashboard %}active{% endblock %}
 
 {% block content %}
-<a href="/dashboard" class="back-to-stocks">Back to stocks</a>
+<div class="stock-detail-actions">
+    <a href="/dashboard{% if stock.selected_date %}?selected_date={{ stock.selected_date }}{% endif %}" class="back-to-stocks">Back to stocks</a>
+    <form method="GET" action="/stocks/{{ stock.symbol }}/view" class="dashboard-date-form detail-date-form">
+        <label>
+            <span>Analysis date</span>
+            <input type="date" name="selected_date" value="{{ stock.selected_date or '' }}">
+        </label>
+        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+        {% if stock.selected_date %}
+            <a href="/stocks/{{ stock.symbol }}/view" class="btn btn-outline btn-sm">Latest</a>
+        {% endif %}
+    </form>
+</div>
 
 <section class="stock-detail-header">
     <div class="stock-identity">
@@ -31,7 +43,9 @@
             {% endif %}
             <small>Close on {{ stock.trade_date }}</small>
         {% else %}
-            <span class="data-unavailable">No price data</span>
+            <span class="data-unavailable">
+                No price data{% if stock.selected_date %} for {{ stock.selected_date }}{% endif %}
+            </span>
         {% endif %}
     </div>
 </section>
@@ -42,7 +56,10 @@
             <p class="workspace-eyebrow">Model outlook</p>
             <h2>Analysis scores</h2>
         </div>
-        <span class="score-scale-note">1 bearish · 5 neutral · 10 bullish</span>
+        <span class="score-scale-note">
+            {% if stock.selected_date %}Selected date: {{ stock.selected_date }} · {% endif %}
+            1 bearish · 5 neutral · 10 bullish
+        </span>
     </div>
 
     <div class="score-grid">
@@ -90,7 +107,9 @@
             <p class="workspace-eyebrow">Recent market data</p>
             <h2>Price history</h2>
         </div>
-        <span class="score-scale-note">Latest 10 trading days</span>
+        <span class="score-scale-note">
+            10 trading days{% if stock.selected_date %} ending {{ stock.selected_date }}{% else %}, latest available{% endif %}
+        </span>
     </div>
 
     {% if stock.price_history %}

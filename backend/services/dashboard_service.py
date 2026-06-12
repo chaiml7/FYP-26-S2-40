@@ -1,5 +1,7 @@
 """Read models for the authenticated stock dashboard."""
 
+from datetime import date
+
 from backend.database.supabase_client import supabase
 from backend.services.stock_list_service import get_active_stocks, get_stock_by_symbol
 
@@ -18,30 +20,47 @@ def _score_tone(score: float | None) -> str:
     return "neutral"
 
 
-def _recent_prices(symbol: str, limit: int = 2) -> list:
-    response = (
+def _recent_prices(
+    symbol: str,
+    limit: int = 2,
+    selected_date: date = None,
+) -> list:
+    query = (
         supabase.table("daily_ohlcv")
         .select("trade_date,open,high,low,close,volume")
         .eq("symbol", symbol.upper())
         .order("trade_date", desc=True)
         .limit(limit)
-        .execute()
     )
+    if selected_date is not None:
+        query = query.lte("trade_date", selected_date.isoformat())
+    response = query.execute()
     return response.data or []
 
 
-def _price_summary(symbol: str) -> dict:
-    rows = _recent_prices(symbol)
+def _empty_price_summary() -> dict:
+    return {
+        "price": None,
+        "change": None,
+        "change_percent": None,
+        "trade_date": None,
+    }
+
+
+def _price_summary(symbol: str, selected_date: date = None) -> dict:
+    rows = _recent_prices(symbol, selected_date=selected_date)
     latest = _first(rows)
     previous = rows[1] if len(rows) > 1 else None
 
-    if not latest or latest.get("close") is None:
-        return {
-            "price": None,
-            "change": None,
-            "change_percent": None,
-            "trade_date": None,
-        }
+    if (
+        not latest
+        or latest.get("close") is None
+        or (
+            selected_date is not None
+            and latest.get("trade_date") != selected_date.isoformat()
+        )
+    ):
+        return _empty_price_summary()
 
     price = float(latest["close"])
     previous_close = (
@@ -65,8 +84,11 @@ def _price_summary(symbol: str) -> dict:
     }
 
 
-def _technical_prediction(symbol: str) -> dict | None:
-    response = (
+def _technical_prediction(
+    symbol: str,
+    selected_date: date = None,
+) -> dict | None:
+    query = (
         supabase.table("direction_predictions")
         .select(
             "prediction,probabilities,raw_outlook,technical_score,"
@@ -76,13 +98,18 @@ def _technical_prediction(symbol: str) -> dict | None:
         .order("latest_date", desc=True)
         .order("created_at", desc=True)
         .limit(1)
-        .execute()
     )
+    if selected_date is not None:
+        query = query.eq("latest_date", selected_date.isoformat())
+    response = query.execute()
     return _first(response.data or [])
 
 
-def _sentiment_prediction(symbol: str) -> dict | None:
-    response = (
+def _sentiment_prediction(
+    symbol: str,
+    selected_date: date = None,
+) -> dict | None:
+    query = (
         supabase.table("sentiment_daily_scores")
         .select(
             "bullish_score,sentiment_label,score_date,article_count,"
@@ -91,23 +118,31 @@ def _sentiment_prediction(symbol: str) -> dict | None:
         .eq("symbol", symbol.upper())
         .order("score_date", desc=True)
         .limit(1)
-        .execute()
     )
+    if selected_date is not None:
+        query = query.eq("score_date", selected_date.isoformat())
+    response = query.execute()
     return _first(response.data or [])
 
 
-def _financial_prediction(symbol: str) -> dict | None:
-    response = (
+def _financial_prediction(
+    symbol: str,
+    selected_date: date = None,
+) -> dict | None:
+    query = (
         supabase.table("financial_predictions")
         .select(
             "prediction,probabilities,raw_outlook,fundamental_score,"
             "confidence,period,model_version,created_at"
         )
         .eq("ticker", symbol.upper())
+        .order("period", desc=True)
         .order("created_at", desc=True)
         .limit(1)
-        .execute()
     )
+    if selected_date is not None:
+        query = query.lte("period", selected_date.isoformat())
+    response = query.execute()
     return _first(response.data or [])
 
 
@@ -121,39 +156,52 @@ def _score_card(name: str, score: float | None, detail: dict | None) -> dict:
     }
 
 
-def get_dashboard_stocks() -> list:
+def get_dashboard_stocks(selected_date: date = None) -> list:
     stocks = get_active_stocks() or []
     dashboard_stocks = []
 
     for stock in sorted(stocks, key=lambda item: item.get("symbol", "")):
         symbol = stock.get("symbol", "").upper()
+        try:
+            price_summary = _price_summary(symbol, selected_date)
+        except Exception as exc:
+            print(f"Dashboard price lookup failed for {symbol}: {exc}")
+            price_summary = _empty_price_summary()
         dashboard_stocks.append({
             **stock,
             "symbol": symbol,
             "company_name": stock.get("company_name") or symbol,
-            **_price_summary(symbol),
+            **price_summary,
         })
 
     return dashboard_stocks
 
 
-def get_stock_dashboard(symbol: str) -> dict | None:
+def get_stock_dashboard(
+    symbol: str,
+    selected_date: date = None,
+) -> dict | None:
     stocks = get_stock_by_symbol(symbol)
     stock = _first(stocks or [])
     if stock is None or stock.get("is_active") is False:
         return None
 
     symbol = stock["symbol"].upper()
-    technical = _technical_prediction(symbol)
-    sentiment = _sentiment_prediction(symbol)
-    financial = _financial_prediction(symbol)
-    history = list(reversed(_recent_prices(symbol, limit=10)))
+    technical = _technical_prediction(symbol, selected_date)
+    sentiment = _sentiment_prediction(symbol, selected_date)
+    financial = _financial_prediction(symbol, selected_date)
+    history = list(reversed(
+        _recent_prices(symbol, limit=10, selected_date=selected_date)
+    ))
 
     return {
         **stock,
         "symbol": symbol,
         "company_name": stock.get("company_name") or symbol,
-        **_price_summary(symbol),
+        **_price_summary(symbol, selected_date),
+        "selected_date": (
+            selected_date.isoformat() if selected_date is not None else None
+        ),
         "scores": [
             _score_card(
                 "Technical",
