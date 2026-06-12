@@ -32,21 +32,24 @@ def test_selected_date_requires_price_on_that_exact_day(mock_prices):
     )
 
 
-@patch("backend.services.dashboard_service._price_summary")
+@patch("backend.services.dashboard_service._dashboard_price_summaries")
 @patch("backend.services.dashboard_service.get_active_stocks")
 def test_dashboard_stocks_are_sorted_and_use_company_name(
     mock_stocks,
-    mock_price,
+    mock_prices,
 ):
     mock_stocks.return_value = [
         {"id": 2, "symbol": "MSFT", "company_name": "Microsoft"},
         {"id": 1, "symbol": "AAPL", "company_name": "Apple"},
     ]
-    mock_price.return_value = {
-        "price": 100,
-        "change": 1,
-        "change_percent": 1,
-        "trade_date": "2026-06-11",
+    mock_prices.return_value = {
+        symbol: {
+            "price": 100,
+            "change": 1,
+            "change_percent": 1,
+            "trade_date": "2026-06-11",
+        }
+        for symbol in ("AAPL", "MSFT")
     }
 
     result = get_dashboard_stocks()
@@ -55,13 +58,13 @@ def test_dashboard_stocks_are_sorted_and_use_company_name(
     assert result[0]["company_name"] == "Apple"
 
 
-@patch("backend.services.dashboard_service._price_summary")
+@patch("backend.services.dashboard_service._dashboard_price_summaries")
 @patch("backend.services.dashboard_service.get_active_stocks")
-def test_failed_price_lookup_does_not_hide_stock(mock_stocks, mock_price):
+def test_failed_price_lookup_does_not_hide_stock(mock_stocks, mock_prices):
     mock_stocks.return_value = [
         {"id": 1, "symbol": "AAPL", "company_name": "Apple"},
     ]
-    mock_price.side_effect = RuntimeError("temporary database error")
+    mock_prices.side_effect = RuntimeError("temporary database error")
 
     result = get_dashboard_stocks()
 
@@ -108,6 +111,8 @@ def test_stock_dashboard_keeps_missing_score_separate_from_bearish(
         "unavailable",
         "bullish",
     ]
+    assert result["chart_history"] == []
+    assert result["price_history"] == []
     mock_technical.assert_called_once_with("AAPL", selected_date)
     mock_sentiment.assert_called_once_with("AAPL", selected_date)
     mock_financial.assert_called_once_with("AAPL", selected_date)

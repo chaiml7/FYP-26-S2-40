@@ -50,6 +50,34 @@
     </div>
 </section>
 
+<section class="card candlestick-panel">
+    <div class="section-title-row">
+        <div>
+            <p class="workspace-eyebrow">OHLC price action</p>
+            <h2>Candlestick chart</h2>
+        </div>
+        <span class="score-scale-note">
+            Up to 60 trading days{% if stock.selected_date %} ending {{ stock.selected_date }}{% endif %}
+        </span>
+    </div>
+
+    {% if stock.chart_history %}
+        <div class="candlestick-chart-wrap" style="height: 360px;">
+            <div
+                id="candlestick-chart"
+                class="candlestick-chart"
+                aria-label="{{ stock.symbol }} candlestick price chart"
+            ></div>
+        </div>
+        <div class="chart-legend">
+            <span><i class="legend-swatch candle-up"></i> Price increased</span>
+            <span><i class="legend-swatch candle-down"></i> Price decreased</span>
+        </div>
+    {% else %}
+        <p class="data-unavailable">No OHLC data is available for this chart.</p>
+    {% endif %}
+</section>
+
 <section class="analysis-section">
     <div class="section-title-row">
         <div>
@@ -143,4 +171,94 @@
         <p class="data-unavailable">No historical prices have been imported for this stock.</p>
     {% endif %}
 </section>
+{% endblock %}
+
+{% block scripts %}
+{% if stock.chart_history %}
+<script src="/static/js/lightweight-charts.standalone.production.js?v=5.0.9-1"></script>
+<script>
+(() => {
+    const rows = {{ stock.chart_history | tojson }};
+    const container = document.getElementById("candlestick-chart");
+    if (!window.LightweightCharts) {
+        container.textContent = "Chart library could not be loaded.";
+        container.classList.add("chart-load-error");
+        return;
+    }
+
+    try {
+        const chart = LightweightCharts.createChart(container, {
+            width: Math.max(container.clientWidth, 300),
+            height: Math.max(container.clientHeight, 300),
+            layout: {
+                background: { type: "solid", color: "transparent" },
+                textColor: "#94a3b8",
+                fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+            },
+            grid: {
+                vertLines: { color: "rgba(148, 163, 184, 0.10)" },
+                horzLines: { color: "rgba(148, 163, 184, 0.14)" }
+            },
+            crosshair: {
+                mode: LightweightCharts.CrosshairMode.Normal
+            },
+            rightPriceScale: {
+                borderColor: "#1e293b"
+            },
+            timeScale: {
+                borderColor: "#1e293b",
+                timeVisible: false,
+                rightOffset: 3,
+                barSpacing: 9
+            },
+            localization: {
+                priceFormatter: (price) => `$${Number(price).toFixed(2)}`
+            }
+        });
+
+        const seriesOptions = {
+            upColor: "#10b981",
+            downColor: "#ef4444",
+            borderUpColor: "#10b981",
+            borderDownColor: "#ef4444",
+            wickUpColor: "#10b981",
+            wickDownColor: "#ef4444",
+            priceLineVisible: true
+        };
+        const series = typeof chart.addSeries === "function"
+            ? chart.addSeries(
+                LightweightCharts.CandlestickSeries,
+                seriesOptions
+            )
+            : chart.addCandlestickSeries(seriesOptions);
+
+        series.setData(rows.map((row) => ({
+            time: row.trade_date,
+            open: Number(row.open),
+            high: Number(row.high),
+            low: Number(row.low),
+            close: Number(row.close)
+        })));
+        chart.timeScale().fitContent();
+
+        const resizeChart = () => {
+            chart.applyOptions({
+                width: Math.max(container.clientWidth, 300),
+                height: Math.max(container.clientHeight, 300)
+            });
+        };
+        if ("ResizeObserver" in window) {
+            const resizeObserver = new ResizeObserver(resizeChart);
+            resizeObserver.observe(container);
+        } else {
+            window.addEventListener("resize", resizeChart);
+        }
+    } catch (error) {
+        console.error("Unable to initialize candlestick chart:", error);
+        container.textContent = "Unable to display the candlestick chart.";
+        container.classList.add("chart-load-error");
+    }
+})();
+</script>
+{% endif %}
 {% endblock %}

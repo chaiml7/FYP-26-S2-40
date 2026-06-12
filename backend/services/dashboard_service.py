@@ -47,8 +47,10 @@ def _empty_price_summary() -> dict:
     }
 
 
-def _price_summary(symbol: str, selected_date: date = None) -> dict:
-    rows = _recent_prices(symbol, selected_date=selected_date)
+def _price_summary_from_rows(
+    rows: list,
+    selected_date: date = None,
+) -> dict:
     latest = _first(rows)
     previous = rows[1] if len(rows) > 1 else None
 
@@ -81,6 +83,41 @@ def _price_summary(symbol: str, selected_date: date = None) -> dict:
             round(change_percent, 2) if change_percent is not None else None
         ),
         "trade_date": latest.get("trade_date"),
+    }
+
+
+def _price_summary(symbol: str, selected_date: date = None) -> dict:
+    rows = _recent_prices(symbol, selected_date=selected_date)
+    return _price_summary_from_rows(rows, selected_date)
+
+
+def _dashboard_price_summaries(
+    symbols: list[str],
+    selected_date: date = None,
+) -> dict[str, dict]:
+    if not symbols:
+        return {}
+
+    query = (
+        supabase.table("daily_ohlcv")
+        .select("symbol,trade_date,open,high,low,close,volume")
+        .in_("symbol", symbols)
+        .order("trade_date", desc=True)
+        .limit(max(200, len(symbols) * 6))
+    )
+    if selected_date is not None:
+        query = query.lte("trade_date", selected_date.isoformat())
+
+    response = query.execute()
+    rows_by_symbol = {symbol: [] for symbol in symbols}
+    for row in response.data or []:
+        symbol = str(row.get("symbol", "")).upper()
+        if symbol in rows_by_symbol and len(rows_by_symbol[symbol]) < 2:
+            rows_by_symbol[symbol].append(row)
+
+    return {
+        symbol: _price_summary_from_rows(rows, selected_date)
+        for symbol, rows in rows_by_symbol.items()
     }
 
 
@@ -159,19 +196,29 @@ def _score_card(name: str, score: float | None, detail: dict | None) -> dict:
 def get_dashboard_stocks(selected_date: date = None) -> list:
     stocks = get_active_stocks() or []
     dashboard_stocks = []
+    sorted_stocks = sorted(stocks, key=lambda item: item.get("symbol", ""))
+    symbols = [
+        stock.get("symbol", "").upper()
+        for stock in sorted_stocks
+        if stock.get("symbol")
+    ]
 
-    for stock in sorted(stocks, key=lambda item: item.get("symbol", "")):
+    try:
+        price_summaries = _dashboard_price_summaries(
+            symbols,
+            selected_date,
+        )
+    except Exception as exc:
+        print(f"Dashboard price batch lookup failed: {exc}")
+        price_summaries = {}
+
+    for stock in sorted_stocks:
         symbol = stock.get("symbol", "").upper()
-        try:
-            price_summary = _price_summary(symbol, selected_date)
-        except Exception as exc:
-            print(f"Dashboard price lookup failed for {symbol}: {exc}")
-            price_summary = _empty_price_summary()
         dashboard_stocks.append({
             **stock,
             "symbol": symbol,
             "company_name": stock.get("company_name") or symbol,
-            **price_summary,
+            **price_summaries.get(symbol, _empty_price_summary()),
         })
 
     return dashboard_stocks
@@ -192,6 +239,9 @@ def get_stock_dashboard(
     financial = _financial_prediction(symbol, selected_date)
     history = list(reversed(
         _recent_prices(symbol, limit=10, selected_date=selected_date)
+    ))
+    chart_history = list(reversed(
+        _recent_prices(symbol, limit=60, selected_date=selected_date)
     ))
 
     return {
@@ -219,5 +269,6 @@ def get_stock_dashboard(
                 financial,
             ),
         ],
+        "chart_history": chart_history,
         "price_history": history,
     }
