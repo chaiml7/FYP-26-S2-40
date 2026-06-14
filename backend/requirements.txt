@@ -6,3 +6,6 @@ yfinance
 pandas
 APScheduler
 requests
+itsdangerous
+jinja2
+python-multipart

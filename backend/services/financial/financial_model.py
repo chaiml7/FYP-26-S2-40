@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from services.financial.feature_engineering import (
+from backend.services.financial.feature_engineering import (
     FEATURE_COLUMNS,
     build_training_dataset,
     engineer_features,

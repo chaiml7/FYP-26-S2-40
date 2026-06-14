@@ -1,9 +1,9 @@
 import pytest
 from contextlib import contextmanager
 from unittest.mock import patch, MagicMock
-from services.sentiment.sentiment_pipeline import run_pipeline, WATCHLIST
+from backend.services.sentiment.sentiment_pipeline import run_pipeline, WATCHLIST
 
-MODULE = "services.sentiment.sentiment_pipeline"
+MODULE = "backend.services.sentiment.sentiment_pipeline"
 
 MOCK_HEADLINES = [
     {"headline": "Apple profits up", "source": "finnhub", "published_at": "2026-05-24T09:00:00+00:00"},

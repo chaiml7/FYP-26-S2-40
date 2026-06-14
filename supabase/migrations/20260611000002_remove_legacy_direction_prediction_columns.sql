@@ -1,0 +1,18 @@
+alter table public.direction_predictions
+    drop column if exists predicted_direction,
+    drop column if exists predicted_probability,
+    drop column if exists confidence,
+    drop column if exists model_used,
+    drop column if exists accuracy,
+    drop column if exists precision,
+    drop column if exists recall,
+    drop column if exists f1_score,
+    drop column if exists roc_auc,
+    drop column if exists baseline_accuracy,
+    drop column if exists majority_baseline_accuracy,
+    drop column if exists target_return_threshold,
+    drop column if exists decision_threshold,
+    drop column if exists selected_feature_count,
+    drop column if exists selected_features,
+    drop column if exists top_features,
+    drop column if exists tuned_params;

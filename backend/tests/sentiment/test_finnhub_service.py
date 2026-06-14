@@ -2,9 +2,9 @@ import pytest
 import requests
 from unittest.mock import patch, MagicMock, call
 from datetime import date
-from services.sentiment.finnhub_service import fetch_news
+from backend.services.sentiment.finnhub_service import fetch_news
 
-MODULE = "services.sentiment.finnhub_service"
+MODULE = "backend.services.sentiment.finnhub_service"
 
 SAMPLE_FINNHUB_RESPONSE = [
     {"headline": "Apple Q2 earnings beat expectations", "datetime": 1716537600},

@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import patch, MagicMock, call
 from datetime import date
 
-from services.sentiment.sentiment_aggregator import (
+from backend.services.sentiment.sentiment_aggregator import (
     calculate_daily_sentiment_score,
     save_scores,
     get_sentiment_summary,
@@ -11,7 +11,7 @@ from services.sentiment.sentiment_aggregator import (
 )
 from tests.sentiment.conftest import SAMPLE_SCORED_HEADLINES
 
-MODULE = "services.sentiment.sentiment_aggregator"
+MODULE = "backend.services.sentiment.sentiment_aggregator"
 
 
 @patch(f"{MODULE}._get_stock_id", return_value=1)

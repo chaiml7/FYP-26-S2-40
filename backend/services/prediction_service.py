@@ -39,59 +39,57 @@ def get_latest_prediction_by_symbol(symbol: str):
 
     return response.data
 
-def get_technical_score(symbol: str, score_date: date = None) -> int:
-    score_date = score_date or date.today()
-    day = score_date.isoformat()
-
+def get_technical_score(symbol: str, score_date: date = None) -> float:
     try:
-        response = (
+        query = (
             supabase.table("direction_predictions")
-            .select("predicted_probability")
+            .select("technical_score")
             .eq("symbol", symbol.upper())
-            .eq("latest_date", day)
+            .order("latest_date", desc=True)
+            .order("created_at", desc=True)
             .limit(1)
-            .execute()
         )
+        if score_date is not None:
+            query = query.eq("latest_date", score_date.isoformat())
+        response = query.execute()
         
         rows = response.data or []
         if not rows:
             return 0 
             
-        raw_score = rows[0].get("predicted_probability")
-        if raw_score is None:
+        technical_score = rows[0].get("technical_score")
+        if technical_score is None:
             return 0
             
-        return int(round(float(raw_score) * 10))
+        return round(float(technical_score), 2)
         
     except Exception as e:
         print(f"Database error in get_technical_score for {symbol}: {e}")
         return 0 
 
 
-def get_financial_score(symbol: str, score_date: date = None) -> int:
-    score_date = score_date or date.today()
-    day = score_date.isoformat()
-
+def get_financial_score(symbol: str, score_date: date = None) -> float:
     try:
-        response = (
+        query = (
             supabase.table("financial_predictions")
-            .select("score")
+            .select("fundamental_score")
             .eq("ticker", symbol.upper())
-            .eq("period", day)
             .order("created_at", desc=True)
             .limit(1)
-            .execute()
         )
+        if score_date is not None:
+            query = query.eq("period", score_date.isoformat())
+        response = query.execute()
         
         rows = response.data or []
         if not rows:
             return 0 
             
-        raw_score = rows[0].get("score")
-        if raw_score is None:
+        fundamental_score = rows[0].get("fundamental_score")
+        if fundamental_score is None:
             return 0
             
-        return int(round(float(raw_score) * 10))
+        return round(float(fundamental_score), 2)
         
     except Exception as e:
         print(f"Database error in get_financial_score for {symbol}: {e}")

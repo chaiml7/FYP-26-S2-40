@@ -2,9 +2,9 @@ import pytest
 import requests
 from unittest.mock import patch, MagicMock
 from datetime import date
-from services.sentiment.news_scraper_service import fetch_news
+from backend.services.sentiment.news_scraper_service import fetch_news
 
-MODULE = "services.sentiment.news_scraper_service"
+MODULE = "backend.services.sentiment.news_scraper_service"
 
 SAMPLE_NEWSAPI_RESPONSE = {
     "status": "ok",

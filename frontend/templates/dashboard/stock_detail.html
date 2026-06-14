@@ -1,0 +1,264 @@
+{% extends base_layout %}
+
+{% block title %}{{ stock.symbol }} - StockLens{% endblock %}
+
+{% block nav_dashboard %}active{% endblock %}
+
+{% block content %}
+<div class="stock-detail-actions">
+    <a href="/dashboard{% if stock.selected_date %}?selected_date={{ stock.selected_date }}{% endif %}" class="back-to-stocks">Back to stocks</a>
+    <form method="GET" action="/stocks/{{ stock.symbol }}/view" class="dashboard-date-form detail-date-form">
+        <label>
+            <span>Analysis date</span>
+            <input type="date" name="selected_date" value="{{ stock.selected_date or '' }}">
+        </label>
+        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+        {% if stock.selected_date %}
+            <a href="/stocks/{{ stock.symbol }}/view" class="btn btn-outline btn-sm">Latest</a>
+        {% endif %}
+    </form>
+</div>
+
+<section class="stock-detail-header">
+    <div class="stock-identity">
+        <span class="ticker-tile ticker-tile-large">{{ stock.symbol[:2] }}</span>
+        <div>
+            <div class="stock-title-line">
+                <h1>{{ stock.symbol }}</h1>
+                <span class="exchange-label">{{ stock.exchange or "Tracked" }}</span>
+            </div>
+            <p>{{ stock.company_name }}</p>
+            <span class="sector-label">{{ stock.sector or "Unclassified" }}</span>
+        </div>
+    </div>
+
+    <div class="stock-quote">
+        {% if stock.price is not none %}
+            <strong>${{ "%.2f" | format(stock.price) }}</strong>
+            {% if stock.change_percent is not none %}
+                <span class="move-value {% if stock.change_percent > 0 %}positive{% elif stock.change_percent < 0 %}negative{% else %}flat{% endif %}">
+                    {% if stock.change > 0 %}+{% endif %}${{ "%.2f" | format(stock.change) }}
+                    ({% if stock.change_percent > 0 %}+{% endif %}{{ "%.2f" | format(stock.change_percent) }}%)
+                </span>
+            {% endif %}
+            <small>Close on {{ stock.trade_date }}</small>
+        {% else %}
+            <span class="data-unavailable">
+                No price data{% if stock.selected_date %} for {{ stock.selected_date }}{% endif %}
+            </span>
+        {% endif %}
+    </div>
+</section>
+
+<section class="card candlestick-panel">
+    <div class="section-title-row">
+        <div>
+            <p class="workspace-eyebrow">OHLC price action</p>
+            <h2>Candlestick chart</h2>
+        </div>
+        <span class="score-scale-note">
+            Up to 60 trading days{% if stock.selected_date %} ending {{ stock.selected_date }}{% endif %}
+        </span>
+    </div>
+
+    {% if stock.chart_history %}
+        <div class="candlestick-chart-wrap" style="height: 360px;">
+            <div
+                id="candlestick-chart"
+                class="candlestick-chart"
+                aria-label="{{ stock.symbol }} candlestick price chart"
+            ></div>
+        </div>
+        <div class="chart-legend">
+            <span><i class="legend-swatch candle-up"></i> Price increased</span>
+            <span><i class="legend-swatch candle-down"></i> Price decreased</span>
+        </div>
+    {% else %}
+        <p class="data-unavailable">No OHLC data is available for this chart.</p>
+    {% endif %}
+</section>
+
+<section class="analysis-section">
+    <div class="section-title-row">
+        <div>
+            <p class="workspace-eyebrow">Model outlook</p>
+            <h2>Analysis scores</h2>
+        </div>
+        <span class="score-scale-note">
+            {% if stock.selected_date %}Selected date: {{ stock.selected_date }} · {% endif %}
+            1 bearish · 5 neutral · 10 bullish
+        </span>
+    </div>
+
+    <div class="score-grid">
+        {% for item in stock.scores %}
+        <article class="panel-card score-panel score-{{ item.tone }}">
+            <div class="score-panel-header">
+                <span>{{ item.name }}</span>
+                <span class="score-status">{{ item.tone | title }}</span>
+            </div>
+            {% if item.score is not none %}
+                <div class="score-number">{{ "%.1f" | format(item.score) }}<small>/10</small></div>
+                <div class="score-track" aria-label="{{ item.name }} score {{ item.score }} out of 10">
+                    <span style="width: {{ item.score * 10 }}%"></span>
+                </div>
+            {% else %}
+                <div class="score-missing">Not available</div>
+                <div class="score-track"><span style="width: 0"></span></div>
+            {% endif %}
+
+            <dl class="score-metadata">
+                {% if item.name == "Technical" and item.detail %}
+                    <div><dt>Direction</dt><dd>{{ item.detail.prediction | title }}</dd></div>
+                    <div><dt>As of</dt><dd>{{ item.detail.latest_date }}</dd></div>
+                    <div><dt>Horizon</dt><dd>{{ item.detail.prediction_horizon | replace("_", " ") | title }}</dd></div>
+                {% elif item.name == "Sentiment" and item.detail %}
+                    <div><dt>Label</dt><dd>{{ item.detail.sentiment_label | title }}</dd></div>
+                    <div><dt>As of</dt><dd>{{ item.detail.score_date }}</dd></div>
+                    <div><dt>Articles</dt><dd>{{ item.detail.article_count }}</dd></div>
+                {% elif item.name == "Financial" and item.detail %}
+                    <div><dt>Outlook</dt><dd>{{ item.detail.prediction | title }}</dd></div>
+                    <div><dt>Period</dt><dd>{{ item.detail.period }}</dd></div>
+                    <div><dt>Confidence</dt><dd>{{ "%.1f" | format(item.detail.confidence) }}%</dd></div>
+                {% else %}
+                    <div><dt>Status</dt><dd>No prediction has been saved</dd></div>
+                {% endif %}
+            </dl>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="card price-history-panel">
+    <div class="section-title-row">
+        <div>
+            <p class="workspace-eyebrow">Recent market data</p>
+            <h2>Price history</h2>
+        </div>
+        <span class="score-scale-note">
+            10 trading days{% if stock.selected_date %} ending {{ stock.selected_date }}{% else %}, latest available{% endif %}
+        </span>
+    </div>
+
+    {% if stock.price_history %}
+    <div class="history-table-scroll">
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Open</th>
+                    <th>High</th>
+                    <th>Low</th>
+                    <th>Close</th>
+                    <th>Volume</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in stock.price_history %}
+                <tr>
+                    <td>{{ row.trade_date }}</td>
+                    <td>${{ "%.2f" | format(row.open) }}</td>
+                    <td>${{ "%.2f" | format(row.high) }}</td>
+                    <td>${{ "%.2f" | format(row.low) }}</td>
+                    <td><strong>${{ "%.2f" | format(row.close) }}</strong></td>
+                    <td>{{ "{:,}".format(row.volume) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <p class="data-unavailable">No historical prices have been imported for this stock.</p>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% if stock.chart_history %}
+<script src="/static/js/lightweight-charts.standalone.production.js?v=5.0.9-1"></script>
+<script>
+(() => {
+    const rows = {{ stock.chart_history | tojson }};
+    const container = document.getElementById("candlestick-chart");
+    if (!window.LightweightCharts) {
+        container.textContent = "Chart library could not be loaded.";
+        container.classList.add("chart-load-error");
+        return;
+    }
+
+    try {
+        const chart = LightweightCharts.createChart(container, {
+            width: Math.max(container.clientWidth, 300),
+            height: Math.max(container.clientHeight, 300),
+            layout: {
+                background: { type: "solid", color: "transparent" },
+                textColor: "#94a3b8",
+                fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+            },
+            grid: {
+                vertLines: { color: "rgba(148, 163, 184, 0.10)" },
+                horzLines: { color: "rgba(148, 163, 184, 0.14)" }
+            },
+            crosshair: {
+                mode: LightweightCharts.CrosshairMode.Normal
+            },
+            rightPriceScale: {
+                borderColor: "#1e293b"
+            },
+            timeScale: {
+                borderColor: "#1e293b",
+                timeVisible: false,
+                rightOffset: 3,
+                barSpacing: 9
+            },
+            localization: {
+                priceFormatter: (price) => `$${Number(price).toFixed(2)}`
+            }
+        });
+
+        const seriesOptions = {
+            upColor: "#10b981",
+            downColor: "#ef4444",
+            borderUpColor: "#10b981",
+            borderDownColor: "#ef4444",
+            wickUpColor: "#10b981",
+            wickDownColor: "#ef4444",
+            priceLineVisible: true
+        };
+        const series = typeof chart.addSeries === "function"
+            ? chart.addSeries(
+                LightweightCharts.CandlestickSeries,
+                seriesOptions
+            )
+            : chart.addCandlestickSeries(seriesOptions);
+
+        series.setData(rows.map((row) => ({
+            time: row.trade_date,
+            open: Number(row.open),
+            high: Number(row.high),
+            low: Number(row.low),
+            close: Number(row.close)
+        })));
+        chart.timeScale().fitContent();
+
+        const resizeChart = () => {
+            chart.applyOptions({
+                width: Math.max(container.clientWidth, 300),
+                height: Math.max(container.clientHeight, 300)
+            });
+        };
+        if ("ResizeObserver" in window) {
+            const resizeObserver = new ResizeObserver(resizeChart);
+            resizeObserver.observe(container);
+        } else {
+            window.addEventListener("resize", resizeChart);
+        }
+    } catch (error) {
+        console.error("Unable to initialize candlestick chart:", error);
+        container.textContent = "Unable to display the candlestick chart.";
+        container.classList.add("chart-load-error");
+    }
+})();
+</script>
+{% endif %}
+{% endblock %}
