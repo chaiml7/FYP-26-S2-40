@@ -74,7 +74,7 @@ async def premium_prediction_breakdown(request: Request, symbol: str = "NVDA"):
     fin_w = weights.get("financial")
 
     # Fetch Sentiment
-    sentiment_date = date(2026, 5, 25)
+    sentiment_date = date(2026, 6, 10)
     sentiment_data = get_weighted_sentiment_score(target_symbol, sentiment_date)
     if sentiment_data and "bullish_score" in sentiment_data:
         raw_sent = int((sentiment_data.get("bullish_score") or 0))

@@ -97,7 +97,12 @@ async def process_login(
         request.session["user_id"] = str(user_id)
         request.session["user_role"] = user_role
 
-        return RedirectResponse(url="/dashboard", status_code=303)
+        if user_role == "user_admin":
+            return RedirectResponse(url="/admin/user_management", status_code=303)
+        elif user_role == "backend_admin":
+            return RedirectResponse(url="/backend_admin/stocks", status_code=303)
+        else:
+            return RedirectResponse(url="/dashboard", status_code=303)
 
     except Exception as e:
         return templates.TemplateResponse(
