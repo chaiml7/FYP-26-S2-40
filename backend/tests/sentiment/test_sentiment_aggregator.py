@@ -23,7 +23,7 @@ def test_save_scores_upserts_rows(mock_supa, mock_get_stock_id):
     assert len(rows) == 3
     assert rows[0]["symbol"] == "AAPL"
     assert rows[0]["stock_id"] == 1
-    assert rows[0]["model_version"] == "ProsusAI/finbert"
+    assert rows[0]["model_version"] == "balibpt/finbert-stocklens"
 
 
 @patch(f"{MODULE}.supabase")
