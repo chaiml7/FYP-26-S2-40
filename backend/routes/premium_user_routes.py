@@ -33,7 +33,7 @@ async def premium_recommendations(request: Request):
             pred = raw_pred[0]
             display_recommendations.append({
                 "ticker": symbol,
-                "company_name": stock.get("name", "Unknown Company"),
+                "company_name": stock.get("company_name", "Unknown Company"),
                 "action": pred.get("action", "HOLD").upper(),
                 "target_price": f"{float(pred.get('target_price', 0)):.2f}",
                 "confidence": pred.get("confidence_score", 0),
@@ -207,7 +207,7 @@ async def premium_news_feed(request: Request, symbol: str, days: int = 7):
     # Resolve company name from active stocks list
     stocks = get_active_stocks()
     company_name = next(
-        (s.get("name", target_symbol) for s in stocks if s.get("symbol", "").upper() == target_symbol),
+        (s.get("company_name", target_symbol) for s in stocks if s.get("symbol", "").upper() == target_symbol),
         target_symbol,
     )
 
