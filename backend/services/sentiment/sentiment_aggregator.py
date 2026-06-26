@@ -108,7 +108,7 @@ def get_sentiment_summary(symbol: str, days: int = 7) -> dict:
             "published_at": r["published_at"],
             "label": r["label"],
             "score": r["score"],
-            "url": r.get("url"),
+            "url": r.get("url") if (r.get("url") or "").startswith(("https://", "http://")) else None,
         }
         for r in rows
     ]
