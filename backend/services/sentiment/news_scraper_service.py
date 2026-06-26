@@ -32,7 +32,12 @@ def fetch_news(symbol: str, company_name: str, from_date: date = None) -> list:
             if not isinstance(articles, list):
                 return []
             return [
-                {"headline": a["title"], "source": "newsapi", "published_at": a.get("publishedAt", "")}
+                {
+                    "headline": a["title"],
+                    "source": "newsapi",
+                    "published_at": a.get("publishedAt", ""),
+                    "url": a.get("url"),
+                }
                 for a in articles
                 if a.get("title")
             ]
