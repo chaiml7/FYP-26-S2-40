@@ -7,8 +7,8 @@ from backend.services.sentiment.finnhub_service import fetch_news
 MODULE = "backend.services.sentiment.finnhub_service"
 
 SAMPLE_FINNHUB_RESPONSE = [
-    {"headline": "Apple Q2 earnings beat expectations", "datetime": 1716537600},
-    {"headline": "Apple launches new product line", "datetime": 1716624000},
+    {"headline": "Apple Q2 earnings beat expectations", "datetime": 1716537600, "url": "https://example.com/article1"},
+    {"headline": "Apple launches new product line", "datetime": 1716624000, "url": "https://example.com/article2"},
 ]
 
 
@@ -36,6 +36,17 @@ def test_fetch_returns_headlines(mock_get):
     assert result[0]["source"] == "finnhub"
     assert "headline" in result[0]
     assert "published_at" in result[0]
+    assert "url" in result[0]
+    assert result[0]["url"] == "https://example.com/article1"
+
+
+@patch(f"{MODULE}.requests.get")
+def test_fetch_url_none_when_missing(mock_get):
+    mock_get.return_value = mock_response(json_data=[
+        {"headline": "No url article", "datetime": 1716537600},
+    ])
+    result = fetch_news("AAPL", from_date=date(2026, 5, 23))
+    assert result[0]["url"] is None
 
 
 @patch(f"{MODULE}.requests.get")
