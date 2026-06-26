@@ -22,11 +22,11 @@ def _session_context(request: Request) -> dict | None:
         return None
 
     email = request.session.get("user_email", "")
-    base_layout = (
-        "premium_users/base.html"
-        if role == "premium_user"
-        else "free_users/base.html"
-    )
+    if role == "premium_user":
+        base_layout = "premium_users/base.html"
+    elif role == "basic_user":
+        base_layout = "free_users/base.html"
+
     return {
         "user_role": role,
         "user_email": email,
