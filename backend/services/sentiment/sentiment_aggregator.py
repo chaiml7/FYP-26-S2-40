@@ -32,6 +32,7 @@ def save_scores(symbol: str, scored_headlines: list) -> dict:
             "label": h["label"],
             "score": h["score"],
             "model_version": MODEL_VERSION,
+            "url": h.get("url"),
         }
         for h in scored_headlines
     ]
@@ -107,6 +108,7 @@ def get_sentiment_summary(symbol: str, days: int = 7) -> dict:
             "published_at": r["published_at"],
             "label": r["label"],
             "score": r["score"],
+            "url": r.get("url"),
         }
         for r in rows
     ]
