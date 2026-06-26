@@ -10,8 +10,8 @@ SAMPLE_NEWSAPI_RESPONSE = {
     "status": "ok",
     "totalResults": 2,
     "articles": [
-        {"title": "Apple sales surge globally", "publishedAt": "2026-05-24T09:00:00Z"},
-        {"title": "Apple faces antitrust probe", "publishedAt": "2026-05-24T10:00:00Z"},
+        {"title": "Apple sales surge globally", "publishedAt": "2026-05-24T09:00:00Z", "url": "https://example.com/n1"},
+        {"title": "Apple faces antitrust probe", "publishedAt": "2026-05-24T10:00:00Z", "url": "https://example.com/n2"},
     ],
 }
 
@@ -40,6 +40,8 @@ def test_fetch_returns_headlines(mock_get):
     assert result[0]["source"] == "newsapi"
     assert "headline" in result[0]
     assert "published_at" in result[0]
+    assert "url" in result[0]
+    assert result[0]["url"] == "https://example.com/n1"
 
 
 @patch(f"{MODULE}.requests.get")
@@ -107,3 +109,12 @@ def test_article_missing_title_filtered_out(mock_get):
     result = fetch_news("AAPL", "Apple", from_date=date(2026, 5, 23))
     assert len(result) == 1
     assert result[0]["headline"] == "Valid title"
+
+
+@patch(f"{MODULE}.requests.get")
+def test_fetch_url_none_when_missing(mock_get):
+    mock_get.return_value = mock_response(json_data={
+        "articles": [{"title": "No url article", "publishedAt": "2026-05-24T09:00:00Z"}]
+    })
+    result = fetch_news("AAPL", "Apple", from_date=date(2026, 5, 23))
+    assert result[0]["url"] is None
