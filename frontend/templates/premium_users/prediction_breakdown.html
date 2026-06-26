@@ -46,8 +46,14 @@
                 <div class="confidence-bg" style="height: 6px; width: 100%;">
                     <div class="confidence-fill {% if data.sentiment_score > 5 %}fill-success{% elif data.sentiment_score == 5 %}fill-neutral{% else %}fill-danger{% endif %}" style="width: {{ data.sentiment_score * 10 }}%;"></div>
                 </div>
+                <div style="margin-top: 6px; text-align: right;">
+                    <a href="/premium/news/{{ data.symbol }}" style="font-size: 0.78rem; color: var(--text-muted); text-decoration: none;"
+                       onmouseover="this.style.color='#3b82f6'" onmouseout="this.style.color='var(--text-muted)'">
+                        View news feed →
+                    </a>
+                </div>
             </div>
-            
+
             <div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.85rem;">
                     <span class="text-main font-bold">Financial Analysis</span>

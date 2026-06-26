@@ -116,6 +116,13 @@
                     <div><dt>Label</dt><dd>{{ item.detail.sentiment_label | title }}</dd></div>
                     <div><dt>As of</dt><dd>{{ item.detail.score_date }}</dd></div>
                     <div><dt>Articles</dt><dd>{{ item.detail.article_count }}</dd></div>
+                    {% if user_role == "premium_user" %}
+                    <div style="margin-top: 0.75rem;">
+                        <a href="/premium/news/{{ stock.symbol }}" class="btn btn-outline btn-sm" style="width: 100%; text-align: center; display: block;">
+                            View News Feed →
+                        </a>
+                    </div>
+                    {% endif %}
                 {% elif item.name == "Financial" and item.detail %}
                     <div><dt>Outlook</dt><dd>{{ item.detail.prediction | title }}</dd></div>
                     <div><dt>Period</dt><dd>{{ item.detail.period }}</dd></div>
