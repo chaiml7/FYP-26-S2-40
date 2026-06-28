@@ -40,7 +40,7 @@ def save_scores(symbol: str, scored_headlines: list) -> dict:
         try:
             response = (
                 supabase.table("sentiment_scores")
-                .upsert(rows, on_conflict="symbol,headline,published_at")
+                .insert(rows)
                 .execute()
             )
             return {"rows_saved": len(response.data)}
@@ -108,7 +108,7 @@ def get_sentiment_summary(symbol: str, days: int = 7) -> dict:
             "published_at": r["published_at"],
             "label": r["label"],
             "score": r["score"],
-            "url": r.get("url") if (r.get("url") or "").startswith(("https://", "http://")) else None,
+            "url": _clean_url(r.get("url")),
         }
         for r in rows
     ]
@@ -159,6 +159,15 @@ def has_data_for_today(symbol: str) -> bool:
         .execute()
     )
     return len(response.data) > 0
+
+
+def _clean_url(url) -> str | None:
+    if not url or not url.startswith(("https://", "http://")):
+        return None
+    # Strip FinnHub API endpoints and NewsAPI URLs — neither links to an actual article page
+    if "finnhub.io/api/" in url or "newsapi.org" in url:
+        return None
+    return url
 
 
 def _score_to_label(avg_score: float) -> str:
