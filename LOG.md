@@ -338,6 +338,111 @@ Teammate: Chai Ming Liang (chaiml7)
 - `finbert_service.py` was touched on main; verify no conflicts with Bali's fine-tuned FinBERT version (already merged cleanly)
 - `requirements.txt` restructured into `requirements-dev.txt` and `requirements-ml.txt` — update local install commands
 
+### 2026-06-14 — Bali — Merged main into bali (technical analysis + dashboard)
+
+**What changed on main (c47b8fa..6234ee4):**
+
+Teammate: Chai Ming Liang (chaiml7) — all commits 2026-06-12
+
+1. **`7bad5f8`** — Added Technical Analysis model to main and fine-tuned code/logic
+   - New `backend/services/technical/` module (6 files):
+     - `feature_engineering.py` — technical feature construction (+174 lines)
+     - `indicator_service.py` — technical indicator calculations (+308 lines)
+     - `price_service.py` — price data access layer (+486 lines)
+     - `technical_model.py` — model training/inference (+419 lines)
+     - `technical_repository.py` — Supabase persistence (+171 lines)
+     - `technical_service.py` — service orchestrator (+208 lines)
+   - New `backend/routes/technical_routes.py` (+148 lines)
+   - New `backend/tests/technical/` — 4 test files (`test_feature_engineering.py`, `test_technical_model.py`, `test_technical_repository.py`, `test_technical_routes.py`)
+   - New Supabase migrations (3 files under `supabase/migrations/`):
+     - `20260611000000_add_versioned_technical_predictions.sql`
+     - `20260611000001_enforce_single_active_technical_model.sql`
+     - `20260611000002_remove_legacy_direction_prediction_columns.sql`
+   - `backend/requirements-ml.txt` — added new ML dep
+   - `backend/services/prediction_service.py` — updated for versioned predictions
+   - `backend/tests/test_prediction_service.py` — new test file
+
+2. **`368f614`** — Added dashboard routes/service, created dashboard templates, updated styles
+   - New `backend/routes/dashboard_routes.py` (+93 lines) — aggregated dashboard data endpoint
+   - New `backend/services/dashboard_service.py` (+274 lines) — combines price + sentiment + prediction data
+   - New `frontend/templates/dashboard/` — 3 Jinja2 templates:
+     - `index.html` (+140 lines) — stock list dashboard
+     - `stock_detail.html` (+264 lines) — per-stock detail page with charts
+     - `not_found.html` (+14 lines) — 404 page
+   - `frontend/static/css/styles.css` — major overhaul (+927 lines dashboard-specific styles)
+   - `frontend/static/js/lightweight-charts.standalone.production.js` — TradingView charting library added
+   - `frontend/main.py` — registered dashboard routes
+   - `backend/main.py` — registered technical + dashboard routers
+   - `backend/database/supabase_client.py` — minor update
+   - `backend/routes/premium_user_routes.py` — updated (+23 lines)
+   - `backend/routes/financial_routes.py` — minor fix
+
+3. **`43fd198`** — Fix bug (minor; no files listed separately)
+
+4. **`6234ee4`** — Fix load times (minor; no files listed separately)
+
+**Sentiment test files touched (import path fixes only):**
+- `backend/tests/sentiment/conftest.py`, `test_finbert_service.py`, `test_finnhub_service.py`, `test_news_scraper_service.py`, `test_sentiment_aggregator.py`, `test_sentiment_pipeline.py`, `test_sentiment_routes.py` — all adjusted to updated import prefix; no logic changes
+
+**Integration impact on sentiment pipeline (my scope):**
+- **No breaking changes** — sentiment service files untouched except import path fixes (already handled)
+- **Dashboard service uses sentiment data** — `dashboard_service.py` likely queries `sentiment_scores` or `sentiment_daily_scores` to populate the stock detail page; sentiment pipeline output is now being consumed by the frontend
+- **`stock_detail.html`** renders per-stock pages — the bullish_score (1–10) from `sentiment_daily_scores` may appear here; verify if Chai wired it up or left a placeholder
+- **Technical model is now live** — XGBoost/LSTM complement is operational; if ensemble scoring (technical + sentiment) is planned, `technical_service.py` is the integration point
+- **Migrations must be applied** — the 3 new SQL migration files need to be run against Supabase dashboard if not auto-applied
+
+**Action items:**
+- [ ] Apply the 3 Supabase migrations if not already applied (`20260611000000`, `20260611000001`, `20260611000002`)
+- [ ] Check `dashboard_service.py` to confirm how sentiment scores are consumed — verify correct column names (`bullish_score`, `score`, `label`)
+- [ ] Verify `stock_detail.html` renders sentiment correctly with real data
+- [ ] Confirm `backend/requirements.txt` is up-to-date and run `pip install -r requirements.txt`
+
+---
+
+### 2026-06-11 — Bali — Merged main, replaced stale sentiment data, PR #7
+
+**What I did:**
+- Merged latest `main` into `bali` (commits `dfce3bd..c47b8fa`)
+- Investigated existing sentiment data (68 records from 2026-05-25)
+- Confirmed via git history that data was from OLD base ProsusAI/finbert model (pre-dates fine-tuning commit by 12 days)
+- Fixed `MODEL_VERSION` constant in `sentiment_aggregator.py` from `"ProsusAI/finbert"` → `"balibpt/finbert-stocklens"`
+- Created `scripts/refresh_sentiment.py` — standalone reusable script to bulk-replace sentiment data
+- Ran script: fetched 2,744 headlines (7 days, 10 stocks), scored with fine-tuned model, replaced all DB data
+- Added NFLX and BABA to `stocks` table (were missing)
+- Final state: 2,744 sentiment_scores + 54 sentiment_daily_scores across all 10 stocks
+- Opened PR #7: https://github.com/chaiml7/FYP-26-S2-40/pull/7 (MODEL_VERSION fix only)
+
+**What changed on main since last merge (dfce3bd..c47b8fa):**
+
+Teammates: Addison (origin/Addison), Ian (technical_analysis), Maith
+
+1. **Addison (`106afe9`)** — Frontend design and backend links
+   - Replaced React+Vite frontend with Jinja2 templates + Flask-style `main.py`
+   - Added admin routes, premium user routes, backend admin routes
+   - Added weighted sentiment scoring (`sentiment_daily_scores` table, bullish_score 1-10)
+   - Added `stock_id` FK to `sentiment_scores` table
+   - Changed all imports to `backend.` prefix (breaking for standalone scripts)
+
+2. **Ian/Addison (`9b5b402`)** — Added financial report model and APIs
+   - New `backend/services/financial/` module (feature engineering, GBM model, repository)
+   - New `backend/routes/financial_routes.py`
+   - `requirements-ml.txt` updated
+
+**Integration issues found & fixed:**
+- `supabase_client.py` reads `SUPABASE_KEY` but `.env` has `SUPABASE_SECRET_KEY` — bridged in script
+- No unique constraint on `(symbol, headline, published_at)` in DB — switched from upsert to insert
+- `backend.` import prefix breaks standalone scripts — refresh script uses `sys.path` workaround
+
+**Sentiment pipeline status: COMPLETE**
+- Fine-tuned model deployed and producing high-confidence scores (mean 0.956)
+- Daily weighted scores (bullish_score 1-10) ready for ensemble integration
+- All 10 stocks covered with 7 days of fresh data
+
+**Next steps:**
+- Wait for PR #7 merge
+- Delete `feature/bali-fix-model-version` branch after merge
+- Sentiment work is done — ensemble scoring is teammate's responsibility
+
 ---
 
 ## Issues / Bugs Tracker
