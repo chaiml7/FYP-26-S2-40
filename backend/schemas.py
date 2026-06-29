@@ -33,6 +33,16 @@ class FinancialModelTrainRequest(BaseModel):
     base_version: Optional[str] = None
 
 
+class FinancialModelTuneRequest(BaseModel):
+    save_best: bool = False
+    activate_best: bool = False
+    top_n: int = Field(default=5, ge=1, le=20)
+
+
+class FinancialModelBinaryTuneRequest(BaseModel):
+    top_n: int = Field(default=5, ge=1, le=20)
+
+
 class AccountCreate(BaseModel):
     email: str = Field(..., pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
     password: str = Field(..., min_length=8)
