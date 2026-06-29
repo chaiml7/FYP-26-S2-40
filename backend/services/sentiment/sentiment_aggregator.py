@@ -111,6 +111,7 @@ def get_sentiment_summary(symbol: str, days: int = 7) -> dict:
             "url": _clean_url(r.get("url")),
         }
         for r in rows
+        if r.get("source") == "gnews"
     ]
 
     score_response = (
