@@ -4,7 +4,7 @@ from backend.database.supabase_client import supabase
 
 MAX_RETRIES = 3
 BACKOFF_BASE = 2
-MODEL_VERSION = "ProsusAI/finbert"
+MODEL_VERSION = "balibpt/finbert-stocklens"
 
 LABEL_WEIGHTS = {
     "positive": 1,

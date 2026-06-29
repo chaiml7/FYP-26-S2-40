@@ -1,11 +1,11 @@
 import pytest
 from unittest.mock import patch, MagicMock, call
 import torch
-import services.sentiment.finbert_service as finbert_module
-from services.sentiment.finbert_service import score_headlines
+import backend.services.sentiment.finbert_service as finbert_module
+from backend.services.sentiment.finbert_service import score_headlines
 from tests.sentiment.conftest import make_mock_model, make_mock_tokenizer, make_mock_model_outputs, make_mock_tokenizer_output
 
-MODEL_PATH = "services.sentiment.finbert_service"
+MODEL_PATH = "backend.services.sentiment.finbert_service"
 
 
 @pytest.fixture(autouse=True)

@@ -1,10 +1,10 @@
 """
 Root test conftest — stubs out heavy/unavailable dependencies so that
-services which import from `database.supabase_client` can be collected
+services which import from `backend.database.supabase_client` can be collected
 without requiring the real `python-dotenv` and `supabase` packages to
 be installed in the test environment.
 
-Individual tests patch `services.sentiment.*.supabase` (or similar) as
+Individual tests patch `backend.services.sentiment.*.supabase` (or similar) as
 needed; this stub just prevents ImportError at collection time.
 """
 import sys

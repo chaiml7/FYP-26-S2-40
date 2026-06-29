@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from services.financial import financial_model
+from backend.services.financial import financial_model
 
 
 def test_version_id_is_stable_and_path_safe():

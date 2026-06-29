@@ -1,11 +1,11 @@
 """Application service for versioned financial model operations."""
 
-from services.financial.financial_model import (
+from backend.services.financial.financial_model import (
     activate_local_model,
     predict_latest,
     train_model,
 )
-from services.financial.financial_repository import (
+from backend.services.financial.financial_repository import (
     activate_model_version,
     get_active_model_version,
     get_financial_prediction_history,
@@ -17,10 +17,10 @@ from services.financial.financial_repository import (
     save_financial_statements,
     save_model_version,
 )
-from services.financial.yfinance_financial_fetcher import (
+from backend.services.financial.yfinance_financial_fetcher import (
     fetch_quarterly_financial_statements,
 )
-from services.stock_list_service import get_active_stocks, get_stock_by_symbol
+from backend.services.stock_list_service import get_active_stocks, get_stock_by_symbol
 
 
 MODEL_REGISTRY_COLUMNS = {

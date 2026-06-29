@@ -1,6 +1,6 @@
 import pytest
 
-from services.financial.financial_model import calculate_fundamental_score
+from backend.services.financial.financial_model import calculate_fundamental_score
 
 
 @pytest.mark.parametrize(
