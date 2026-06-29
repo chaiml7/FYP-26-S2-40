@@ -164,8 +164,9 @@ def has_data_for_today(symbol: str) -> bool:
 def _clean_url(url) -> str | None:
     if not url or not url.startswith(("https://", "http://")):
         return None
-    # Strip FinnHub API endpoints and NewsAPI URLs — neither links to an actual article page
-    if "finnhub.io/api/" in url or "newsapi.org" in url:
+    # Strip all finnhub.io URLs (API endpoints and their news pages never link to the actual article)
+    # and NewsAPI URLs (free-tier links 404)
+    if "finnhub.io" in url or "newsapi.org" in url:
         return None
     return url
 
