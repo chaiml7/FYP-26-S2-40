@@ -1,5 +1,8 @@
 from backend.database.supabase_client import supabase
 from backend.services.stock_list_service import get_stock_by_symbol
+from backend.services.dashboard_service import _price_summary
+from backend.services.prediction_service import get_latest_prediction_by_symbol
+from backend.services.sentiment.sentiment_aggregator import get_sentiment_summary
 
 
 def get_user_watchlist(user_id: str):
@@ -72,3 +75,54 @@ def get_user_watchlist_symbols(user_id: str) -> list:
         for item in watchlist
         if item.get("stocks") and item["stocks"].get("symbol")
     ]
+
+
+def get_user_watchlist_summary(user_id: str) -> list:
+    watchlist = get_user_watchlist(user_id)
+    summary = []
+
+    for item in watchlist:
+        stock = item.get("stocks") or {}
+        symbol = stock.get("symbol")
+
+        price = _price_summary(symbol) if symbol else {
+            "price": None, "change": None, "change_percent": None, "trade_date": None,
+        }
+        predictions = get_latest_prediction_by_symbol(symbol) if symbol else []
+        prediction = predictions[0] if predictions else None
+
+        try:
+            sentiment = get_sentiment_summary(symbol) if symbol else {}
+        except Exception:
+            sentiment = {}
+
+        weighted_scores = sentiment.get("weighted_scores") or []
+        legacy_daily_scores = sentiment.get("daily_scores") or []
+
+        if weighted_scores:
+            sentiment_label = weighted_scores[0].get("sentiment_label")
+            sentiment_score = weighted_scores[0].get("bullish_score")
+        elif legacy_daily_scores:
+            sentiment_label = legacy_daily_scores[0].get("label")
+            sentiment_score = legacy_daily_scores[0].get("avg_score")
+        else:
+            sentiment_label = None
+            sentiment_score = None
+
+        summary.append({
+            "watchlist_id": item["id"],
+            "stock_id": item["stock_id"],
+            "symbol": symbol,
+            "company_name": stock.get("company_name"),
+            "sector": stock.get("sector"),
+            "price": price["price"],
+            "change": price["change"],
+            "change_percent": price["change_percent"],
+            "trade_date": price["trade_date"],
+            "prediction_signal": prediction.get("signal") if prediction else None,
+            "sentiment_label": sentiment_label,
+            "sentiment_score": sentiment_score,
+            "added_at": item["created_at"],
+        })
+
+    return summary
