@@ -338,13 +338,23 @@ async def watchlist(request: Request):
 
     # DYNAMIC LAYOUT SELECTOR: Chooses the shell based on the user's role
     layout = "premium_users/base.html" if role == "premium_user" else "free_users/base.html"
+    is_premium = role == "premium_user"
+
+    watchlist_rows = []
+    if is_premium:
+        try:
+            watchlist_rows = get_user_watchlist_summary(request.session.get("user_id"))
+        except Exception:
+            watchlist_rows = []
 
     return templates.TemplateResponse(
-        request=request, 
+        request=request,
         name="free_users/watchlist.html",
         context={
             "request": request,
-            "base_layout": layout  # Passes the chosen layout to Jinja2
+            "base_layout": layout,  # Passes the chosen layout to Jinja2
+            "is_premium": is_premium,
+            "watchlist_rows": watchlist_rows,
         }
     )
 
