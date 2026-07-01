@@ -445,12 +445,86 @@ Teammates: Addison (origin/Addison), Ian (technical_analysis), Maith
 
 ---
 
+### 2026-06-26 — Bali — Premium News Feed + Auth Bug Fix
+
+**What I did:**
+- Built the full premium news feed feature end-to-end
+- Discovered and fixed a critical Supabase auth contamination bug affecting the whole team
+- Fixed news link quality issues (dead FinnHub URLs, NewsAPI 404s)
+
+**Premium news feed (`/premium/news/{symbol}`):**
+- New Jinja2 template `frontend/templates/premium_users/news_feed.html` — sentiment bar (7-day window) + per-article cards with label badge and FinBERT score
+- New route in `backend/routes/premium_user_routes.py` — Premium + Admin roles only (403 for Base/Guest)
+- Entry points added to `stock_detail.html` and `prediction_breakdown.html` ("View News Feed" button)
+- Fixed a `company_name` key bug in premium routes — was reading wrong key from stock lookup dict
+
+**Auth contamination bug (root cause + fix):**
+- **Root cause:** `supabase.auth.sign_in_with_password()` mutates the shared service-role singleton — overwrites its Authorization header with the user's JWT. All subsequent DB queries then ran under the user's JWT, subject to RLS. Tables like `sentiment_scores` (service-role-only) silently return empty sets.
+- **Why teammates weren't affected:** They don't run `frontend/main.py` on localhost — they hit the deployed instance or use their own flow. The contamination only triggers when you log in via our FastAPI login route.
+- **Fix:** Added a dedicated `_supabase_auth` client instance in `frontend/main.py` used solely for `sign_in_with_password()` / `sign_out()`. The service-role singleton is never touched by auth calls.
+- Created `SUPABASE_AUTH_BUG.md` at project root as a post-mortem (stays on `bali` only)
+
+**URL quality fix (`_clean_url()` helper):**
+- FinnHub URLs (`finnhub.io/api/news?id=...`) are internal API endpoints — clicking them goes to FinnHub homepage, not the article
+- Added `_clean_url()` in `sentiment_aggregator.py` — strips any URL not starting with `http(s)://`, and all `finnhub.io` or `newsapi.org` URLs
+- FinnHub headlines still score fine; their URLs just aren't displayed
+
+**Pipeline fix (upsert → insert):**
+- `save_scores()` was using `upsert(on_conflict="symbol,headline,published_at")` but `sentiment_scores` has no unique constraint on those columns → Supabase threw `42P10` silently (supabase-py swallowed it)
+- Fixed by switching to plain `insert()`; `has_data_for_today()` guard prevents same-day duplicates
+
+**Ran pipeline:** 10 symbols processed, all saved successfully, `daily_score_saved: 1` for all
+
+**PR #9:** https://github.com/chaiml7/FYP-26-S2-40/pull/9
+
+---
+
+### 2026-06-29 — Bali — Replaced NewsAPI with gnews; display-only filter for news feed
+
+**Problem:**
+- NewsAPI free tier frequently returns 404 article URLs (paywalled, moved, deleted content)
+- FinnHub links were being shown with no URL or dead URLs — bad UX
+
+**Solution — gnews (Google News RSS wrapper):**
+- Installed `gnews` package (Google News RSS, no API key, no strict rate limit)
+- Created `backend/services/sentiment/gnews_service.py` — fetches up to 10 articles per symbol via `"{company_name} {symbol} stock"` query
+- URLs are `news.google.com/rss/articles/CBMi...` redirect links — resolve to real articles on click (Reuters, WSJ, Barron's, etc.)
+- Article `published date` is RFC 2822 format — parsed with `email.utils.parsedate_to_datetime`
+- Updated `sentiment_pipeline.py` to use `fetch_gnews` instead of `fetch_newsapi`
+- Added `gnews` to `backend/requirements.txt`
+
+**Display filter:**
+- News feed now only shows `source = 'gnews'` articles in the headlines list
+- FinnHub and legacy NewsAPI rows still exist in DB and still contribute to daily sentiment scores (the `by_date` aggregation runs on all rows before the display filter)
+- This is a read-time filter in `get_sentiment_summary()` — no DB changes needed
+
+**Pipeline re-run (2026-06-29):**
+| Symbol | Headlines | Daily score |
+|--------|-----------|-------------|
+| NVDA | 51 | saved |
+| MSFT / GOOGL | 26 each | saved |
+| AAPL / TSLA | 22 each | saved |
+| AMZN | 25 | saved |
+| META / AMD | 14 each | saved |
+| NFLX | 11 | saved |
+| BABA | 10 | saved |
+
+All `daily_score_saved: 1` — `sentiment_daily_scores` upsert confirmed working.
+
+**PR #9 updated and pushed** — feature branch `feature/bali-premium-news-feed` cherry-picked 16 commits from `bali`, excluding LOG.md, SUPABASE_AUTH_BUG.md, and a teammate's unmerged commit (`financials_service.py`).
+
+---
+
 ## Issues / Bugs Tracker
 
 | Date | Issue | Status | Resolution |
 |---|---|---|---|
 | 2026-05-24 | frontend/.env committed with anon key | Open | Add to .gitignore cleanup task |
 | 2026-05-24 | PRD says Flask, codebase uses FastAPI | Resolved | Using FastAPI, noted discrepancy |
+| 2026-06-26 | Shared Supabase client contaminated by auth calls — stocks page empty on localhost | Resolved | Dedicated `_supabase_auth` instance in `frontend/main.py`; service-role singleton never used for auth |
+| 2026-06-26 | FinnHub URLs route to FinnHub homepage, not articles | Resolved | `_clean_url()` strips all `finnhub.io` URLs; FinnHub headlines score-only, no links shown |
+| 2026-06-26 | NewsAPI free-tier URLs frequently 404 | Resolved | Replaced NewsAPI with gnews in pipeline; gnews provides working Google News redirect URLs |
+| 2026-06-26 | `upsert(on_conflict=...)` on `sentiment_scores` fails silently (no unique constraint) | Resolved | Switched to `insert()`; `has_data_for_today()` guard prevents duplicates |
 
 ---
 
@@ -461,3 +535,5 @@ Teammates: Addison (origin/Addison), Ian (technical_analysis), Maith
 | 2026-05-24 | Use `bali` branch for personal files, PRs to main for code only | Keep main clean, share context across machines |
 | 2026-05-24 | FinBERT over VADER for sentiment | PRD specifies FinBERT as primary; VADER as fallback if compute is an issue |
 | 2026-05-24 | FinnHub + NewsAPI + RSS as news sources | Free tier coverage + redundancy |
+| 2026-06-29 | Replace NewsAPI with gnews | NewsAPI free-tier URLs 404; gnews provides working Google News redirect links with no API key |
+| 2026-06-29 | Display only gnews in news feed; use all sources for score calculation | FinnHub has no linkable article URLs; separating display from scoring keeps sentiment accurate |
