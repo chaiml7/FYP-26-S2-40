@@ -24,9 +24,6 @@ from backend.services.auth_service import (
     update_password,
 )
 from backend.services.stock_list_service import get_stock_by_symbol
-from backend.services.stock_history_service import get_latest_stock_price
-from backend.services.prediction_service import get_latest_prediction_by_symbol
-from backend.services.sentiment.sentiment_aggregator import get_sentiment_summary
 from backend.services.user_profile_service import (
     get_profile,
     get_profiles,
@@ -37,6 +34,8 @@ from backend.services.user_profile_service import (
 from backend.services.user_watchlist_service import (
     add_user_watchlist_stock,
     get_user_watchlist,
+    get_user_watchlist_summary,
+    get_user_watchlist_symbols,
     remove_user_watchlist_stock,
 )
 
@@ -209,53 +208,13 @@ def view_current_user_watchlist(authorization: str = Header(default=None)):
 @router.get("/users/me/watchlist/symbols")
 def view_current_user_watchlist_symbols(authorization: str = Header(default=None)):
     user, _ = _current_user(authorization)
-    watchlist = get_user_watchlist(user["id"])
-
-    return [
-        item["stocks"]["symbol"]
-        for item in watchlist
-        if item.get("stocks") and item["stocks"].get("symbol")
-    ]
+    return get_user_watchlist_symbols(user["id"])
 
 
 @router.get("/users/me/watchlist/summary")
 def view_current_user_watchlist_summary(authorization: str = Header(default=None)):
     user, _ = _current_user(authorization)
-    watchlist = get_user_watchlist(user["id"])
-    summary = []
-
-    for item in watchlist:
-        stock = item.get("stocks") or {}
-        symbol = stock.get("symbol")
-
-        latest_price = get_latest_stock_price(symbol) if symbol else []
-        latest_prediction = get_latest_prediction_by_symbol(symbol) if symbol else []
-
-        try:
-            sentiment = get_sentiment_summary(symbol) if symbol else {}
-        except Exception:
-            sentiment = {}
-
-        weighted_scores = sentiment.get("weighted_scores") or []
-        legacy_daily_scores = sentiment.get("daily_scores") or []
-
-        summary.append({
-            "watchlist_id": item["id"],
-            "stock_id": item["stock_id"],
-            "symbol": symbol,
-            "company_name": stock.get("company_name"),
-            "sector": stock.get("sector"),
-            "latest_price": latest_price[0] if len(latest_price) > 0 else None,
-            "latest_prediction": latest_prediction[0] if len(latest_prediction) > 0 else None,
-            "sentiment": {
-                "latest_daily_score": weighted_scores[0]
-                if weighted_scores
-                else (legacy_daily_scores[0] if legacy_daily_scores else None)
-            },
-            "added_at": item["created_at"],
-        })
-
-    return summary
+    return get_user_watchlist_summary(user["id"])
 
 
 @router.post("/users/me/watchlist")
