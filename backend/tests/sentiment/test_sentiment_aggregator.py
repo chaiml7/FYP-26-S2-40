@@ -23,7 +23,7 @@ def test_save_scores_upserts_rows(mock_supa, mock_get_stock_id):
     assert len(rows) == 3
     assert rows[0]["symbol"] == "AAPL"
     assert rows[0]["stock_id"] == 1
-    assert rows[0]["model_version"] == "ProsusAI/finbert"
+    assert rows[0]["model_version"] == "balibpt/finbert-stocklens"
 
 
 @patch(f"{MODULE}.supabase")
@@ -38,8 +38,56 @@ def test_save_scores_empty_list_does_not_upsert(mock_supa):
 def test_save_scores_includes_required_fields(mock_supa, mock_get_stock_id):
     save_scores("AAPL", SAMPLE_SCORED_HEADLINES)
     rows = mock_supa.table.return_value.upsert.call_args[0][0]
-    required = {"symbol", "stock_id", "headline", "source", "published_at", "label", "score", "model_version"}
+    required = {"symbol", "stock_id", "headline", "source", "published_at", "label", "score", "model_version", "url"}
     assert required.issubset(rows[0].keys())
+
+
+@patch(f"{MODULE}._get_stock_id", return_value=1)
+@patch(f"{MODULE}.supabase")
+def test_save_scores_url_passed_through(mock_supa, mock_get_stock_id):
+    save_scores("AAPL", SAMPLE_SCORED_HEADLINES)
+    rows = mock_supa.table.return_value.upsert.call_args[0][0]
+    assert rows[0]["url"] == "https://example.com/1"
+    assert rows[2]["url"] is None
+
+
+@patch(f"{MODULE}.supabase")
+def test_get_sentiment_summary_headlines_include_url(mock_supa):
+    mock_rows = [
+        {
+            "published_at": "2026-05-24T09:00:00+00:00",
+            "headline": "Apple profits up",
+            "source": "finnhub",
+            "label": "positive",
+            "score": 0.92,
+            "url": "https://example.com/apple",
+        }
+    ]
+    score_rows = []
+
+    # Two supabase calls: sentiment_scores then sentiment_daily_scores
+    execute_mock_scores = MagicMock()
+    execute_mock_scores.data = mock_rows
+    execute_mock_daily = MagicMock()
+    execute_mock_daily.data = score_rows
+
+    chain_scores = MagicMock()
+    chain_scores.execute.return_value = execute_mock_scores
+    chain_daily = MagicMock()
+    chain_daily.execute.return_value = execute_mock_daily
+
+    def table_side_effect(name):
+        mock = MagicMock()
+        if name == "sentiment_scores":
+            mock.select.return_value.eq.return_value.gte.return_value.order.return_value = chain_scores
+        else:
+            mock.select.return_value.eq.return_value.gte.return_value.order.return_value = chain_daily
+        return mock
+
+    mock_supa.table.side_effect = table_side_effect
+
+    result = get_sentiment_summary("AAPL", days=7)
+    assert result["headlines"][0]["url"] == "https://example.com/apple"
 
 
 @patch(f"{MODULE}.time.sleep")

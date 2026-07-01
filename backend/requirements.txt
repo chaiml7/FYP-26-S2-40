@@ -9,3 +9,4 @@ requests
 itsdangerous
 jinja2
 python-multipart
+gnews

@@ -3,7 +3,7 @@ import logging
 from datetime import date
 
 from backend.services.sentiment.finnhub_service import fetch_news as fetch_finnhub
-from backend.services.sentiment.news_scraper_service import fetch_news as fetch_newsapi
+from backend.services.sentiment.gnews_service import fetch_news as fetch_gnews
 from backend.services.sentiment.finbert_service import score_headlines
 from backend.services.sentiment.sentiment_aggregator import (save_daily_sentiment_score,save_scores,has_data_for_today)
 
@@ -28,7 +28,7 @@ def run_pipeline() -> dict:
         try:
             headlines = list(fetch_finnhub(symbol, from_date=from_date))
             time.sleep(0.5)
-            headlines += list(fetch_newsapi(symbol, COMPANY_NAMES[symbol], from_date=from_date))
+            headlines += list(fetch_gnews(symbol, COMPANY_NAMES[symbol], from_date=from_date))
             if not headlines:
                 results.append({"symbol": symbol, "headlines_scored": 0, "status": "no_data"})
                 continue

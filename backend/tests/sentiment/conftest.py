@@ -4,9 +4,9 @@ import torch
 import backend.services.sentiment.finbert_service as finbert_module
 
 SAMPLE_HEADLINES = [
-    {"headline": "Apple reports record profits", "source": "finnhub", "published_at": "2026-05-24T09:00:00+00:00"},
-    {"headline": "Tesla recalls 500,000 vehicles due to safety issue", "source": "finnhub", "published_at": "2026-05-24T10:00:00+00:00"},
-    {"headline": "NVIDIA announces new GPU architecture", "source": "newsapi", "published_at": "2026-05-24T11:00:00+00:00"},
+    {"headline": "Apple reports record profits", "source": "finnhub", "published_at": "2026-05-24T09:00:00+00:00", "url": "https://example.com/1"},
+    {"headline": "Tesla recalls 500,000 vehicles due to safety issue", "source": "finnhub", "published_at": "2026-05-24T10:00:00+00:00", "url": "https://example.com/2"},
+    {"headline": "NVIDIA announces new GPU architecture", "source": "newsapi", "published_at": "2026-05-24T11:00:00+00:00", "url": None},
 ]
 
 SAMPLE_SCORED_HEADLINES = [

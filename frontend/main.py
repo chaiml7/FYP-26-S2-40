@@ -16,8 +16,6 @@ from backend.routes.premium_user_routes import router as premium_user_router
 from backend.routes.admin_routes import router as admin_router
 from backend.routes.backend_admin_routes import router as backend_admin_router
 from backend.routes.dashboard_routes import router as dashboard_router
-from backend.database.supabase_client import supabase
-
 from backend.services.user_profile_service import get_profile
 
 # Load the keys from .env file into Python's memory
@@ -27,6 +25,10 @@ sys.path.append(root_dir)
 
 dotenv_path = os.path.join(root_dir, "backend", ".env")
 load_dotenv(dotenv_path)
+
+# Separate client instance used only for login/logout auth calls.
+# Never used for DB queries — keeps the shared service-role singleton uncontaminated.
+_supabase_auth = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SECRET_KEY"))
 
 app = FastAPI()
 app.include_router(stock_router)
@@ -76,7 +78,7 @@ async def process_login(
 ):
     try:
         # Secure Authentication
-        auth_response = supabase.auth.sign_in_with_password({
+        auth_response = _supabase_auth.auth.sign_in_with_password({
             "email": email,
             "password": password
         })
@@ -115,7 +117,7 @@ async def process_login(
 async def logout(request: Request):
     try:
         # Kill active Auth session
-        supabase.auth.sign_out()
+        _supabase_auth.auth.sign_out()
     except Exception as e:
         print(f"Supabase Sign-Out Error: {e}")
 

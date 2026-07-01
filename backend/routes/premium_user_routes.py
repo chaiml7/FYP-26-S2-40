@@ -5,7 +5,7 @@ from datetime import date
 
 from backend.services.stock_list_service import get_active_stocks
 from backend.services.prediction_service import get_latest_prediction_by_symbol, get_technical_score, get_financial_score
-from backend.services.sentiment.sentiment_aggregator import get_weighted_sentiment_score
+from backend.services.sentiment.sentiment_aggregator import get_weighted_sentiment_score, get_sentiment_summary
 from backend.database.supabase_client import supabase
 
 router = APIRouter()
@@ -33,7 +33,7 @@ async def premium_recommendations(request: Request):
             pred = raw_pred[0]
             display_recommendations.append({
                 "ticker": symbol,
-                "company_name": stock.get("name", "Unknown Company"),
+                "company_name": stock.get("company_name", "Unknown Company"),
                 "action": pred.get("action", "HOLD").upper(),
                 "target_price": f"{float(pred.get('target_price', 0)):.2f}",
                 "confidence": pred.get("confidence_score", 0),
@@ -189,8 +189,40 @@ async def save_premium_weightages(
         
         # This properly creates a row if it doesn't exist, and updates if it does!
         supabase.table("weightages").upsert(payload).execute()
-        
+
     except Exception as e:
         print(f"Database error saving weightages: {e}")
 
     return RedirectResponse(url="/premium/weightages", status_code=303)
+
+@router.get("/premium/news/{symbol}")
+async def premium_news_feed(request: Request, symbol: str, days: int = 7):
+    role = request.session.get("user_role")
+    if role != "premium_user":
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    target_symbol = symbol.upper()
+    summary = get_sentiment_summary(target_symbol, days=days)
+
+    # Resolve company name from active stocks list
+    stocks = get_active_stocks()
+    company_name = next(
+        (s.get("company_name", target_symbol) for s in stocks if s.get("symbol", "").upper() == target_symbol),
+        target_symbol,
+    )
+
+    user_email = request.session.get("user_email", "")
+    user_initial = user_email[0].upper() if user_email else "U"
+
+    return templates.TemplateResponse(
+        request=request,
+        name="news_feed.html",
+        context={
+            "request": request,
+            "symbol": target_symbol,
+            "company_name": company_name,
+            "summary": summary,
+            "user_email": user_email,
+            "user_initial": user_initial,
+        },
+    )
