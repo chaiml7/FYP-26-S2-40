@@ -24,6 +24,10 @@
                 <p>Enter your details to access your dashboard.</p>
             </div>
 
+            {% if error %}
+            <p class="text-danger">{{ error }}</p>
+            {% endif %}
+
             <form action="/login" method="POST" class="auth-form">
                 <div class="form-group">
                     <label for="email" class="form-label">Email Address</label>

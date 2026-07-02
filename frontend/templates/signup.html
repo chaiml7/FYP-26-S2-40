@@ -25,9 +25,13 @@
                 <p>Join thousands of traders analyzing the market smarter.</p>
             </div>
 
-            <form action="/dashboard" method="POST" class="auth-form">
+            {% if error %}
+            <p class="text-danger">{{ error }}</p>
+            {% endif %}
+
+            <form action="/signup" method="POST" class="auth-form">
                 <div class="form-group">
-                    <label for="full_name" class="form-label">Full Name</label>
+                    <label for="firstName" class="form-label">Full Name</label>
                     <input type="text" id="firstName" name="firstName" class="form-control" placeholder="Jane Doe" required>
                 </div>
 

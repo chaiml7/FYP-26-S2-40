@@ -26,6 +26,15 @@
             <div class="stock-title-line">
                 <h1>{{ stock.symbol }}</h1>
                 <span class="exchange-label">{{ stock.exchange or "Tracked" }}</span>
+                {% if user_role == "premium_user" %}
+                <button
+                    class="watchlist-star watchlist-star-large {% if is_watchlisted %}active{% endif %}"
+                    data-symbol="{{ stock.symbol }}"
+                    aria-pressed="{{ 'true' if is_watchlisted else 'false' }}"
+                    aria-label="Toggle watchlist for {{ stock.symbol }}"
+                    onclick="toggleWatchlist(this);"
+                >★</button>
+                {% endif %}
             </div>
             <p>{{ stock.company_name }}</p>
             <span class="sector-label">{{ stock.sector or "Unclassified" }}</span>
@@ -181,6 +190,32 @@
 {% endblock %}
 
 {% block scripts %}
+{% if user_role == "premium_user" %}
+<script>
+    function toggleWatchlist(button) {
+        const symbol = button.dataset.symbol;
+        const isActive = button.classList.contains("active");
+        const method = isActive ? "DELETE" : "POST";
+
+        button.disabled = true;
+        fetch(`/premium/watchlist/${symbol}`, { method })
+            .then((response) => {
+                if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+                return response.json();
+            })
+            .then((data) => {
+                button.classList.toggle("active", data.watchlisted);
+                button.setAttribute("aria-pressed", data.watchlisted ? "true" : "false");
+            })
+            .catch((error) => {
+                console.error("Watchlist toggle failed:", error);
+            })
+            .finally(() => {
+                button.disabled = false;
+            });
+    }
+</script>
+{% endif %}
 {% if stock.chart_history %}
 <script src="/static/js/lightweight-charts.standalone.production.js?v=5.0.9-1"></script>
 <script>
