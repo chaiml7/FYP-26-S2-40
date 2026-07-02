@@ -545,6 +545,36 @@ All `daily_score_saved: 1` — `sentiment_daily_scores` upsert confirmed working
 
 ---
 
+### 2026-07-02 — Bali — Merged changes from main (commit `e07e062`)
+
+**What changed on main:**
+
+Teammate: chaiml7 (mingliang0312@gmail.com)
+Commit: `e07e0629ef20d0f34c0cb3c68102ea9f5b901b4d`
+Date: 2026-06-29
+
+- `e07e062` — adjusted financial model. Currently above 50% accuracy on test data.
+
+**Files changed:**
+```
+ backend/routes/financial_routes.py                 |   79 +-
+ backend/schemas.py                                 |   10 +
+ backend/services/financial/financial_model.py      | 1049 +++++++++++++++++++-
+ backend/services/financial/financial_repository.py |   34 +-
+ backend/services/financial/financial_service.py    |  249 ++++-
+ .../services/financial/sec_financial_fetcher.py    |  355 +++++++
+ backend/tests/financial/test_financial_routes.py   |  121 +++
+ backend/tests/financial/test_model_versioning.py   |   26 +
+ 8 files changed, 1868 insertions(+), 55 deletions(-)
+```
+
+**Integration impact:**
+- No overlap with the sentiment pipeline or watchlist work — touches only `backend/services/financial/*`, `backend/routes/financial_routes.py`, and `backend/schemas.py`. Merge was conflict-free.
+- This merge also brought PR #10 (watchlist feature + signup fix) back into `bali` via `main`, since it had just been merged there — no new content from that side, `git pull` reported those files unchanged.
+- No action needed on the sentiment side; `frontend.main` import-checked clean after the merge.
+
+---
+
 ## Issues / Bugs Tracker
 
 | Date | Issue | Status | Resolution |
