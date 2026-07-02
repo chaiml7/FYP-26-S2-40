@@ -2,18 +2,29 @@
 
 from fastapi import APIRouter, HTTPException
 
-from backend.schemas import FinancialModelTrainRequest
+from backend.schemas import (
+    FinancialModelBinaryTuneRequest,
+    FinancialModelTrainRequest,
+    FinancialModelTuneRequest,
+)
 from backend.services.financial.financial_service import (
     generate_all_financial_predictions,
+    generate_binary_financial_prediction,
     generate_financial_prediction,
+    import_all_sec_financial_statements,
     import_all_financial_statements,
     import_financial_statements,
+    import_sec_financial_statements,
     read_financial_model_version,
     read_financial_model_versions,
     read_financial_prediction_history,
+    read_latest_binary_financial_prediction,
     read_latest_financial_prediction,
     set_active_financial_model,
+    train_binary_financial_model,
     train_financial_model,
+    tune_binary_financial_model,
+    tune_financial_model,
 )
 
 
@@ -38,6 +49,22 @@ def import_all_statements():
         _raise_financial_error(exc)
 
 
+@router.post("/statements/import-sec")
+def import_all_sec_statements():
+    try:
+        return import_all_sec_financial_statements()
+    except Exception as exc:
+        _raise_financial_error(exc)
+
+
+@router.post("/statements/import-sec/{symbol}")
+def import_sec_statements(symbol: str):
+    try:
+        return import_sec_financial_statements(symbol)
+    except Exception as exc:
+        _raise_financial_error(exc)
+
+
 @router.post("/statements/import/{symbol}")
 def import_statements(symbol: str):
     try:
@@ -54,6 +81,37 @@ def train_model(request: FinancialModelTrainRequest = None):
             request.training_mode,
             request.base_version,
         )
+    except Exception as exc:
+        _raise_financial_error(exc)
+
+
+@router.post("/model/tune")
+def tune_model(request: FinancialModelTuneRequest = None):
+    try:
+        request = request or FinancialModelTuneRequest()
+        return tune_financial_model(
+            save_best=request.save_best,
+            activate_best=request.activate_best,
+            top_n=request.top_n,
+        )
+    except Exception as exc:
+        _raise_financial_error(exc)
+
+
+@router.post("/model/tune-binary")
+def tune_binary_model(request: FinancialModelBinaryTuneRequest = None):
+    try:
+        request = request or FinancialModelBinaryTuneRequest()
+        return tune_binary_financial_model(top_n=request.top_n)
+    except Exception as exc:
+        _raise_financial_error(exc)
+
+
+@router.post("/model/train-binary")
+def train_binary_model(request: FinancialModelBinaryTuneRequest = None):
+    try:
+        request = request or FinancialModelBinaryTuneRequest()
+        return train_binary_financial_model(top_n=request.top_n)
     except Exception as exc:
         _raise_financial_error(exc)
 
@@ -95,6 +153,14 @@ def create_prediction(symbol: str, model_version: str = None):
         _raise_financial_error(exc)
 
 
+@router.post("/predictions-binary/{symbol}")
+def create_binary_prediction(symbol: str, model_version: str = None):
+    try:
+        return generate_binary_financial_prediction(symbol, model_version)
+    except Exception as exc:
+        _raise_financial_error(exc)
+
+
 @router.get("/predictions/{symbol}/latest")
 def view_latest_prediction(symbol: str):
     prediction = read_latest_financial_prediction(symbol)
@@ -102,6 +168,17 @@ def view_latest_prediction(symbol: str):
         raise HTTPException(
             status_code=404,
             detail=f"No financial prediction found for {symbol.upper()}.",
+        )
+    return prediction
+
+
+@router.get("/predictions-binary/{symbol}/latest")
+def view_latest_binary_prediction(symbol: str):
+    prediction = read_latest_binary_financial_prediction(symbol)
+    if prediction is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No binary financial prediction found for {symbol.upper()}.",
         )
     return prediction
 

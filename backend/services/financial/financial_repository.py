@@ -19,18 +19,30 @@ PREDICTION_COLUMNS = {
 
 
 def load_financial_statements(symbol: str = None) -> list:
-    query = (
-        supabase.table("financial_statements")
-        .select("*")
-        .eq("period_type", "quarterly")
-        .order("stock_id")
-        .order("period")
-    )
-    if symbol:
-        query = query.eq("ticker", symbol.upper())
+    rows = []
+    batch_size = 1000
+    start = 0
 
-    response = query.execute()
-    return response.data or []
+    while True:
+        query = (
+            supabase.table("financial_statements")
+            .select("*")
+            .eq("period_type", "quarterly")
+            .order("stock_id")
+            .order("period")
+            .range(start, start + batch_size - 1)
+        )
+        if symbol:
+            query = query.eq("ticker", symbol.upper())
+
+        response = query.execute()
+        batch = response.data or []
+        rows.extend(batch)
+        if len(batch) < batch_size:
+            break
+        start += batch_size
+
+    return rows
 
 
 def save_financial_statements(statements: list) -> list:
