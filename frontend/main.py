@@ -16,6 +16,7 @@ from backend.routes.premium_user_routes import router as premium_user_router
 from backend.routes.admin_routes import router as admin_router
 from backend.routes.backend_admin_routes import router as backend_admin_router
 from backend.routes.dashboard_routes import router as dashboard_router
+from backend.services.auth_service import AuthServiceError, create_account
 from backend.services.user_profile_service import get_profile
 
 # Load the keys from .env file into Python's memory
@@ -133,6 +134,40 @@ async def logout(request: Request):
 @app.get("/signup")
 async def signup(request: Request):
     return templates.TemplateResponse(
-        request=request, 
+        request=request,
         name="signup.html"
     )
+
+@app.post("/signup")
+async def process_signup(
+    request: Request,
+    firstName: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...)
+):
+    try:
+        auth_response = create_account(email, password, firstName)
+    except AuthServiceError as e:
+        return templates.TemplateResponse(
+            request=request,
+            name="signup.html",
+            context={"error": e.detail}
+        )
+
+    # Supabase only issues a session immediately when email confirmation is
+    # disabled; otherwise the response has no access_token and the user must
+    # confirm their email before they can log in.
+    if not auth_response.get("access_token"):
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={"error": "Account created! Please check your email to confirm your address before logging in."}
+        )
+
+    user_id = auth_response.get("user", {}).get("id")
+
+    request.session["user_email"] = email
+    request.session["user_id"] = str(user_id)
+    request.session["user_role"] = "basic_user"
+
+    return RedirectResponse(url="/dashboard", status_code=303)
