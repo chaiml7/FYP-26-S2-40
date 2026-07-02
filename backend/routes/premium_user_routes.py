@@ -9,7 +9,7 @@ from backend.services.sentiment.sentiment_aggregator import get_weighted_sentime
 from backend.database.supabase_client import supabase
 
 router = APIRouter()
-templates = Jinja2Templates(directory="frontend/templates/premium_users")
+templates = Jinja2Templates(directory="frontend/templates")
 
 @router.get("/premium/recommendations")
 async def premium_recommendations(request: Request):
@@ -42,7 +42,7 @@ async def premium_recommendations(request: Request):
 
     return templates.TemplateResponse(
         request=request, 
-        name="stock_recommendations.html",
+        name="premium_users/stock_recommendations.html",
         context={
             "request": request,
             "recommendations": display_recommendations
@@ -121,7 +121,7 @@ async def premium_prediction_breakdown(request: Request, symbol: str = "NVDA"):
 
     return templates.TemplateResponse(
         request=request, 
-        name="prediction_breakdown.html",
+        name="premium_users/prediction_breakdown.html",
         context={
             "request": request,
             "data": display_data
@@ -158,7 +158,7 @@ async def premium_user_weightages(request: Request):
 
     return templates.TemplateResponse(
         request=request, 
-        name="user_model_weightage.html",
+        name="premium_users/user_model_weightage.html",
         context={"request": request, "weights": user_weights, "defaults": admin_defaults}
     )
 

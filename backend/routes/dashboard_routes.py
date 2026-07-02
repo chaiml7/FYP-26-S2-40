@@ -26,6 +26,10 @@ def _session_context(request: Request) -> dict | None:
         base_layout = "premium_users/base.html"
     elif role == "basic_user":
         base_layout = "free_users/base.html"
+    elif role == "frontend_admin":
+        base_layout = "user_admin/base.html"
+    else:
+        return
 
     return {
         "user_role": role,

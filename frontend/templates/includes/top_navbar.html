@@ -1,0 +1,33 @@
+<header class="app-topbar" style="display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; position: relative; z-index: 10;">
+
+    <div class="topbar-brand" style="flex: 1; display: flex; align-items: center; gap: 15px; justify-content: flex-start;">
+        <span style="font-weight: bold; font-size: 1.1rem; color: var(--text-main, white);">📈 StockLens</span>
+        
+        {% if user_role == 'premium_user' %}
+            <span style="color: #fbbf24; border: 1px solid #fbbf24; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">PREMIUM</span>
+        {% elif user_role == 'user_admin' %}
+            <span style="color: #ef4444; border: 1px solid #ef4444; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">ADMIN</span>
+        {% else %}
+            <span style="color: #94a3b8; border: 1px solid #94a3b8; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">FREE</span>
+        {% endif %}
+    </div>
+
+    <div class="topbar-center" style="flex: 1; display: flex; justify-content: center;">
+        <form action="/search" method="GET" class="topbar-search" style="width: 100%; max-width: 450px;">
+            <span class="search-icon">🔍</span>
+            <input type="text" name="q" placeholder="Search ticker symbol..." class="form-control search-input bg-darker" style="width: 100%;">
+        </form>
+    </div>
+    
+    <div class="topbar-actions" style="flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 20px; min-width: 0;">
+        <button class="btn-icon">🔔</button>
+        
+        <div class="user-chip" style="display: flex; align-items: center; gap: 10px;">
+            <span class="avatar-sm">{{ user_initial or "U" }}</span>
+            <span class="text-sm font-medium">{{ user_email or "StockLens user" }}</span>
+        </div>
+        
+        <a href="/logout" class="btn btn-outline btn-sm">Log Out</a>
+    </div>
+
+</header>
