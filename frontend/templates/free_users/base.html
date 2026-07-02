@@ -7,15 +7,9 @@
     <link rel="stylesheet" href="/static/css/styles.css?v=20260612-4">
 </head>
 <body class="app-page">
-
+    {% include "templates/includes/top_navbar.html" %}
     <div class="app-layout">
         <aside class="app-sidebar">
-            <div class="sidebar-brand">
-                <span class="logo-icon">📈</span>
-                <span class="brand-name">StockLens</span>
-                <span class="role-tag badge-subtle" style="margin-left: auto;">FREE</span>
-            </div>
-            
             <nav class="sidebar-nav">
                 <a href="/dashboard" class="nav-item {% block nav_dashboard %}{% endblock %}">
                     <span class="nav-icon">&#128202;</span> Dashboard
@@ -36,22 +30,6 @@
         </aside>
 
         <main class="app-main">
-            <header class="app-topbar">
-                <form action="/search" method="GET" class="topbar-search">
-                    <span class="search-icon">🔍</span>
-                    <input type="text" name="q" placeholder="Search ticker symbol..." class="form-control search-input bg-darker">
-                </form>
-                
-                <div class="topbar-actions">
-                    <button class="btn-icon">🔔</button>
-                    <div class="user-chip">
-                        <span class="avatar-sm">{{ user_initial or "U" }}</span>
-                        <span class="text-sm font-medium">{{ user_email or "StockLens user" }}</span>
-                    </div>
-                    <a href="/logout" class="btn btn-outline btn-sm">Log Out</a>
-                </div>
-            </header>
-
             <div class="page-content">
                 {% block content %}
                 {% endblock %}

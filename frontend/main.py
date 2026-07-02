@@ -14,7 +14,6 @@ from backend.routes.stock_routes import router as stock_router
 from backend.routes.user_routes import router as user_router
 from backend.routes.premium_user_routes import router as premium_user_router
 from backend.routes.admin_routes import router as admin_router
-from backend.routes.backend_admin_routes import router as backend_admin_router
 from backend.routes.dashboard_routes import router as dashboard_router
 from backend.services.auth_service import AuthServiceError, create_account
 from backend.services.user_profile_service import get_profile
@@ -36,7 +35,6 @@ app.include_router(stock_router)
 app.include_router(user_router)
 app.include_router(premium_user_router)
 app.include_router(admin_router)
-app.include_router(backend_admin_router)
 app.include_router(dashboard_router)
 
 # Session Middleware
