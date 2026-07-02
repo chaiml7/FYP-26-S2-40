@@ -515,6 +515,36 @@ All `daily_score_saved: 1` — `sentiment_daily_scores` upsert confirmed working
 
 ---
 
+### 2026-07-02 — Bali — Watchlist feature (premium add/remove + like button), built via subagent-driven development
+
+**Problem:**
+- `/user/watchlist` was 100% hardcoded HTML (5 fake rows, fake AAPL chart) — no backend wiring at all
+- No like/unlike control existed anywhere in the app (dashboard list, stock detail page)
+- Investigation found the backend watchlist service + a bearer-token JSON API already existed in `user_watchlist_service.py`/`user_routes.py`, but nothing in the app actually called it — the real app (`frontend/main.py`) uses session-cookie auth everywhere, not bearer tokens, so that API was dead code
+
+**Design (full spec: `docs/superpowers/specs/2026-07-01-watchlist-feature-design.md`):**
+- Feature is premium-only; basic users see a blurred/locked teaser + upgrade message on `/user/watchlist`, no star buttons anywhere
+- Kept the unused bearer API alive but refactored it to delegate to new shared service functions, instead of ripping it out
+
+**Implementation (10-task plan, `docs/superpowers/plans/2026-07-01-watchlist-feature.md`, executed via subagent-driven-development skill — fresh implementer + reviewer subagent per task):**
+- `user_watchlist_service.py` — added `add_watchlist_by_symbol`, `remove_watchlist_by_symbol`, `get_user_watchlist_symbols`, `get_user_watchlist_summary` (price/change reused from `dashboard_service._price_summary`, plus prediction signal + sentiment label/score)
+- `user_routes.py` — refactored the two existing bearer-token watchlist endpoints to call the new service functions instead of duplicating logic inline; wired `/user/watchlist` to branch on `premium_user` vs `basic_user`
+- `premium_user_routes.py` — new session-gated JSON endpoints: `POST/DELETE /premium/watchlist/{symbol}`, `GET /premium/watchlist/symbols` (403 for non-premium, enforced server-side, not just hidden in the UI)
+- `dashboard_routes.py` — threads `watchlisted_symbols`/`is_watchlisted` into the `/dashboard` and `/stocks/{symbol}/view` template context for premium users
+- `dashboard/index.html`, `dashboard/stock_detail.html` — added a ★ toggle button (premium-only), wired to the new endpoints via `fetch()`, optimistic-on-success state update
+- `free_users/watchlist.html` — full rewrite: real table (ticker/price/change/sentiment/prediction/remove) for premium, blurred teaser + lock overlay for basic
+- `backend/tests/test_user_watchlist_service.py` — 9 new tests (symbol resolution, not-found errors, weighted vs. legacy sentiment fallback, sentiment-service-failure swallow)
+- Full backend suite: 54/54 passing (baseline was 45; `tests/sentiment/*` has 26 pre-existing failures unrelated to this work — ML dependency issue in this environment, not touched)
+
+**Process note — subagent-driven development:**
+- Brainstormed → wrote design spec → wrote 10-task implementation plan → executed with a fresh implementer subagent + fresh reviewer subagent per task (all 10 tasks approved, only Minor findings)
+- Task 4's reviewer flagged an Important finding: manual verification only covered the 403-unauthenticated path, not the 200/404 paths — resolved with a follow-up subagent that forged a signed session cookie (using the known `SessionMiddleware` secret) to verify the premium happy-path and 404-not-found live against the running app
+- Final whole-branch review (Opus) caught one real bug outside the plan's scope: an earlier `.superpowers/` gitignore edit (`echo ... >> .gitignore`) had merged onto the previous line because the file had no trailing newline, producing `.claude/.superpowers/` — which both failed to ignore the scratch dir AND stopped ignoring `.claude/` itself. Fixed by splitting into two lines and committing separately.
+
+**Known environment quirk:** `frontend/main.py` must be run as `python -m uvicorn frontend.main:app --reload --port 8000` from the repo root (not `cd frontend && uvicorn main:app`) — its `backend.*` imports need the repo root on `sys.path`, and the `sys.path.append` inside the file happens after those imports, so it only works when the module is already resolvable from cwd.
+
+---
+
 ## Issues / Bugs Tracker
 
 | Date | Issue | Status | Resolution |
