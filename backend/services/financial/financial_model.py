@@ -19,8 +19,8 @@ LABELS = ["negative", "neutral", "positive"]
 LABEL_TO_ID = {label: index for index, label in enumerate(LABELS)}
 BINARY_LABELS = ["bearish", "bullish"]
 BINARY_LABEL_TO_ID = {label: index for index, label in enumerate(BINARY_LABELS)}
-MODEL_FAMILY = "xgboost_financial"
 BINARY_MODEL_FAMILY = "xgboost_financial_binary"
+MODEL_FAMILY = BINARY_MODEL_FAMILY
 DEFAULT_BINARY_DISPLAY_THRESHOLDS = {
     "bearish_below": 0.45,
     "neutral_between": [0.45, 0.55],
@@ -54,7 +54,17 @@ CONTINUATION_ESTIMATORS = 30
 EARLY_STOPPING_ROUNDS = 25
 MIN_ROLLING_TRAIN_ROWS = 40
 MIN_ROLLING_EVAL_ROWS = 8
-TUNING_WEIGHT_POWERS = [0.0, 0.25, 0.5, 0.75, 1.0]
+TUNING_WEIGHT_POWERS = [0.5, 0.75, 1.0]
+BINARY_BEARISH_MULTIPLIERS = [1.0, 1.25, 1.5, 2.0]
+BINARY_DECISION_THRESHOLDS = [0.4, 0.45, 0.5, 0.55, 0.6]
+TUNING_VALIDATION_YEAR = 2025
+MIN_VALIDATION_MACRO_F1 = 0.60
+MIN_VALIDATION_BALANCED_ACCURACY = 0.60
+ACTIVE_BASELINE_METRICS = {
+    "balanced_accuracy": 0.5071,
+    "macro_f1": 0.5060,
+    "log_loss": 0.6923,
+}
 TUNING_CANDIDATES = [
     {
         "name": "current",
@@ -320,7 +330,6 @@ def _mean_metric(folds: list[dict], metric_name: str) -> float | None:
 def _rolling_validation(dataset: pd.DataFrame, dependencies) -> dict:
     folds = []
     years = sorted(dataset["period"].dt.year.dropna().unique())
-
     for test_year in years:
         previous_data = dataset[dataset["period"].dt.year < test_year].copy()
         test_set = dataset[dataset["period"].dt.year == test_year].copy()
@@ -427,7 +436,6 @@ def _rolling_validation_for_parameters(
 ) -> dict:
     folds = []
     years = sorted(dataset["period"].dt.year.dropna().unique())
-
     for test_year in years:
         previous_data = dataset[dataset["period"].dt.year < test_year].copy()
         test_set = dataset[dataset["period"].dt.year == test_year].copy()
@@ -554,6 +562,7 @@ def _fit_binary_classifier(
     validation_set: pd.DataFrame,
     parameters: dict,
     weight_power: float,
+    bearish_multiplier: float,
     dependencies,
 ):
     labels = training_set["binary_label"]
@@ -562,9 +571,13 @@ def _fit_binary_classifier(
         parameters_override=parameters,
         early_stopping=validation_set is not None,
     )
-    fit_arguments = {
-        "sample_weight": _sample_weights(labels, weight_power),
-    }
+    sample_weight = _sample_weights(labels, weight_power)
+    sample_weight = np.where(
+        labels.to_numpy() == "bearish",
+        sample_weight * bearish_multiplier,
+        sample_weight,
+    )
+    fit_arguments = {"sample_weight": sample_weight}
     if validation_set is not None:
         validation_labels = validation_set["binary_label"]
         fit_arguments.update({
@@ -575,7 +588,12 @@ def _fit_binary_classifier(
                 )
             ],
             "sample_weight_eval_set": [
-                _sample_weights(validation_labels, weight_power),
+                np.where(
+                    validation_labels.to_numpy() == "bearish",
+                    _sample_weights(validation_labels, weight_power)
+                    * bearish_multiplier,
+                    _sample_weights(validation_labels, weight_power),
+                ),
             ],
             "verbose": False,
         })
@@ -628,23 +646,93 @@ def _calculate_binary_metrics(actual, predicted, probabilities, dependencies) ->
     }
 
 
-def _evaluate_binary_model(model, evaluation_set: pd.DataFrame, dependencies) -> dict:
+def _evaluate_binary_model(
+    model,
+    evaluation_set: pd.DataFrame,
+    dependencies,
+    decision_threshold: float = 0.5,
+) -> dict:
     actual = evaluation_set["binary_label_id"].to_numpy()
     probabilities = model.predict_proba(_feature_matrix(evaluation_set))
-    predicted = np.argmax(probabilities, axis=1)
+    predicted = (
+        probabilities[:, BINARY_LABEL_TO_ID["bullish"]] >= decision_threshold
+    ).astype(int)
     return _calculate_binary_metrics(actual, predicted, probabilities, dependencies)
+
+
+def _rank_binary_metrics(metrics: dict) -> tuple:
+    return (
+        metrics.get("macro_f1") or 0,
+        metrics.get("balanced_accuracy") or 0,
+        metrics.get("accuracy") or 0,
+        -(metrics.get("log_loss") or 999),
+    )
+
+
+def _binary_selection_score(metrics: dict) -> float:
+    macro_f1 = float(metrics.get("macro_f1") or 0)
+    balanced_accuracy = float(metrics.get("balanced_accuracy") or 0)
+    accuracy = float(metrics.get("accuracy") or 0)
+    log_loss = min(1.0, max(0.0, float(metrics.get("log_loss") or 1.0)))
+    score = (
+        0.40 * macro_f1
+        + 0.30 * balanced_accuracy
+        + 0.20 * (1.0 - log_loss)
+        + 0.10 * accuracy
+    )
+    return round(score, 6)
+
+
+def _meets_binary_validation_requirements(metrics: dict) -> bool:
+    return (
+        float(metrics.get("macro_f1") or 0) >= MIN_VALIDATION_MACRO_F1
+        and float(metrics.get("balanced_accuracy") or 0)
+        >= MIN_VALIDATION_BALANCED_ACCURACY
+    )
+
+
+def _binary_deployment_assessment(
+    metrics: dict,
+    baseline_metrics: dict = None,
+) -> dict:
+    baseline = {
+        **ACTIVE_BASELINE_METRICS,
+        **(baseline_metrics or {}),
+    }
+    checks = {
+        "balanced_accuracy": (
+            float(metrics.get("balanced_accuracy") or 0)
+            > float(baseline["balanced_accuracy"])
+        ),
+        "macro_f1": (
+            float(metrics.get("macro_f1") or 0)
+            > float(baseline["macro_f1"])
+        ),
+        "log_loss": (
+            float(metrics.get("log_loss") or 999)
+            < float(baseline["log_loss"])
+        ),
+    }
+    return {
+        "eligible": all(checks.values()),
+        "checks": checks,
+        "required_to_beat": {
+            "balanced_accuracy": f"> {baseline['balanced_accuracy']}",
+            "macro_f1": f"> {baseline['macro_f1']}",
+            "log_loss": f"< {baseline['log_loss']}",
+        },
+    }
 
 
 def _binary_rolling_validation_for_parameters(
     dataset: pd.DataFrame,
     parameters: dict,
     weight_power: float,
+    bearish_multiplier: float,
     dependencies,
 ) -> dict:
     folds = []
-    years = sorted(dataset["period"].dt.year.dropna().unique())
-
-    for test_year in years:
+    for test_year in (TUNING_VALIDATION_YEAR,):
         previous_data = dataset[dataset["period"].dt.year < test_year].copy()
         test_set = dataset[dataset["period"].dt.year == test_year].copy()
         if (
@@ -663,8 +751,18 @@ def _binary_rolling_validation_for_parameters(
             validation_set,
             parameters,
             weight_power,
+            bearish_multiplier,
             dependencies,
         )
+        metrics_by_threshold = {
+            str(threshold): _evaluate_binary_model(
+                model,
+                test_set,
+                dependencies,
+                threshold,
+            )
+            for threshold in BINARY_DECISION_THRESHOLDS
+        }
         folds.append({
             "test_year": int(test_year),
             "train_rows": len(training_set),
@@ -675,18 +773,60 @@ def _binary_rolling_validation_for_parameters(
                 label: int(count)
                 for label, count in test_set["binary_label"].value_counts().items()
             },
-            "metrics": _evaluate_binary_model(model, test_set, dependencies),
+            "metrics_by_threshold": metrics_by_threshold,
         })
+
+    if not folds:
+        return {
+            "fold_count": 0,
+            "folds": [],
+            "decision_threshold": 0.5,
+            "average_metrics": {
+                "accuracy": None,
+                "balanced_accuracy": None,
+                "macro_f1": None,
+                "log_loss": None,
+            },
+            "threshold_results": [],
+        }
+
+    threshold_results = []
+    for threshold in BINARY_DECISION_THRESHOLDS:
+        threshold_key = str(threshold)
+        threshold_folds = [
+            {"metrics": fold["metrics_by_threshold"][threshold_key]}
+            for fold in folds
+        ]
+        threshold_results.append({
+            "decision_threshold": threshold,
+            "average_metrics": {
+                "accuracy": _mean_metric(threshold_folds, "accuracy"),
+                "balanced_accuracy": _mean_metric(
+                    threshold_folds,
+                    "balanced_accuracy",
+                ),
+                "macro_f1": _mean_metric(threshold_folds, "macro_f1"),
+                "log_loss": _mean_metric(threshold_folds, "log_loss"),
+            },
+        })
+    threshold_results.sort(
+        key=lambda result: _rank_binary_metrics(result["average_metrics"]),
+        reverse=True,
+    )
+    best_threshold = threshold_results[0] if threshold_results else {
+        "decision_threshold": 0.5,
+        "average_metrics": {},
+    }
+    selected_key = str(best_threshold["decision_threshold"])
+    for fold in folds:
+        fold["metrics"] = fold.pop("metrics_by_threshold")[selected_key]
 
     return {
         "fold_count": len(folds),
         "folds": folds,
-        "average_metrics": {
-            "accuracy": _mean_metric(folds, "accuracy"),
-            "balanced_accuracy": _mean_metric(folds, "balanced_accuracy"),
-            "macro_f1": _mean_metric(folds, "macro_f1"),
-            "log_loss": _mean_metric(folds, "log_loss"),
-        },
+        "decision_threshold": best_threshold["decision_threshold"],
+        "average_metrics": best_threshold["average_metrics"],
+        "threshold_results": threshold_results,
     }
 
 
@@ -695,28 +835,29 @@ def _evaluate_binary_tuning_candidate(
     strategy: str,
     candidate: dict,
     weight_power: float,
+    bearish_multiplier: float,
     dependencies,
 ) -> dict:
     binary_dataset = _prepare_binary_dataset(dataset, strategy)
-    train_set, holdout_set = _chronological_holdout(binary_dataset)
-    early_training_set, validation_set = _binary_latest_validation_split(train_set)
-    if early_training_set is None:
-        early_training_set = train_set
-        validation_set = None
+    tuning_set, holdout_set = _chronological_holdout(binary_dataset)
 
     parameters = _binary_parameters_for_candidate(candidate)
-    model = _fit_binary_classifier(
-        early_training_set,
-        validation_set,
+    rolling_validation = _binary_rolling_validation_for_parameters(
+        tuning_set,
         parameters,
         weight_power,
+        bearish_multiplier,
         dependencies,
     )
-    rolling_validation = _binary_rolling_validation_for_parameters(
-        binary_dataset,
-        parameters,
-        weight_power,
-        dependencies,
+    decision_threshold = rolling_validation["decision_threshold"]
+    validation_metrics = rolling_validation["average_metrics"]
+    validation_fold = next(
+        (
+            fold
+            for fold in rolling_validation["folds"]
+            if fold["test_year"] == TUNING_VALIDATION_YEAR
+        ),
+        None,
     )
     return {
         "strategy": strategy,
@@ -727,33 +868,66 @@ def _evaluate_binary_tuning_candidate(
         ),
         "candidate_name": candidate["name"],
         "weight_power": weight_power,
+        "bearish_multiplier": bearish_multiplier,
+        "decision_threshold": decision_threshold,
+        "selection_score": _binary_selection_score(validation_metrics),
+        "meets_validation_requirements": (
+            _meets_binary_validation_requirements(validation_metrics)
+        ),
         "parameters": parameters,
-        "best_n_estimators": _best_iteration_count(model),
+        "best_n_estimators": (
+            validation_fold["best_n_estimators"]
+            if validation_fold
+            else None
+        ),
         "dataset_rows": len(binary_dataset),
         "class_distribution": {
             label: int(count)
             for label, count in binary_dataset["binary_label"].value_counts().items()
         },
         "latest_holdout_rows": len(holdout_set),
-        "latest_holdout_metrics": _evaluate_binary_model(
-            model,
-            holdout_set,
-            dependencies,
-        ),
+        "latest_holdout_metrics": None,
         "rolling_validation": rolling_validation,
     }
 
 
 def _rank_binary_tuning_result(result: dict) -> tuple:
     rolling = result["rolling_validation"]["average_metrics"]
-    latest = result["latest_holdout_metrics"]
     return (
+        result.get("meets_validation_requirements", False),
+        result.get("selection_score", 0),
         rolling.get("macro_f1") or 0,
         rolling.get("balanced_accuracy") or 0,
-        rolling.get("accuracy") or 0,
-        latest.get("accuracy") or 0,
-        -(rolling.get("log_loss") or 999),
     )
+
+
+def _evaluate_selected_binary_holdout(
+    dataset: pd.DataFrame,
+    result: dict,
+    dependencies,
+) -> dict:
+    binary_dataset = _prepare_binary_dataset(dataset, result["strategy"])
+    training_set, holdout_set = _chronological_holdout(binary_dataset)
+    parameters = dict(result["parameters"])
+    if result.get("best_n_estimators"):
+        parameters["n_estimators"] = result["best_n_estimators"]
+    model = _fit_binary_classifier(
+        training_set,
+        None,
+        parameters,
+        result["weight_power"],
+        result["bearish_multiplier"],
+        dependencies,
+    )
+    return {
+        "rows": len(holdout_set),
+        "metrics": _evaluate_binary_model(
+            model,
+            holdout_set,
+            dependencies,
+            result["decision_threshold"],
+        ),
+    }
 
 
 def calculate_fundamental_score(probabilities: dict) -> tuple[float, float]:
@@ -1178,6 +1352,7 @@ def tune_model(
 def tune_binary_model(
     statements: list | pd.DataFrame,
     top_n: int = 5,
+    baseline_metrics: dict = None,
 ) -> dict:
     dependencies = _load_ml_dependencies()
     dataset = _validate_dataset(statements)
@@ -1186,17 +1361,35 @@ def tune_binary_model(
     for strategy in ("directional", "strong_only"):
         for candidate in TUNING_CANDIDATES:
             for weight_power in TUNING_WEIGHT_POWERS:
-                results.append(
-                    _evaluate_binary_tuning_candidate(
-                        dataset,
-                        strategy,
-                        candidate,
-                        weight_power,
-                        dependencies,
+                for bearish_multiplier in BINARY_BEARISH_MULTIPLIERS:
+                    results.append(
+                        _evaluate_binary_tuning_candidate(
+                            dataset,
+                            strategy,
+                            candidate,
+                            weight_power,
+                            bearish_multiplier,
+                            dependencies,
+                        )
                     )
-                )
 
     results.sort(key=_rank_binary_tuning_result, reverse=True)
+    best_result = results[0]
+    if best_result["rolling_validation"]["fold_count"] == 0:
+        raise ValueError(
+            f"No usable {TUNING_VALIDATION_YEAR} validation rows were found."
+        )
+    holdout = _evaluate_selected_binary_holdout(
+        dataset,
+        best_result,
+        dependencies,
+    )
+    best_result["latest_holdout_rows"] = holdout["rows"]
+    best_result["latest_holdout_metrics"] = holdout["metrics"]
+    best_result["deployment_assessment"] = _binary_deployment_assessment(
+        holdout["metrics"],
+        baseline_metrics,
+    )
     return {
         "source_dataset_rows": len(dataset),
         "source_dataset_start": dataset["period"].min().date().isoformat(),
@@ -1204,14 +1397,16 @@ def tune_binary_model(
         "candidate_count": len(results),
         "label_order": BINARY_LABELS,
         "ranking_metric": (
-            "rolling binary macro_f1, rolling balanced_accuracy, rolling "
-            "accuracy, latest holdout accuracy, then rolling log_loss"
+            f"{TUNING_VALIDATION_YEAR} combined score: 40% macro_f1, "
+            "30% balanced_accuracy, 20% inverse log_loss, 10% accuracy"
         ),
         "note": (
-            "Comparison-only experiment. This endpoint does not save, activate, "
-            "or change the current 3-class financial model."
+            f"Tunes exclusively on {TUNING_VALIDATION_YEAR}. Each company's "
+            "latest labelled quarter is excluded from tuning and used once "
+            "to evaluate the selected candidate. This does not save or "
+            "activate a model."
         ),
-        "best_result": results[0],
+        "best_result": best_result,
         "top_results": results[:top_n],
     }
 
@@ -1219,11 +1414,22 @@ def tune_binary_model(
 def train_binary_model(
     statements: list | pd.DataFrame,
     top_n: int = 5,
+    baseline_metrics: dict = None,
 ) -> dict:
     dependencies = _load_ml_dependencies()
     dataset = _validate_dataset(statements)
-    tuned = tune_binary_model(statements, top_n=top_n)
+    tuned = tune_binary_model(
+        statements,
+        top_n=top_n,
+        baseline_metrics=baseline_metrics,
+    )
     best_result = tuned["best_result"]
+    if not best_result["deployment_assessment"]["eligible"]:
+        raise ValueError(
+            "Best tuned model did not beat the active-model holdout baseline; "
+            "it was not saved or activated. Run /api/financial/model/tune "
+            "and review best_result.deployment_assessment."
+        )
     binary_dataset = _prepare_binary_dataset(dataset, best_result["strategy"])
 
     parameters = dict(best_result["parameters"])
@@ -1239,7 +1445,12 @@ def train_binary_model(
     model.fit(
         _feature_matrix(binary_dataset),
         binary_dataset["binary_label_id"].to_numpy(),
-        sample_weight=_sample_weights(labels, best_result["weight_power"]),
+        sample_weight=np.where(
+            labels.to_numpy() == "bearish",
+            _sample_weights(labels, best_result["weight_power"])
+            * best_result["bearish_multiplier"],
+            _sample_weights(labels, best_result["weight_power"]),
+        ),
     )
 
     trained_at = datetime.now(timezone.utc)
@@ -1262,6 +1473,8 @@ def train_binary_model(
         "hyperparameters": {
             **parameters,
             "weight_power": best_result["weight_power"],
+            "bearish_multiplier": best_result["bearish_multiplier"],
+            "decision_threshold": best_result["decision_threshold"],
             "early_stopping_rounds": EARLY_STOPPING_ROUNDS,
             "display_thresholds": {
                 "bearish_below": 0.45,
@@ -1278,6 +1491,8 @@ def train_binary_model(
                 "ranking_metric": tuned["ranking_metric"],
                 "best_candidate_name": best_result["candidate_name"],
                 "best_weight_power": best_result["weight_power"],
+                "best_bearish_multiplier": best_result["bearish_multiplier"],
+                "best_decision_threshold": best_result["decision_threshold"],
             },
             "rolling_validation": best_result["rolling_validation"],
             "note": (
@@ -1288,7 +1503,7 @@ def train_binary_model(
         },
         "feature_columns": FEATURE_COLUMNS,
         "labels": BINARY_LABELS,
-        "evaluation_mode": "binary_parameter_tuning_with_rolling_year_validation",
+        "evaluation_mode": "binary_parameter_tuning_with_2025_validation",
         "xgboost_version": dependencies["xgboost"].__version__,
     }
     saved_metadata = _save_version(model, metadata)
@@ -1297,10 +1512,7 @@ def train_binary_model(
         "saved_model": saved_metadata,
         "best_result": best_result,
         "top_results": tuned["top_results"],
-        "warning": (
-            "Saved as a separate binary model family. Activate this model "
-            "version to use it in the normal financial prediction pipeline."
-        ),
+        "message": "Saved as the financial prediction model and ready for activation.",
     }
 
 
@@ -1392,7 +1604,12 @@ def predict_latest_binary(
         "bearish": round(bearish_probability, 4),
         "bullish": round(bullish_probability, 4),
     }
-    binary_prediction = "bullish" if bullish_probability >= 0.5 else "bearish"
+    decision_threshold = float(
+        metadata.get("hyperparameters", {}).get("decision_threshold", 0.5)
+    )
+    binary_prediction = (
+        "bullish" if bullish_probability >= decision_threshold else "bearish"
+    )
     thresholds = (
         metadata.get("hyperparameters", {}).get("display_thresholds")
         or DEFAULT_BINARY_DISPLAY_THRESHOLDS
@@ -1422,4 +1639,5 @@ def predict_latest_binary(
         "raw_outlook": raw_outlook,
         "fundamental_score": fundamental_score,
         "display_thresholds": thresholds,
+        "decision_threshold": decision_threshold,
     }
