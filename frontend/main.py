@@ -14,10 +14,13 @@ from backend.routes.stock_routes import router as stock_router
 from backend.routes.user_routes import router as user_router
 from backend.routes.premium_user_routes import router as premium_user_router
 from backend.routes.admin_routes import router as admin_router
-from backend.routes.backend_admin_routes import router as backend_admin_router
 from backend.routes.dashboard_routes import router as dashboard_router
 from backend.services.auth_service import AuthServiceError, create_account
 from backend.services.user_profile_service import get_profile
+from backend.services.dashboard_service import (
+    get_public_market_leaders,
+    get_public_model_metrics,
+)
 
 # Load the keys from .env file into Python's memory
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -36,7 +39,6 @@ app.include_router(stock_router)
 app.include_router(user_router)
 app.include_router(premium_user_router)
 app.include_router(admin_router)
-app.include_router(backend_admin_router)
 app.include_router(dashboard_router)
 
 # Session Middleware
@@ -55,9 +57,32 @@ templates = Jinja2Templates(directory=template_path)
 # ==========================================
 @app.get("/")
 async def home(request: Request):
+    try:
+        market_leaders = get_public_market_leaders()
+    except Exception as exc:
+        print(f"Public market leaders lookup failed: {exc}")
+        market_leaders = []
+    try:
+        model_metrics = get_public_model_metrics()
+    except Exception as exc:
+        print(f"Public model metrics lookup failed: {exc}")
+        model_metrics = None
+    featured_analysis = next(
+        (
+            stock
+            for stock in market_leaders
+            if stock.get("overall_score") is not None
+        ),
+        None,
+    )
     return templates.TemplateResponse(
-        request=request, 
-        name="index.html"
+        request=request,
+        name="index.html",
+        context={
+            "market_leaders": market_leaders,
+            "featured_analysis": featured_analysis,
+            "model_metrics": model_metrics,
+        },
     )
 
 # ==========================================

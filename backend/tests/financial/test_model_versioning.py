@@ -11,7 +11,7 @@ def test_version_id_is_stable_and_path_safe():
 
     version = financial_model._new_version_id(trained_at)
 
-    assert version == "xgboost_financial_20260611T070809123456Z"
+    assert version == "xgboost_financial_binary_20260611T070809123456Z"
     financial_model._validate_version(version)
 
 
@@ -69,3 +69,15 @@ def test_binary_model_can_be_activated_as_product_model(monkeypatch):
 
     assert activated["model_version"] == version
     assert activated["is_active"] is True
+
+
+def test_legacy_three_class_model_cannot_be_activated(monkeypatch):
+    version = "xgboost_financial_20260611T070809123456Z"
+    monkeypatch.setattr(
+        financial_service,
+        "get_model_version",
+        lambda model_version: {"model_version": model_version},
+    )
+
+    with pytest.raises(ValueError, match="not a binary financial model"):
+        financial_service.set_active_financial_model(version)

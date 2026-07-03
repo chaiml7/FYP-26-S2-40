@@ -2,11 +2,44 @@ from datetime import date
 from unittest.mock import patch
 
 from backend.services.dashboard_service import (
+    _combined_score,
+    _format_volume,
+    _model_performance_row,
     _price_summary,
     _score_tone,
     get_dashboard_stocks,
     get_stock_dashboard,
 )
+
+
+def test_public_market_score_uses_product_weights():
+    assert _combined_score(8, 6, 4) == 6.6
+    assert _combined_score(8, None, 4) is None
+
+
+def test_public_market_volume_is_compact():
+    assert _format_volume(1_250_000) == "1.2M"
+    assert _format_volume(None) == "--"
+
+
+def test_public_model_metrics_formats_registry_metrics():
+    result = _model_performance_row(
+        "Financial",
+        "financial_binary_v1",
+        {
+            "accuracy": 0.5635,
+            "balanced_accuracy": 0.5071,
+            "macro_f1": 0.506,
+            "log_loss": 0.6923,
+        },
+        "holdout",
+    )
+
+    assert result["accuracy"] == 56.4
+    assert result["balanced_accuracy"] == 50.7
+    assert result["macro_f1"] == 50.6
+    assert result["log_loss"] == 0.6923
+    assert result["evaluation_status"] == "Held-out test"
 
 
 def test_score_tone_distinguishes_missing_and_outlook_ranges():
