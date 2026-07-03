@@ -17,6 +17,10 @@ from backend.routes.admin_routes import router as admin_router
 from backend.routes.dashboard_routes import router as dashboard_router
 from backend.services.auth_service import AuthServiceError, create_account
 from backend.services.user_profile_service import get_profile
+from backend.services.dashboard_service import (
+    get_public_market_leaders,
+    get_public_model_metrics,
+)
 
 # Load the keys from .env file into Python's memory
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -53,9 +57,32 @@ templates = Jinja2Templates(directory=template_path)
 # ==========================================
 @app.get("/")
 async def home(request: Request):
+    try:
+        market_leaders = get_public_market_leaders()
+    except Exception as exc:
+        print(f"Public market leaders lookup failed: {exc}")
+        market_leaders = []
+    try:
+        model_metrics = get_public_model_metrics()
+    except Exception as exc:
+        print(f"Public model metrics lookup failed: {exc}")
+        model_metrics = None
+    featured_analysis = next(
+        (
+            stock
+            for stock in market_leaders
+            if stock.get("overall_score") is not None
+        ),
+        None,
+    )
     return templates.TemplateResponse(
-        request=request, 
-        name="index.html"
+        request=request,
+        name="index.html",
+        context={
+            "market_leaders": market_leaders,
+            "featured_analysis": featured_analysis,
+            "model_metrics": model_metrics,
+        },
     )
 
 # ==========================================
