@@ -575,6 +575,48 @@ Date: 2026-06-29
 
 ---
 
+### 2026-07-03 — Bali — Merged changes from main (commit `c8e3922`)
+
+**What changed on main:**
+
+- `c796249` — UI and path change: renamed `backend_admin` routes/templates → `user_admin`, added shared `top_navbar.html` include
+- `4b16657` — Removal of backend admin: dropped unused `backend_admin_routes.py` router registration from `frontend/main.py`
+- `1db079c` — adjusted financial model to perform better (Addison's branch merged in)
+- `c8e3922` — new public homepage dashboard: `get_public_market_leaders()` / `get_public_model_metrics()` in `dashboard_service.py`, wired into `frontend/main.py`'s `/` route; large `index.html` + `styles.css` rework; new `test_dashboard_service.py`
+
+**Files changed (`76a60fb..c8e3922`):**
+```
+ backend/routes/admin_routes.py                     | 128 ++-
+ backend/routes/backend_admin_routes.py             | 127 ---
+ backend/routes/dashboard_routes.py                 |   4 +
+ backend/routes/financial_routes.py                 |  53 +-
+ backend/routes/premium_user_routes.py              |   8 +-
+ backend/schemas.py                                 |   9 +-
+ backend/services/dashboard_service.py              | 191 +++++
+ backend/services/financial/financial_model.py      | 346 ++--
+ backend/services/financial/financial_service.py    | 184 ++--
+ backend/tests/financial/test_financial_routes.py   | 151 +---
+ backend/tests/financial/test_financial_score.py    |  93 +-
+ backend/tests/financial/test_model_versioning.py   |  14 +-
+ backend/tests/test_dashboard_service.py            |  33 +
+ frontend/main.py                                   |  33 +-
+ frontend/static/css/styles.css                     | 947 +++++++++--
+ frontend/templates/backend_admin/*                 | removed, moved to user_admin/*
+ frontend/templates/includes/top_navbar.html        |  33 +
+ frontend/templates/index.html                      | 378 ++--
+ frontend/templates/user_admin/*                    | new/renamed from backend_admin/*
+ 30 files changed, 2364 insertions(+), 1162 deletions(-)
+```
+
+**Integration impact:**
+- No overlap with the sentiment pipeline or watchlist work. New homepage code (`get_public_market_leaders`, `get_public_model_metrics`) is additive in `dashboard_service.py` — doesn't touch `_price_summary`, which the watchlist feature depends on.
+- `backend_admin` → `user_admin` rename doesn't touch `free_users/watchlist.html` or the premium watchlist routes/templates; `free_users/base.html` only lost some now-shared nav CSS (moved into `top_navbar.html`).
+- Financial model changes (`1db079c`) are scoped to `backend/services/financial/*` and `financial_routes.py` — no shared code with sentiment or watchlist.
+- Merge was conflict-free (`git pull origin main` via ORT strategy, no manual resolution needed).
+- No action needed on the sentiment/watchlist side.
+
+---
+
 ## Issues / Bugs Tracker
 
 | Date | Issue | Status | Resolution |
