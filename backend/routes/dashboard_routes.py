@@ -10,6 +10,7 @@ from backend.services.dashboard_service import (
     get_dashboard_stocks,
     get_stock_dashboard,
 )
+from backend.services.user_watchlist_service import get_user_watchlist_symbols
 
 
 router = APIRouter()
@@ -26,9 +27,14 @@ def _session_context(request: Request) -> dict | None:
         base_layout = "premium_users/base.html"
     elif role == "basic_user":
         base_layout = "free_users/base.html"
+    elif role == "frontend_admin":
+        base_layout = "user_admin/base.html"
+    else:
+        return
 
     return {
         "user_role": role,
+        "user_id": request.session.get("user_id"),
         "user_email": email,
         "user_initial": email[:1].upper() if email else "U",
         "base_layout": base_layout,
@@ -47,6 +53,14 @@ async def dashboard(request: Request, selected_date: date = None):
         for stock in stocks
         if stock.get("sector")
     })
+
+    watchlisted_symbols = []
+    if session["user_role"] == "premium_user":
+        try:
+            watchlisted_symbols = get_user_watchlist_symbols(session["user_id"])
+        except Exception:
+            watchlisted_symbols = []
+
     return templates.TemplateResponse(
         request=request,
         name="dashboard/index.html",
@@ -57,6 +71,7 @@ async def dashboard(request: Request, selected_date: date = None):
             "selected_date": (
                 selected_date.isoformat() if selected_date else ""
             ),
+            "watchlisted_symbols": watchlisted_symbols,
         },
     )
 
@@ -86,8 +101,15 @@ async def stock_detail(
             status_code=404,
         )
 
+    is_watchlisted = False
+    if session["user_role"] == "premium_user":
+        try:
+            is_watchlisted = stock["symbol"] in get_user_watchlist_symbols(session["user_id"])
+        except Exception:
+            is_watchlisted = False
+
     return templates.TemplateResponse(
         request=request,
         name="dashboard/stock_detail.html",
-        context={**session, "stock": stock},
+        context={**session, "stock": stock, "is_watchlisted": is_watchlisted},
     )

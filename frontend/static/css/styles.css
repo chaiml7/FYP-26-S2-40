@@ -2,18 +2,19 @@
    1. BASE STYLES & VARIABLES
    ========================================= */
 :root {
-    --bg-dark: #0b1120;
-    --bg-card: #111827;
-    --text-main: #f8fafc;
-    --text-muted: #94a3b8;
-    --accent-blue: #3b82f6;
-    --accent-hover: #2563eb;
-    --border-color: #1e293b;
+    --bg-dark: #f8fafc; 
+    --bg-card: #ffffff; 
+    --text-main: #0f172a; 
+    --text-muted: #64748b; 
+    --accent-blue: #3b82f6; 
+    --accent-hover: #2563eb;    
+    --border-color: #e2e8f0;
+    --admin: #8b5df633;
     --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 body {
-    background-color: var(--bg-dark);
+    background-color: var(--bg-card);
     color: var(--text-muted);
     font-family: var(--font-stack);
     margin: 0;
@@ -32,7 +33,7 @@ a {
     position: fixed;
     top: 0;
     width: 100%;
-    background-color: rgba(11, 17, 32, 0.9);
+    background-color: var(--bg-card);
     backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--border-color);
     z-index: 100;
@@ -165,12 +166,16 @@ a {
     gap: 0.5rem;
     padding: 0.35rem 1rem;
     border-radius: 50px;
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    background-color: rgba(59, 130, 246, 0.1);
+
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-card);
     color: var(--accent-blue);
+
     font-size: 0.75rem;
     font-weight: bold;
     letter-spacing: 1px;
+    
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .dot {
@@ -224,7 +229,7 @@ a {
 .icon-box {
     width: 48px;
     height: 48px;
-    background-color: rgba(59, 130, 246, 0.1);
+    background-color: var(--bg-dark);
     color: var(--accent-blue);
     display: flex;
     align-items: center;
@@ -345,7 +350,7 @@ a {
 }
 
 .faq-question:hover {
-    background-color: rgba(30, 41, 59, 0.5);
+    background-color: var(--bg-dark);
 }
 
 .faq-icon {
@@ -355,7 +360,6 @@ a {
 .faq-answer {
     max-height: 0; /* Hides the text height */
     padding: 0 1.25rem; /* Removes padding so it hides cleanly */
-    background-color: rgba(11, 17, 32, 0.3);
     transition: max-height 0.3s ease, padding 0.3s ease;
 }
 
@@ -407,7 +411,7 @@ a {
 }
 
 .back-link:hover {
-    color: var(--text-main);
+    color: var(--bg-dark);
     transform: translateX(-4px); /* Gently slides the arrow to the left on hover */
 }
 
@@ -424,7 +428,7 @@ a {
 }
 
 .auth-brand:hover {
-    color: var(--text-main);
+    color: var(--bg-dark);
 }
 
 .auth-card {
@@ -484,7 +488,7 @@ a {
 .form-control {
     width: 100%;
     padding: 0.75rem 1rem;
-    background-color: rgba(11, 17, 32, 0.5); /* Slightly darker than the card */
+    background-color: var(--bg-dark); /* Slightly darker than the card */
     border: 1px solid var(--border-color);
     border-radius: 6px;
     color: var(--text-main);
@@ -552,7 +556,7 @@ a {
    10. ADMIN DASHBOARD
    ========================================= */
 .admin-page {
-    background-color: var(--bg-dark);
+    background-color: var(--bg-card);
 }
 
 .admin-layout {
@@ -570,17 +574,18 @@ a {
     flex-shrink: 0;
 }
 
-.sidebar-brand {
+.topbar-brand {
     padding: 1.5rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    border-bottom: 1px solid var(--border-color);
 }
+
+
 
 .badge-admin {
     font-size: 0.65rem;
-    background-color: rgba(139, 92, 246, 0.2);
+    background-color: var(--admin);
     color: #a78bfa; /* Purple for Admin */
     padding: 2px 6px;
     border-radius: 4px;
@@ -606,12 +611,12 @@ a {
 }
 
 .nav-item:hover {
-    background-color: rgba(30, 41, 59, 0.5);
+    background-color: var(--bg-dark);
     color: var(--text-main);
 }
 
 .nav-item.active {
-    background-color: rgba(30, 41, 59, 0.8);
+    background-color: var(--bg-dark);
     color: var(--text-main);
     border-left-color: var(--accent-blue);
 }
@@ -709,7 +714,7 @@ a {
 }
 
 .pill:hover {
-    color: var(--text-main);
+    color: var(--bg-dark);
 }
 
 .pill.active {
@@ -737,7 +742,7 @@ a {
     letter-spacing: 1px;
     color: var(--text-muted);
     border-bottom: 1px solid var(--border-color);
-    background-color: rgba(30, 41, 59, 0.3);
+    background-color: var(--bg-dark);
 }
 
 .admin-table td {
@@ -751,11 +756,11 @@ a {
 }
 
 .admin-table tr:hover {
-    background-color: rgba(30, 41, 59, 0.2);
+    background-color: var(--bg-dark);
 }
 
 .count-badge {
-    background-color: rgba(30, 41, 59, 0.8); /* Dark background */
+    background-color: var(--bg-dark); /* Dark background */
     color: var(--text-main);
     padding: 2px 8px;
     border-radius: 12px;
@@ -815,7 +820,7 @@ a {
 }
 
 .btn-icon:hover {
-    background-color: var(--bg-card);
+    background-color: var(--bg-dark);
     border-color: var(--text-muted);
 }
 
@@ -881,11 +886,11 @@ a {
 }
 
 .role-nav-card:hover {
-    background-color: rgba(30, 41, 59, 0.5);
+    background-color: var(--bg-dark);
 }
 
 .role-nav-card.active {
-    background-color: rgba(30, 41, 59, 0.8);
+    background-color: var(--bg-dark);
     border-color: var(--accent-blue);
 }
 
@@ -895,7 +900,7 @@ a {
 }
 
 .info-box {
-    background-color: rgba(11, 17, 32, 0.5);
+    background-color: var(--bg-card);
     border: 1px solid var(--border-color);
     padding: 1rem;
     border-radius: 6px;
@@ -976,7 +981,7 @@ a {
     justify-content: space-between;
     align-items: center;
     padding: 1rem;
-    background-color: rgba(11, 17, 32, 0.3);
+    background-color: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     cursor: pointer;
@@ -984,7 +989,7 @@ a {
 }
 
 .user-row:hover {
-    background-color: rgba(30, 41, 59, 0.4);
+    background-color: var(--bg-dark);
 }
 
 .user-info {
@@ -1016,7 +1021,7 @@ a {
    12. USER APPLICATION DASHBOARD
    ========================================= */
 .app-page {
-    background-color: var(--bg-dark);
+    background-color: var(--bg-card);
 }
 
 .app-layout {
@@ -1057,7 +1062,7 @@ a {
 }
 
 .bg-darker {
-    background-color: rgba(11, 17, 32, 0.8) !important;
+    background-color: var(--bg-card) !important;
 }
 
 .topbar-actions {
@@ -1071,7 +1076,7 @@ a {
     align-items: center;
     gap: 0.75rem;
     padding: 0.25rem 0.75rem 0.25rem 0.25rem;
-    background-color: rgba(30, 41, 59, 0.5);
+    background-color: var(--bg-dark);
     border: 1px solid var(--border-color);
     border-radius: 50px;
     color: var(--text-main);
@@ -1108,7 +1113,7 @@ a {
     text-transform: capitalize;
     color: var(--text-muted);
     border-bottom: 1px solid var(--border-color);
-    background-color: rgba(30, 41, 59, 0.2);
+    background-color: var(--bg-dark);
 }
 
 .data-table td {
@@ -1118,7 +1123,7 @@ a {
 }
 
 .data-table tr:hover {
-    background-color: rgba(30, 41, 59, 0.3);
+    background-color: var(--bg-dark);
 }
 
 .data-table tr:last-child td {
@@ -1194,7 +1199,7 @@ a {
     font-size: 0.75rem;
     font-weight: 800;
     letter-spacing: 1px;
-    border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+    border-bottom: 1px solid var(--bg-dark);
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -1211,12 +1216,12 @@ a {
     justify-content: space-between;
     align-items: center;
     padding: 1rem 1.5rem;
-    border-bottom: 1px solid rgba(30, 41, 59, 0.3);
+    border-bottom: 1px solid var(--bg-dark);
     transition: background-color 0.2s;
 }
 
 .movers-row:hover {
-    background-color: rgba(30, 41, 59, 0.4);
+    background-color: var(--bg-dark);
 }
 
 .movers-row:last-child {
@@ -1256,7 +1261,7 @@ a {
 }
 
 .news-card:hover {
-    background-color: rgba(30, 41, 59, 0.4);
+    background-color: var(--bg-dark);
     border-color: rgba(59, 130, 246, 0.5); /* Subtle blue glow on border */
     transform: translateY(-2px);
 }
@@ -1264,7 +1269,7 @@ a {
 .news-icon-wrapper {
     width: 40px;
     height: 40px;
-    background-color: rgba(30, 41, 59, 0.5);
+    background-color: var(--bg-dark);
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -1343,7 +1348,7 @@ a {
 }
 
 .social-pill {
-    background-color: rgba(30, 41, 59, 0.6);
+    background-color: var(--bg-dark);
     border: 1px solid var(--border-color);
     color: var(--text-main);
     padding: 0.4rem 1rem;
@@ -1436,7 +1441,7 @@ a {
 }
 
 .recommendation-card:hover {
-    background-color: rgba(30, 41, 59, 0.3);
+    background-color: var(--bg-dark);
 }
 
 /* Badge specific to ratings */
@@ -1466,7 +1471,7 @@ a {
 .confidence-bg {
     width: 100%;
     height: 4px;
-    background-color: rgba(30, 41, 59, 0.8);
+    background-color: var(--bg-dark);
     border-radius: 2px;
     overflow: hidden;
 }
@@ -1509,7 +1514,7 @@ a {
     justify-content: space-between;
     align-items: center;
     padding: 0.875rem 1.25rem;
-    background-color: rgba(30, 41, 59, 0.4);
+    background-color: var(--bg-dark);
     border: 1px solid var(--border-color);
     border-radius: 6px;
 }
@@ -1528,8 +1533,8 @@ a {
    17. SHARED STOCK WORKSPACE
    ========================================= */
 .workspace-page {
-    background: #0c1017;
-    color: #e7edf5;
+    background: var(--bg-dark);
+    color: var(--text-main);
 }
 
 .workspace-layout {
@@ -1572,7 +1577,7 @@ a {
     justify-content: center;
     border-radius: 6px;
     background: #2774d8;
-    color: #ffffff;
+    color: var(--text-main);
     font-size: 0.72rem;
     font-weight: 800;
 }
@@ -1598,7 +1603,7 @@ a {
 
 .workspace-nav-item:hover,
 .workspace-nav-item.active {
-    background: rgba(30, 41, 59, 0.8);
+    background: var(--bg-dark);
     color: var(--text-main);
 }
 
@@ -1630,7 +1635,7 @@ a {
     justify-content: center;
     border-radius: 50%;
     background: #263445;
-    color: #ffffff;
+    color: var(--text-main);
     font-weight: 750;
 }
 
@@ -1649,7 +1654,7 @@ a {
 }
 
 .account-copy span {
-    color: #8492a3;
+    color: var(--text-muted);
     font-size: 0.7rem;
 }
 
@@ -1724,7 +1729,7 @@ a {
 .section-title-row h2,
 .dashboard-not-found h1 {
     margin: 0;
-    color: #f6f8fb;
+    color: var(--text-main);
     letter-spacing: 0;
 }
 
@@ -1736,7 +1741,7 @@ a {
 .stock-detail-header p,
 .dashboard-not-found p {
     margin: 0.35rem 0 0;
-    color: #8f9cac;
+    color: var(--text-muted);
 }
 
 .market-count {
@@ -1751,12 +1756,12 @@ a {
 }
 
 .market-count strong {
-    color: #ffffff;
+    color: var(--text-main);
     font-size: 1.3rem;
 }
 
 .market-count span {
-    color: #8f9cac;
+    color: var(--text-muted);
     font-size: 0.75rem;
 }
 
@@ -1777,7 +1782,7 @@ a {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
-    color: #8492a3;
+    color: var(--text-muted);
     font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -1792,8 +1797,8 @@ a {
     padding: 0 0.85rem;
     border: 1px solid #303b49;
     border-radius: 6px;
-    background: #141b24;
-    color: #eef2f7;
+    background: var(--bg-dark);
+    color: var(--text-muted);
     font: inherit;
     font-size: 0.875rem;
     font-weight: 500;
@@ -1842,9 +1847,9 @@ a {
 .stock-table-shell,
 .price-history-panel {
     overflow: hidden;
-    border: 1px solid #28313d;
+    border: 1px solid var(--text-muted);
     border-radius: 8px;
-    background: #121821;
+    background: var(--bg-dark);
 }
 
 .stock-browser-table,
@@ -1858,7 +1863,7 @@ a {
     padding: 0.8rem 1rem;
     border-bottom: 1px solid #303b49;
     background: #171f29;
-    color: #7f8d9e;
+    color: var(--text-muted);
     font-size: 0.68rem;
     text-align: left;
     text-transform: uppercase;
@@ -1878,7 +1883,7 @@ a {
 }
 
 .stock-browser-row:hover {
-    background: #18212c;
+    background: var(--bg-dark);
 }
 
 .stock-browser-row:last-child td,
@@ -1901,7 +1906,7 @@ a {
 }
 
 .company-cell strong {
-    color: #ffffff;
+    color: var(--text-main);
     font-size: 0.9rem;
 }
 
@@ -1909,7 +1914,7 @@ a {
 .price-date {
     max-width: 280px;
     overflow: hidden;
-    color: #7f8d9e;
+    color: var(--text-muted);
     font-size: 0.72rem;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2024,14 +2029,14 @@ a {
 }
 
 .stock-quote > strong {
-    color: #ffffff;
+    color: var(--text-main);
     font-size: 2rem;
     line-height: 1.1;
 }
 
 .stock-quote small {
     margin-top: 0.25rem;
-    color: #778597;
+    color: var(--text-muted);
     font-size: 0.72rem;
 }
 
@@ -2051,7 +2056,7 @@ a {
     overflow: hidden;
     border: 1px solid var(--border-color);
     border-radius: 6px;
-    background-color: rgba(11, 17, 32, 0.55);
+    background-color: var(--bg-card);
 }
 
 .candlestick-chart {
@@ -2109,7 +2114,7 @@ a {
 }
 
 .score-scale-note {
-    color: #7f8d9e;
+    color: var(--text-muted);
     font-size: 0.72rem;
 }
 
@@ -2150,28 +2155,28 @@ a {
 }
 
 .score-status {
-    color: #8492a3;
+    color: var(--text-muted);
     font-size: 0.66rem;
     text-transform: uppercase;
 }
 
 .score-number {
     margin: 1.15rem 0 0.7rem;
-    color: #ffffff;
+    color: var(--text-main);
     font-size: 2rem;
     font-weight: 800;
     line-height: 1;
 }
 
 .score-number small {
-    color: #758294;
+    color: var(--text-muted);
     font-size: 0.8rem;
 }
 
 .score-missing {
     min-height: 32px;
     margin: 1.15rem 0 0.7rem;
-    color: #758294;
+    color: var(--text-muted);
     font-size: 0.88rem;
     font-weight: 650;
 }
@@ -2294,7 +2299,7 @@ a {
     }
 
     .mobile-brand {
-        color: #ffffff;
+        color: var(--text-main);
         font-weight: 750;
     }
 
@@ -2395,7 +2400,7 @@ a {
         padding: 1rem;
         border: 1px solid #28313d;
         border-radius: 8px;
-        background: #121821;
+        background: var(--bg-card);
     }
 
     .stock-browser-table td {
@@ -2447,4 +2452,70 @@ a {
     .price-history-panel {
         padding: 1rem;
     }
+}
+
+/* Watchlist star toggle */
+.watchlist-star {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    line-height: 1;
+    padding: 4px;
+}
+
+.watchlist-star.active {
+    color: #f59e0b;
+}
+
+.watchlist-star:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.watchlist-star-large {
+    font-size: 1.6rem;
+    margin-left: 0.75rem;
+    vertical-align: middle;
+}
+
+/* Watchlist locked/blurred teaser for basic users */
+.watchlist-locked-wrap {
+    position: relative;
+    overflow: hidden;
+}
+
+.watchlist-blur {
+    filter: blur(4px);
+    pointer-events: none;
+    user-select: none;
+}
+
+.watchlist-lock-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0.5rem;
+    background-color: rgba(11, 17, 32, 0.75);
+    padding: 2rem;
+}
+
+.watchlist-lock-icon {
+    font-size: 2rem;
+}
+
+.watchlist-lock-overlay h2 {
+    color: var(--text-main);
+    font-size: 1.25rem;
+    margin: 0;
+}
+
+.watchlist-lock-overlay p {
+    color: var(--text-muted);
+    margin: 0;
 }

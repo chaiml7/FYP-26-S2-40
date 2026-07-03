@@ -7,15 +7,9 @@
     <link rel="stylesheet" href="/static/css/styles.css?v=20260612-4">
 </head>
 <body class="app-page">
-
+    {% include "/includes/top_navbar.html"%}
     <div class="app-layout">
         <aside class="sidebar">
-            <div class="sidebar-brand">
-                <span class="logo-icon">📈</span>
-                <span class="brand-name">StockLens</span>
-                <span class="badge-premium" style="margin-left: auto;">PREMIUM</span>
-            </div>
-            
             <nav class="sidebar-nav">
                 <a href="/dashboard" class="nav-item {% block nav_dashboard %}{% endblock %}">
                     <span class="nav-icon">&#128202;</span> Dashboard
@@ -48,22 +42,6 @@
         </aside>
 
         <main class="app-main">
-            <header class="app-topbar" style="justify-content: flex-start; gap: 1.5rem;">
-                <form action="/premium/prediction_breakdown" method="GET" class="topbar-search" style="width: 100%; max-width: 500px; display: flex; align-items: center;">
-                    <span class="search-icon" style="position: absolute; margin-left: 12px; color: var(--text-muted);">🔍</span>
-                    <input type="text" name="symbol" class="form-control search-input bg-darker" placeholder="Global symbol analysis look-up... (e.g. PLTR)" style="padding-left: 36px; text-transform: uppercase; width: 100%;">
-                </form>
-                
-                <div class="topbar-actions" style="margin-left: auto; display: flex; align-items: center; gap: 1rem;">
-                    <button class="btn-icon">🔔</button>
-                    <div class="user-chip">
-                        <span class="avatar-sm">{{ user_initial or "U" }}</span>
-                        <span class="text-sm font-medium">{{ user_email or "StockLens user" }}</span>
-                    </div>
-                    <a href="/logout" class="btn btn-outline btn-sm">Log Out</a>
-                </div>
-            </header>
-
             <div class="page-content" style="max-width: 1100px; margin: 0 auto; width: 100%;">
                 {% block content %}
                 {% endblock %}

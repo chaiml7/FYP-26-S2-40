@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Form
+from fastapi import APIRouter, Request, Form, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 from datetime import date
@@ -6,10 +6,15 @@ from datetime import date
 from backend.services.stock_list_service import get_active_stocks
 from backend.services.prediction_service import get_latest_prediction_by_symbol, get_technical_score, get_financial_score
 from backend.services.sentiment.sentiment_aggregator import get_weighted_sentiment_score, get_sentiment_summary
+from backend.services.user_watchlist_service import (
+    add_watchlist_by_symbol,
+    get_user_watchlist_symbols,
+    remove_watchlist_by_symbol,
+)
 from backend.database.supabase_client import supabase
 
 router = APIRouter()
-templates = Jinja2Templates(directory="frontend/templates/premium_users")
+templates = Jinja2Templates(directory="frontend/templates")
 
 @router.get("/premium/recommendations")
 async def premium_recommendations(request: Request):
@@ -42,7 +47,7 @@ async def premium_recommendations(request: Request):
 
     return templates.TemplateResponse(
         request=request, 
-        name="stock_recommendations.html",
+        name="premium_users/stock_recommendations.html",
         context={
             "request": request,
             "recommendations": display_recommendations
@@ -121,7 +126,7 @@ async def premium_prediction_breakdown(request: Request, symbol: str = "NVDA"):
 
     return templates.TemplateResponse(
         request=request, 
-        name="prediction_breakdown.html",
+        name="premium_users/prediction_breakdown.html",
         context={
             "request": request,
             "data": display_data
@@ -158,7 +163,7 @@ async def premium_user_weightages(request: Request):
 
     return templates.TemplateResponse(
         request=request, 
-        name="user_model_weightage.html",
+        name="premium_users/user_model_weightage.html",
         context={"request": request, "weights": user_weights, "defaults": admin_defaults}
     )
 
@@ -226,3 +231,41 @@ async def premium_news_feed(request: Request, symbol: str, days: int = 7):
             "user_initial": user_initial,
         },
     )
+
+
+def _require_premium_session(request: Request) -> str:
+    role = request.session.get("user_role")
+    user_id = request.session.get("user_id")
+    if role != "premium_user":
+        raise HTTPException(status_code=403, detail="Premium access required")
+    return user_id
+
+
+@router.post("/premium/watchlist/{symbol}")
+async def add_premium_watchlist_stock(symbol: str, request: Request):
+    user_id = _require_premium_session(request)
+
+    try:
+        add_watchlist_by_symbol(user_id, symbol)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+
+    return {"symbol": symbol.upper(), "watchlisted": True}
+
+
+@router.delete("/premium/watchlist/{symbol}")
+async def remove_premium_watchlist_stock(symbol: str, request: Request):
+    user_id = _require_premium_session(request)
+
+    try:
+        remove_watchlist_by_symbol(user_id, symbol)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+
+    return {"symbol": symbol.upper(), "watchlisted": False}
+
+
+@router.get("/premium/watchlist/symbols")
+async def view_premium_watchlist_symbols(request: Request):
+    user_id = _require_premium_session(request)
+    return {"symbols": get_user_watchlist_symbols(user_id)}

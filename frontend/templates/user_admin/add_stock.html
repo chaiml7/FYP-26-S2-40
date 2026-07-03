@@ -1,0 +1,103 @@
+{% extends "user_admin/base.html" %}
+
+{% block title %}Sentiment Watchlist - StockLens{% endblock %}
+
+{% block nav_sentiment %}active{% endblock %}
+
+{% block content %}
+
+<div class="max-w-800" style="margin-top: 2rem; width: 100%;">
+    <a href="/backend_admin/stocks" class="back-link mb-6 text-muted hover-main" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
+        <span>←</span> Back to Database
+    </a>
+
+    <div class="card" style="padding: 2.5rem;">
+        <h2 class="text-2xl font-bold text-main mb-6 m-0">Add New Stock</h2>
+        
+        <form id="addStockForm">
+            <div class="grid-2 mb-4">
+                <div class="form-group">
+                    <label class="form-label">Ticker Symbol</label>
+                    <input type="text" id="stockSymbol" class="form-control" placeholder="e.g. NVDA" required style="text-transform: uppercase;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Exchange</label>
+                    <select id="stockExchange" class="form-control" required>
+                        <option value="NASDAQ">NASDAQ</option>
+                        <option value="NYSE">NYSE</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="grid-2 mb-6">
+                <div class="form-group">
+                    <label class="form-label">Company Name</label>
+                    <input type="text" id="stockName" class="form-control" placeholder="e.g. NVIDIA Corporation" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Sector</label>
+                    <select id="stockSector" class="form-control" required>
+                        <option value="" disabled selected>Select a sector...</option>
+                        <option value="technology">Technology</option>
+                        <option value="healthcare">Healthcare</option>
+                        <option value="financials">Financials</option>
+                        <option value="energy">Energy</option>
+                        <option value="consumer_discretionary">Consumer Discretionary</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="flex gap-3 justify-end mt-6 pt-6" style="border-top: 1px solid var(--border-color);">
+                <a href="/backend_admin/stocks" class="btn btn-outline">Cancel</a>
+                <button type="submit" class="btn btn-primary" id="submitStockBtn">Save Stock</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const form = document.getElementById('addStockForm');
+        const submitBtn = document.getElementById('submitStockBtn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = "Saving...";
+
+            const payload = {
+                symbol: document.getElementById('stockSymbol').value.toUpperCase(),
+                company_name: document.getElementById('stockName').value,
+                exchange: document.getElementById('stockExchange').value,
+                sector: document.getElementById('stockSector').value
+            };
+
+            try {
+                const response = await fetch('/stocks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    // Success! Redirect them back to the main database page
+                    window.location.href = '/backend_admin/stocks';
+                } else {
+                    const errorData = await response.json();
+                    alert("Error saving stock: " + (errorData.detail || "Unknown error"));
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = "Save Stock";
+                }
+            } catch (error) {
+                console.error("Fetch error:", error);
+                alert("Network error. Could not reach the server.");
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = "Save Stock";
+            }
+        });
+    });
+</script>
+{% endblock %}
