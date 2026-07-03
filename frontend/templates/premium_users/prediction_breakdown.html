@@ -24,24 +24,39 @@
         <div class="panel-header">Weighted Factor Analysis</div>
         
         <div style="display: flex; flex-direction: column; gap: 1.25rem; margin-bottom: 2rem;">
+
+            <!-- Technical -->
             <div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.85rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.85rem;">
                     <span class="text-main font-bold">Technical</span>
-                    <span class="text-muted">{{ data.tech_weight }}% weight &nbsp; 
-                        <span class="font-bold {% if data.technical_score > 5 %}text-success{% elif data.technical_score == 5 %}text-muted{% else %}text-danger{% endif %}">{{ data.technical_score }}/10</span>
-                    </span>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="text-muted">{{ data.tech_weight }}% weight &nbsp; 
+                            <span class="font-bold {% if data.technical_score > 5 %}text-success{% elif data.technical_score == 5 %}text-muted{% else %}text-danger{% endif %}">{{ data.technical_score }}/10</span>
+                        </span>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="thumb-btn thumb-up" id="thumb-up-technical" onclick="handleThumb('technical', 'up')">👍</button>
+                            <button class="thumb-btn thumb-down" id="thumb-down-technical" onclick="handleThumb('technical', 'down')">👎</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="confidence-bg" style="height: 6px; width: 100%;">
                     <div class="confidence-fill {% if data.technical_score > 5 %}fill-success{% elif data.technical_score == 5 %}fill-neutral{% else %}fill-danger{% endif %}" style="width: {{ data.technical_score * 10 }}%;"></div>
                 </div>
             </div>
             
+            <!-- Sentiment -->
             <div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.85rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.85rem;">
                     <span class="text-main font-bold">Sentiment</span>
-                    <span class="text-muted">{{ data.sent_weight }}% weight &nbsp;
-                        <span class="font-bold {% if data.sentiment_score > 5 %}text-success{% elif data.sentiment_score == 5 %}text-muted{% else %}text-danger{% endif %}">{{ data.sentiment_score }}/10</span>
-                    </span>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="text-muted">{{ data.sent_weight }}% weight &nbsp;
+                            <span class="font-bold {% if data.sentiment_score > 5 %}text-success{% elif data.sentiment_score == 5 %}text-muted{% else %}text-danger{% endif %}">{{ data.sentiment_score }}/10</span>
+                        </span>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="thumb-btn thumb-up" id="thumb-up-sentiment" onclick="handleThumb('sentiment', 'up')">👍</button>
+                            <button class="thumb-btn thumb-down" id="thumb-down-sentiment" onclick="handleThumb('sentiment', 'down')">👎</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="confidence-bg" style="height: 6px; width: 100%;">
                     <div class="confidence-fill {% if data.sentiment_score > 5 %}fill-success{% elif data.sentiment_score == 5 %}fill-neutral{% else %}fill-danger{% endif %}" style="width: {{ data.sentiment_score * 10 }}%;"></div>
@@ -54,12 +69,19 @@
                 </div>
             </div>
 
+            <!-- Financial -->
             <div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.85rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.85rem;">
                     <span class="text-main font-bold">Financial Analysis</span>
-                    <span class="text-muted">{{ data.fin_weight }}% weight &nbsp;
-                        <span class="font-bold {% if data.financial_score > 5 %}text-success{% elif data.financial_score == 5 %}text-muted{% else %}text-danger{% endif %}">{{ data.financial_score }}/10</span>
-                    </span>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="text-muted">{{ data.fin_weight }}% weight &nbsp;
+                            <span class="font-bold {% if data.financial_score > 5 %}text-success{% elif data.financial_score == 5 %}text-muted{% else %}text-danger{% endif %}">{{ data.financial_score }}/10</span>
+                        </span>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="thumb-btn thumb-up" id="thumb-up-financial" onclick="handleThumb('financial', 'up')">👍</button>
+                            <button class="thumb-btn thumb-down" id="thumb-down-financial" onclick="handleThumb('financial', 'down')">👎</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="confidence-bg" style="height: 6px; width: 100%;">
                     <div class="confidence-fill {% if data.financial_score > 5 %}fill-success{% elif data.financial_score == 5 %}fill-neutral{% else %}fill-danger{% endif %}" style="width: {{ data.financial_score * 10 }}%;"></div>
@@ -129,4 +151,57 @@
     </div>
 
 </div>
+
+<style>
+.thumb-btn {
+    background: transparent;
+    border: 1.5px solid var(--border-color);
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    opacity: 0.4;
+}
+.thumb-btn:hover { opacity: 0.8; }
+.thumb-btn.active-up { border-color: #10b981; background: rgba(16,185,129,0.1); opacity: 1; }
+.thumb-btn.active-down { border-color: #ef4444; background: rgba(239,68,68,0.1); opacity: 1; }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const votes = { technical: null, sentiment: null, financial: null };
+
+function handleThumb(model, direction) {
+    const upBtn = document.getElementById('thumb-up-' + model);
+    const downBtn = document.getElementById('thumb-down-' + model);
+
+    if (votes[model] === direction) {
+        votes[model] = null;
+        upBtn.classList.remove('active-up');
+        downBtn.classList.remove('active-down');
+    } else {
+        votes[model] = direction;
+        upBtn.classList.remove('active-up');
+        downBtn.classList.remove('active-down');
+        if (direction === 'up') upBtn.classList.add('active-up');
+        else downBtn.classList.add('active-down');
+        saveVote(model, direction);
+    }
+}
+
+function saveVote(model, direction) {
+    fetch('/user/model_feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model_type: model, vote: direction })
+    });
+}
+</script>
 {% endblock %}

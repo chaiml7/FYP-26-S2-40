@@ -1,0 +1,89 @@
+{% extends base_layout %}
+
+{% block title %}Feedback - StockLens{% endblock %}
+
+{% block nav_feedback %}active{% endblock %}
+
+{% block content %}
+<div class="page-content" style="max-width: 600px; margin: 0 auto; width: 100%;">
+
+    <h1 class="text-xl font-bold text-main" style="margin-bottom: 0.4rem;">Share your feedback</h1>
+    <p class="text-muted" style="margin-bottom: 2rem; font-size: 0.9rem;">Help us improve StockLens</p>
+
+    {% if success %}
+    <div style="background: rgba(16,185,129,0.1); border: 1px solid #10b981; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; color: #10b981;">
+        ✓ Thank you! Your feedback has been submitted.
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div style="background: rgba(239,68,68,0.1); border: 1px solid #ef4444; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; color: #ef4444;">
+        Something went wrong. Please try again.
+    </div>
+    {% endif %}
+
+    <div class="panel-card">
+        <form method="POST" action="/user/feedback">
+
+            <div style="margin-bottom: 1.25rem;">
+                <label class="text-muted" style="font-size: 0.8rem; display: block; margin-bottom: 6px;">Username</label>
+                <input type="text" value="{{ user_email }}" readonly
+                    style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px; color: var(--text-muted); font-size: 0.9rem; box-sizing: border-box; cursor: not-allowed;">
+            </div>
+
+            <div style="margin-bottom: 1.25rem;">
+                <label class="text-muted" style="font-size: 0.8rem; display: block; margin-bottom: 6px;">Topic</label>
+                <select name="topic" required
+                    style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px; color: var(--text-main); font-size: 0.9rem; box-sizing: border-box; cursor: pointer;">
+                    <option value="">Select a topic...</option>
+                    <option value="Dashboard">Dashboard</option>
+                    <option value="Predictions">Predictions</option>
+                    <option value="Watchlist">Watchlist</option>
+                    <option value="News & Social">News & Social</option>
+                    <option value="Market Overview">Market Overview</option>
+                    <option value="Financials">Financials</option>
+                    <option value="General">General</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1.25rem;">
+                <label class="text-muted" style="font-size: 0.8rem; display: block; margin-bottom: 6px;">Rating</label>
+                <div style="display: flex; gap: 8px;">
+                    {% for i in range(1, 6) %}
+                    <span class="star-icon" data-value="{{ i }}" onclick="setRating({{ i }})"
+                        style="font-size: 24px; cursor: pointer; color: var(--border-color); transition: color 0.1s;">★</span>
+                    {% endfor %}
+                </div>
+                <input type="hidden" name="rating" id="rating-input" value="0">
+                <p id="star-label" style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">Select a rating</p>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label class="text-muted" style="font-size: 0.8rem; display: block; margin-bottom: 6px;">Description</label>
+                <textarea name="description" rows="4" placeholder="Share your thoughts..." required
+                    style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px; color: var(--text-main); font-size: 0.9rem; box-sizing: border-box; resize: none;"></textarea>
+            </div>
+
+            <button type="submit"
+                style="width: 100%; background: #ffffff; border: none; border-radius: 6px; padding: 10px; color: #0f1117; font-size: 0.9rem; font-weight: 600; cursor: pointer;">
+                Submit feedback
+            </button>
+
+        </form>
+    </div>
+</div>
+
+<script>
+const labels = ['', 'Poor', 'Fair', 'Good', 'Very good', 'Excellent'];
+let currentRating = 0;
+
+function setRating(n) {
+    currentRating = currentRating === n ? 0 : n;
+    document.getElementById('rating-input').value = currentRating;
+    document.getElementById('star-label').textContent = currentRating ? labels[currentRating] : 'Select a rating';
+    document.querySelectorAll('.star-icon').forEach((s, i) => {
+        s.style.color = i < currentRating ? '#FAC775' : 'var(--border-color)';
+    });
+}
+</script>
+{% endblock %}
