@@ -1,0 +1,5 @@
+# Optional dependencies for Chronos / TimesFM zero-shot forecasting scripts.
+# These packages download pretrained model weights at runtime.
+
+chronos-forecasting
+timesfm[torch]

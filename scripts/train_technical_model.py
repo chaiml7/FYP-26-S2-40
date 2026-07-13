@@ -5,6 +5,8 @@ Run from repo root after syncing indicators:
     python scripts/train_technical_model.py
     python scripts/train_technical_model.py --all
     python scripts/train_technical_model.py --symbol NVDA
+    python scripts/train_technical_model.py --all --threshold 0.005
+    python scripts/train_technical_model.py --all --train-before-date 2026-06-04
 
 Use --sync-first to run the Supabase price/indicator sync before training.
 """
@@ -19,6 +21,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "backend", ".env"))
 
+from services.technical.model_service import TARGET_RETURN_THRESHOLD
 from services.technical.prediction_pipeline import train_global_technical_model
 
 
@@ -29,6 +32,8 @@ def main() -> int:
         sync_first=args.sync_first,
         period=args.period,
         interval=args.interval,
+        train_before_date=args.train_before_date,
+        target_return_threshold=args.threshold,
     )
 
     print_result(result)
@@ -67,6 +72,24 @@ def parse_args() -> argparse.Namespace:
         default="1d",
         help="yfinance interval used only with --sync-first. Default: 1d",
     )
+    parser.add_argument(
+        "--train-before-date",
+        help=(
+            "Only train on indicator rows before this date. "
+            "Example: 2026-06-04 excludes 2026-06-04 itself."
+        ),
+    )
+    parser.add_argument(
+        "--threshold",
+        "--target-threshold",
+        dest="threshold",
+        type=float,
+        default=TARGET_RETURN_THRESHOLD,
+        help=(
+            "Return threshold for class 1/up. "
+            "Use 0.002 for 0.20%%, 0.005 for 0.50%%. Default: 0.002"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -81,7 +104,16 @@ def print_result(result: dict[str, Any]) -> None:
     print(f"model_scope: {result['model_scope']}")
     if result.get("trained_symbol"):
         print(f"trained_symbol: {result['trained_symbol']}")
+    if result.get("train_before_date"):
+        print(f"train_before_date: {result['train_before_date']}")
+    if result.get("training_start_date") or result.get("training_end_date"):
+        print(
+            "training_date_range: "
+            f"{result.get('training_start_date')} to {result.get('training_end_date')}"
+        )
     print(f"symbols_trained_count: {result['symbols_trained_count']}")
+    if result.get("raw_indicator_rows") is not None:
+        print(f"raw_indicator_rows: {result['raw_indicator_rows']}")
     print(f"indicator_rows: {result['indicator_rows']}")
     print(f"clean_training_rows: {result['clean_training_rows']}")
     print(f"model_used: {result['model_used']}")

@@ -58,9 +58,13 @@ def train_global_technical_model(
     sync_stocks: list[dict[str, Any]] | None = None,
     period: str = "10y",
     interval: str = "1d",
+    train_before_date: str | None = None,
+    target_return_threshold: float = TARGET_RETURN_THRESHOLD,
 ) -> dict[str, Any]:
     """Train/evaluate one LightGBM model across all stored ticker histories."""
     clean_symbol = symbol.upper() if symbol else None
+    normalized_train_before_date = _normalize_optional_date(train_before_date)
+    target_return_threshold = float(target_return_threshold)
     sync_results = []
     if sync_first:
         if sync_stocks is not None:
@@ -120,10 +124,27 @@ def train_global_technical_model(
             "sync_results": sync_results,
         }
 
+    raw_indicator_rows = len(indicator_df)
+    indicator_df = _filter_training_history(
+        indicator_df,
+        train_before_date=normalized_train_before_date,
+    )
+    if indicator_df.empty:
+        return {
+            "status": "no_data",
+            "reason": (
+                f"No technical_indicators rows found before {normalized_train_before_date}"
+            ),
+            "indicator_rows": raw_indicator_rows,
+            "filtered_indicator_rows": 0,
+            "train_before_date": normalized_train_before_date,
+            "sync_results": sync_results,
+        }
+
     try:
         _, y, clean_df = prepare_training_data(
             indicator_df,
-            target_return_threshold=TARGET_RETURN_THRESHOLD,
+            target_return_threshold=target_return_threshold,
         )
     except ValueError as exc:
         return {
@@ -143,7 +164,7 @@ def train_global_technical_model(
 
     tuning_result = tune_lightgbm_params(
         indicator_df,
-        target_return_threshold=TARGET_RETURN_THRESHOLD,
+        target_return_threshold=target_return_threshold,
     )
     best_params = tuning_result.get("best_params", {})
     validation_metrics = walk_forward_validation(
@@ -152,13 +173,13 @@ def train_global_technical_model(
         tune_threshold=True,
         use_feature_selection=True,
         max_features=DEFAULT_MAX_FEATURES,
-        target_return_threshold=TARGET_RETURN_THRESHOLD,
+        target_return_threshold=target_return_threshold,
     )
     decision_threshold = float(validation_metrics.get("decision_threshold") or 0.5)
     model, final_clean_df, model_used = train_final_model(
         indicator_df,
         model_params=best_params,
-        target_return_threshold=TARGET_RETURN_THRESHOLD,
+        target_return_threshold=target_return_threshold,
         use_feature_selection=True,
         max_features=DEFAULT_MAX_FEATURES,
     )
@@ -166,14 +187,18 @@ def train_global_technical_model(
     selected_features = getattr(model, "selected_features_", FEATURES)
     feature_importance = get_feature_importance(model, limit=15)
     symbols = sorted(str(value) for value in indicator_df["symbol"].dropna().unique())
+    training_date_range = _date_range_summary(indicator_df)
     model_metadata = {
         "model_used": model_used,
         "model_scope": "single_ticker" if clean_symbol else "global_all_tickers",
         "trained_symbol": clean_symbol,
         "symbols": symbols,
+        "train_before_date": normalized_train_before_date,
+        "training_start_date": training_date_range["start_date"],
+        "training_end_date": training_date_range["end_date"],
         "feature_count": len(FEATURES),
         "training_rows": int(len(final_clean_df)),
-        "target_return_threshold": TARGET_RETURN_THRESHOLD,
+        "target_return_threshold": target_return_threshold,
         "decision_threshold": decision_threshold,
         "selected_feature_count": len(selected_features),
         "selected_features": selected_features,
@@ -189,9 +214,13 @@ def train_global_technical_model(
         "trained_symbol": clean_symbol,
         "symbols_trained": symbols,
         "symbols_trained_count": len(symbols),
+        "train_before_date": normalized_train_before_date,
+        "training_start_date": training_date_range["start_date"],
+        "training_end_date": training_date_range["end_date"],
+        "raw_indicator_rows": raw_indicator_rows,
         "indicator_rows": len(indicator_df),
         "clean_training_rows": int(len(final_clean_df)),
-        "target_return_threshold": TARGET_RETURN_THRESHOLD,
+        "target_return_threshold": target_return_threshold,
         "decision_threshold": decision_threshold,
         "model_used": model_used,
         "model_artifact_path": str(artifact_path),
@@ -214,6 +243,8 @@ def run_global_technical_pipeline(
     sync_stocks: list[dict[str, Any]] | None = None,
     period: str = "10y",
     interval: str = "1d",
+    train_before_date: str | None = None,
+    target_return_threshold: float = TARGET_RETURN_THRESHOLD,
 ) -> dict[str, Any]:
     """Backward-compatible alias for training the shared technical model."""
     return train_global_technical_model(
@@ -221,6 +252,8 @@ def run_global_technical_pipeline(
         sync_stocks=sync_stocks,
         period=period,
         interval=interval,
+        train_before_date=train_before_date,
+        target_return_threshold=target_return_threshold,
     )
 
 
@@ -283,6 +316,9 @@ def predict_trends_with_saved_model(symbol: str | None = None) -> dict[str, Any]
         or metrics.get("decision_threshold")
         or 0.5
     )
+    target_return_threshold = float(
+        metadata.get("target_return_threshold", TARGET_RETURN_THRESHOLD)
+    )
     model_used = metadata.get("model_used", model.__class__.__name__)
 
     predictions = _build_latest_predictions(
@@ -291,6 +327,7 @@ def predict_trends_with_saved_model(symbol: str | None = None) -> dict[str, Any]
         model_used=model_used,
         validation_metrics=metrics,
         decision_threshold=decision_threshold,
+        target_return_threshold=target_return_threshold,
         selected_features=selected_features,
         feature_importance=feature_importance,
         tuned_params=tuned_params,
@@ -303,10 +340,7 @@ def predict_trends_with_saved_model(symbol: str | None = None) -> dict[str, Any]
         "model_artifact_path": str(MODEL_ARTIFACT_PATH),
         "model_used": model_used,
         "decision_threshold": decision_threshold,
-        "target_return_threshold": metadata.get(
-            "target_return_threshold",
-            TARGET_RETURN_THRESHOLD,
-        ),
+        "target_return_threshold": target_return_threshold,
         "symbols_trained": metadata.get("symbols", []),
         "model_scope": metadata.get("model_scope"),
         "trained_symbol": trained_symbol,
@@ -388,6 +422,7 @@ def _build_latest_predictions(
     model_used: str,
     validation_metrics: dict[str, Any],
     decision_threshold: float,
+    target_return_threshold: float,
     selected_features: list[str],
     feature_importance: list[dict[str, float]],
     tuned_params: dict[str, Any],
@@ -434,7 +469,7 @@ def _build_latest_predictions(
                 "majority_baseline_accuracy": validation_metrics.get(
                     "majority_baseline_accuracy"
                 ),
-                "target_return_threshold": TARGET_RETURN_THRESHOLD,
+                "target_return_threshold": target_return_threshold,
                 "decision_threshold": decision_threshold,
                 "selected_feature_count": len(selected_features),
                 "selected_features": selected_features,
@@ -468,6 +503,44 @@ def _probability_for_class(model: Any, X: pd.DataFrame, target_class: int) -> fl
 
     class_index = classes.index(target_class)
     return float(probabilities[0][class_index])
+
+
+def _normalize_optional_date(value: str | None) -> str | None:
+    if not value:
+        return None
+    return pd.to_datetime(value, errors="raise").date().isoformat()
+
+
+def _filter_training_history(
+    df: pd.DataFrame,
+    train_before_date: str | None = None,
+) -> pd.DataFrame:
+    if not train_before_date:
+        return df
+
+    cutoff = pd.to_datetime(train_before_date, errors="raise").date()
+    result = df.copy()
+    result["_date_filter"] = pd.to_datetime(
+        result["date"],
+        errors="coerce",
+        utc=True,
+    ).dt.date
+    result = result[result["_date_filter"] < cutoff]
+    return result.drop(columns=["_date_filter"], errors="ignore").reset_index(drop=True)
+
+
+def _date_range_summary(df: pd.DataFrame) -> dict[str, str | None]:
+    if df is None or df.empty or "date" not in df.columns:
+        return {"start_date": None, "end_date": None}
+
+    dates = pd.to_datetime(df["date"], errors="coerce", utc=True).dt.date.dropna()
+    if dates.empty:
+        return {"start_date": None, "end_date": None}
+
+    return {
+        "start_date": dates.min().isoformat(),
+        "end_date": dates.max().isoformat(),
+    }
 
 
 def _metrics_summary(metrics: dict[str, Any]) -> dict[str, Any]:
