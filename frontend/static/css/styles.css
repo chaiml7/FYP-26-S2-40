@@ -1322,7 +1322,7 @@ a {
    10. ADMIN DASHBOARD
    ========================================= */
 .admin-page {
-    background-color: var(--bg-card);
+    background-color: var(--page-bg);
 }
 
 .admin-layout {
@@ -1506,9 +1506,9 @@ a {
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: var(--text-muted);
-    border-bottom: 1px solid var(--border-color);
-    background-color: var(--bg-dark);
+    color: #ffffff;
+    border-bottom: 1px solid #1d4ed8;
+    background-color: #2563eb;
 }
 
 .admin-table td {
@@ -1787,12 +1787,16 @@ a {
    12. USER APPLICATION DASHBOARD
    ========================================= */
 .app-page {
-    background-color: var(--bg-card);
+    background-color: var(--page-bg);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
 .app-layout {
     display: flex;
-    min-height: 100vh;
+    flex: 1;
+    min-height: 0;
 }
 
 /* Sidebar overrides for User App */
@@ -1818,8 +1822,27 @@ a {
     justify-content: space-between;
     align-items: center;
     padding: 1rem 2rem;
-    background-color: var(--bg-card);
-    border-bottom: 1px solid var(--border-color);
+    background-color: #2563eb;
+    border-bottom: 1px solid #1d4ed8;
+    color: #ffffff;
+}
+
+.app-topbar .topbar-brand > span:first-child,
+.app-topbar .topbar-actions {
+    color: #ffffff !important;
+}
+
+.app-topbar .btn-outline {
+    border-color: rgba(255, 255, 255, 0.6);
+    color: #ffffff;
+}
+
+.app-topbar .btn-outline:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.app-topbar .btn-icon {
+    color: #ffffff;
 }
 
 .topbar-search {
@@ -1842,16 +1865,17 @@ a {
     align-items: center;
     gap: 0.75rem;
     padding: 0.25rem 0.75rem 0.25rem 0.25rem;
-    background-color: var(--bg-dark);
-    border: 1px solid var(--border-color);
+    background-color: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 50px;
-    color: var(--text-main);
+    color: #ffffff;
 }
 
 .avatar-sm {
     width: 28px;
     height: 28px;
-    background-color: var(--border-color);
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -2479,6 +2503,7 @@ a {
 }
 
 .workspace-heading {
+    margin-top: 1rem;
     margin-bottom: 1.5rem;
 }
 
@@ -2561,7 +2586,7 @@ a {
     min-height: 42px;
     box-sizing: border-box;
     padding: 0 0.85rem;
-    border: 1px solid #303b49;
+    border: 1px solid var(--border-color);
     border-radius: 6px;
     background: var(--bg-dark);
     color: var(--text-muted);
@@ -2613,7 +2638,7 @@ a {
 .stock-table-shell,
 .price-history-panel {
     overflow: hidden;
-    border: 1px solid var(--text-muted);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     background: var(--bg-dark);
 }
@@ -2627,19 +2652,28 @@ a {
 .stock-browser-table th,
 .history-table th {
     padding: 0.8rem 1rem;
-    border-bottom: 1px solid #303b49;
-    background: #171f29;
-    color: var(--text-muted);
     font-size: 0.68rem;
     text-align: left;
     text-transform: uppercase;
 }
 
+.stock-browser-table th {
+    border-bottom: 1px solid #1d4ed8;
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.history-table th {
+    border-bottom: 1px solid #1d4ed8;
+    background: #2563eb;
+    color: #ffffff;
+}
+
 .stock-browser-table td,
 .history-table td {
     padding: 0.9rem 1rem;
-    border-bottom: 1px solid #222c37;
-    color: #c9d2dd;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-main);
     font-size: 0.84rem;
 }
 
@@ -2893,10 +2927,10 @@ a {
 .score-panel {
     min-width: 0;
     padding: 1.1rem;
-    border: 1px solid #2b3542;
+    border: 1px solid var(--border-color);
     border-top: 3px solid #677587;
     border-radius: 8px;
-    background: #121821;
+    background: var(--bg-card);
 }
 
 .score-panel.score-bullish {
@@ -2915,7 +2949,7 @@ a {
     display: flex;
     justify-content: space-between;
     gap: 0.75rem;
-    color: #e8edf3;
+    color: var(--text-main);
     font-size: 0.8rem;
     font-weight: 750;
 }
@@ -2951,7 +2985,7 @@ a {
     height: 5px;
     overflow: hidden;
     border-radius: 2px;
-    background: #27313d;
+    background: var(--border-color);
 }
 
 .score-track span {
@@ -2981,7 +3015,7 @@ a {
     justify-content: space-between;
     gap: 0.75rem;
     padding: 0.45rem 0;
-    border-bottom: 1px solid #222c37;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .score-metadata div:last-child {
@@ -2995,12 +3029,98 @@ a {
 }
 
 .score-metadata dt {
-    color: #748294;
+    color: var(--text-muted);
 }
 
 .score-metadata dd {
     overflow-wrap: anywhere;
-    color: #c3ccd7;
+    color: var(--text-main);
+    text-align: right;
+}
+
+.technical-details {
+    margin-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.technical-details summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.85rem 0 0;
+    color: var(--accent-blue);
+    font-size: 0.76rem;
+    font-weight: 750;
+    cursor: pointer;
+    list-style: none;
+}
+
+.technical-details summary::-webkit-details-marker {
+    display: none;
+}
+
+.technical-details-chevron {
+    font-size: 1rem;
+    transition: transform 0.2s ease;
+}
+
+.technical-details[open] .technical-details-chevron {
+    transform: rotate(180deg);
+}
+
+.technical-details-content {
+    padding-top: 0.85rem;
+}
+
+.technical-details-date {
+    margin: 0 0 0.9rem;
+    color: var(--text-muted);
+    font-size: 0.66rem;
+}
+
+.indicator-group + .indicator-group {
+    margin-top: 1rem;
+}
+
+.indicator-group h3 {
+    margin: 0 0 0.4rem;
+    color: var(--text-main);
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.indicator-grid {
+    margin: 0;
+}
+
+.indicator-grid > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.38rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.indicator-grid > div:last-child {
+    border-bottom: 0;
+}
+
+.indicator-grid dt,
+.indicator-grid dd {
+    margin: 0;
+    font-size: 0.69rem;
+}
+
+.indicator-grid dt {
+    color: var(--text-muted);
+}
+
+.indicator-grid dd {
+    color: var(--text-main);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
     text-align: right;
 }
 
@@ -3284,4 +3404,158 @@ a {
 .watchlist-lock-overlay p {
     color: var(--text-muted);
     margin: 0;
+}
+
+/* =========================================
+   20. ROLE THEMES
+   ========================================= */
+
+.role-badge {
+    padding: 2px 8px;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 750;
+    letter-spacing: 0.04em;
+}
+
+.role-badge-free {
+    color: #dbeafe;
+}
+
+.role-badge-premium {
+    color: #f2c66d;
+}
+
+.role-badge-admin {
+    color: #5eead4;
+}
+
+html[data-admin-theme="graphite"] .theme-admin {
+    --page-bg: #f1f5f9;
+    --bg-dark: #f0fdfa;
+    --bg-card: #ffffff;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --accent-blue: #0f766e;
+    --accent-hover: #115e59;
+    --border-color: #d7e3e1;
+}
+
+html[data-admin-theme="graphite"] .theme-admin .app-topbar {
+    background: #0f172a;
+    border-bottom-color: #0f766e;
+}
+
+html[data-admin-theme="graphite"] .theme-admin .admin-table th,
+html[data-admin-theme="graphite"] .theme-admin .stock-browser-table th {
+    background: #0f766e;
+    border-bottom-color: #115e59;
+}
+
+html[data-admin-theme="graphite"] .theme-admin .workspace-eyebrow,
+html[data-admin-theme="graphite"] .theme-admin .text-accent {
+    color: #0f766e;
+}
+
+.appearance-theme-control {
+    position: fixed;
+    z-index: 30;
+    bottom: 1rem;
+    left: 1rem;
+}
+
+.theme-toggle-sidebar .sidebar-nav {
+    padding-bottom: 5rem;
+}
+
+.appearance-theme-toggle {
+    width: 44px;
+    height: 44px;
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--bg-dark);
+    color: var(--text-main);
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.appearance-theme-toggle:hover {
+    border-color: var(--accent-blue);
+    transform: translateY(-1px);
+}
+
+.appearance-theme-toggle:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--accent-blue) 35%, transparent);
+    outline-offset: 2px;
+}
+
+.theme-icon {
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
+html[data-premium-theme="midnight"] .theme-premium {
+    --page-bg: #0b1020;
+    --bg-dark: #101827;
+    --bg-card: #151b2b;
+    --text-main: #f8fafc;
+    --text-muted: #a5b1c2;
+    --accent-blue: #d4a84b;
+    --accent-hover: #e5bd65;
+    --border-color: #2a3548;
+    background: var(--page-bg);
+}
+
+html[data-premium-theme="midnight"] .theme-premium .app-topbar {
+    background: #0f172a;
+    border-bottom-color: #d4a84b;
+}
+
+html[data-premium-theme="midnight"] .theme-premium .stock-browser-table th {
+    background: #1b2435;
+    border-bottom: 2px solid #d4a84b;
+    color: #f8fafc;
+}
+
+html[data-premium-theme="midnight"] .theme-premium .history-table th {
+    background: #1b2435;
+    border-bottom-color: #2a3548;
+    color: #a5b1c2;
+}
+
+html[data-premium-theme="midnight"] .theme-premium .workspace-eyebrow,
+html[data-premium-theme="midnight"] .theme-premium .text-accent,
+html[data-premium-theme="midnight"] .theme-premium .company-cell strong,
+html[data-premium-theme="midnight"] .theme-premium .row-action {
+    color: #d4a84b;
+}
+
+html[data-premium-theme="midnight"] .theme-premium .btn-primary {
+    background: #d4a84b;
+    color: #111827;
+}
+
+html[data-premium-theme="midnight"] .theme-premium .btn-primary:hover {
+    background: #e5bd65;
+}
+
+html[data-premium-theme="midnight"] .theme-premium .appearance-theme-toggle {
+    border-color: rgba(212, 168, 75, 0.55);
+    color: #d4a84b;
+}
+
+html[data-admin-theme="graphite"] .theme-admin .appearance-theme-toggle {
+    border-color: rgba(15, 118, 110, 0.5);
+    color: #0f766e;
+}
+
+html[data-premium-theme="midnight"] .theme-premium .stock-search input,
+html[data-premium-theme="midnight"] .theme-premium .sector-filter select,
+html[data-premium-theme="midnight"] .theme-premium .dashboard-date-form input {
+    color-scheme: dark;
 }

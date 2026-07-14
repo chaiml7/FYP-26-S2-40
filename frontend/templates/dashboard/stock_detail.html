@@ -140,6 +140,39 @@
                     <div><dt>Status</dt><dd>No prediction has been saved</dd></div>
                 {% endif %}
             </dl>
+
+            {% if item.name == "Technical" and user_role == "premium_user" %}
+            <details class="technical-details">
+                <summary>
+                    <span>Technical indicators</span>
+                    <span class="technical-details-chevron" aria-hidden="true">&#8964;</span>
+                </summary>
+                <div class="technical-details-content">
+                    {% if stock.technical_indicator_groups %}
+                        <p class="technical-details-date">
+                            Values as of {{ stock.technical_indicator_date }}
+                        </p>
+                        {% for group in stock.technical_indicator_groups %}
+                        <section class="indicator-group">
+                            <h3>{{ group["title"] }}</h3>
+                            <dl class="indicator-grid">
+                                {% for indicator in group["items"] %}
+                                <div>
+                                    <dt>{{ indicator["label"] }}</dt>
+                                    <dd>{{ indicator["value"] }}</dd>
+                                </div>
+                                {% endfor %}
+                            </dl>
+                        </section>
+                        {% endfor %}
+                    {% else %}
+                        <p class="data-unavailable">
+                            No technical indicator values are available for this date.
+                        </p>
+                    {% endif %}
+                </div>
+            </details>
+            {% endif %}
         </article>
         {% endfor %}
     </div>

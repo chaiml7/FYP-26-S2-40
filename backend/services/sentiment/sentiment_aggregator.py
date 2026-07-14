@@ -13,6 +13,30 @@ LABEL_WEIGHTS = {
 }
 
 
+def get_all_daily_sentiment_scores() -> list[dict]:
+    """Return historical daily sentiment rows for model feature assembly."""
+    rows = []
+    offset = 0
+    page_size = 1000
+    while True:
+        response = (
+            supabase.table("sentiment_daily_scores")
+            .select(
+                "stock_id,score_date,raw_sentiment,bullish_score,article_count,"
+                "positive_count,neutral_count,negative_count"
+            )
+            .order("score_date", desc=False)
+            .range(offset, offset + page_size - 1)
+            .execute()
+        )
+        batch = response.data or []
+        rows.extend(batch)
+        if len(batch) < page_size:
+            break
+        offset += page_size
+    return rows
+
+
 def save_scores(symbol: str, scored_headlines: list) -> dict:
     if not scored_headlines:
         return {"rows_saved": 0}
@@ -71,6 +95,39 @@ def save_daily_sentiment_score(symbol: str, score_date: date = None) -> dict:
         .execute()
     )
 
+    return {
+        "rows_saved": len(response.data or []),
+        "daily_score": daily_score,
+    }
+
+
+def save_neutral_daily_sentiment_score(symbol: str, score_date: date = None) -> dict:
+    """Record an explicit neutral score when no articles were found for a day."""
+    score_date = score_date or date.today()
+    symbol = symbol.upper()
+    stock_id = _get_stock_id(symbol)
+
+    if stock_id is None:
+        return {"rows_saved": 0, "reason": "stock_not_found"}
+
+    daily_score = {
+        "stock_id": stock_id,
+        "symbol": symbol,
+        "score_date": score_date.isoformat(),
+        "article_count": 0,
+        "positive_count": 0,
+        "neutral_count": 0,
+        "negative_count": 0,
+        "raw_sentiment": 0.0,
+        "bullish_score": 5.0,
+        "sentiment_label": "neutral",
+        "model_version": MODEL_VERSION,
+    }
+    response = (
+        supabase.table("sentiment_daily_scores")
+        .upsert(daily_score, on_conflict="stock_id,score_date")
+        .execute()
+    )
     return {
         "rows_saved": len(response.data or []),
         "daily_score": daily_score,
@@ -152,10 +209,10 @@ def get_weighted_sentiment_score(symbol: str, score_date: date = None) -> dict:
 def has_data_for_today(symbol: str) -> bool:
     today = date.today().isoformat()
     response = (
-        supabase.table("sentiment_scores")
+        supabase.table("sentiment_daily_scores")
         .select("id")
         .eq("symbol", symbol.upper())
-        .gte("created_at", f"{today}T00:00:00Z")
+        .eq("score_date", today)
         .limit(1)
         .execute()
     )

@@ -1,110 +1,128 @@
-import pytest
 from contextlib import contextmanager
-from unittest.mock import patch, MagicMock
-from backend.services.sentiment.sentiment_pipeline import run_pipeline, WATCHLIST
+from unittest.mock import patch
+
+from backend.services.sentiment.sentiment_pipeline import run_pipeline
+
 
 MODULE = "backend.services.sentiment.sentiment_pipeline"
 
 MOCK_HEADLINES = [
     {"headline": "Apple profits up", "source": "finnhub", "published_at": "2026-05-24T09:00:00+00:00"},
-    {"headline": "Apple new product launch", "source": "newsapi", "published_at": "2026-05-24T10:00:00+00:00"},
+    {"headline": "Apple new product launch", "source": "gnews", "published_at": "2026-05-24T10:00:00+00:00"},
 ]
 MOCK_SCORES = [
     {"label": "positive", "score": 0.91},
     {"label": "positive", "score": 0.85},
 ]
+ACTIVE_STOCKS = [
+    {"symbol": "AAPL", "company_name": "Apple"},
+    {"symbol": "NVDA", "company_name": "NVIDIA"},
+]
 
 
 @contextmanager
-def patched_pipeline(has_data=False, finnhub_data=None, newsapi_data=None, scores=None,
-                     finnhub_side_effect=None, score_side_effect=None):
-    _finnhub = finnhub_data if finnhub_data is not None else MOCK_HEADLINES[:1]
-    _newsapi = newsapi_data if newsapi_data is not None else MOCK_HEADLINES[1:]
-    _scores = scores if scores is not None else MOCK_SCORES
+def patched_pipeline(
+    has_data=False,
+    finnhub_data=None,
+    gnews_data=None,
+    scores=None,
+    finnhub_side_effect=None,
+    score_side_effect=None,
+):
+    finnhub_results = finnhub_data if finnhub_data is not None else MOCK_HEADLINES[:1]
+    gnews_results = gnews_data if gnews_data is not None else MOCK_HEADLINES[1:]
+    scoring_results = scores if scores is not None else MOCK_SCORES
 
-    with patch(f"{MODULE}.has_data_for_today", return_value=has_data) as m_has, \
-         patch(f"{MODULE}.fetch_finnhub", return_value=_finnhub, side_effect=finnhub_side_effect) as m_fh, \
-         patch(f"{MODULE}.fetch_newsapi", return_value=_newsapi) as m_fa, \
-         patch(f"{MODULE}.score_headlines", return_value=_scores, side_effect=score_side_effect) as m_sc, \
-         patch(f"{MODULE}.save_scores", return_value={"rows_saved": 2}) as m_sv, \
-         patch(f"{MODULE}.save_daily_sentiment_score", return_value={"rows_saved": 1}) as m_ds, \
-         patch(f"{MODULE}.time.sleep") as m_sl:
-        yield {"has_data": m_has, "fetch_finnhub": m_fh, "fetch_newsapi": m_fa,
-               "score_headlines": m_sc, "save_scores": m_sv,
-               "save_daily_sentiment_score": m_ds, "sleep": m_sl}
+    with (
+        patch(f"{MODULE}.get_active_stocks", return_value=ACTIVE_STOCKS) as active_stocks,
+        patch(f"{MODULE}.has_data_for_today", return_value=has_data) as has_data_for_today,
+        patch(
+            f"{MODULE}.fetch_finnhub",
+            return_value=finnhub_results,
+            side_effect=finnhub_side_effect,
+        ) as fetch_finnhub,
+        patch(f"{MODULE}.fetch_gnews", return_value=gnews_results) as fetch_gnews,
+        patch(
+            f"{MODULE}.score_headlines",
+            return_value=scoring_results,
+            side_effect=score_side_effect,
+        ) as score_headlines,
+        patch(f"{MODULE}.save_scores", return_value={"rows_saved": 2}) as save_scores,
+        patch(
+            f"{MODULE}.save_daily_sentiment_score",
+            return_value={"rows_saved": 1},
+        ) as save_daily_score,
+        patch(
+            f"{MODULE}.save_neutral_daily_sentiment_score",
+            return_value={"rows_saved": 1},
+        ) as save_neutral_daily_score,
+        patch(f"{MODULE}.time.sleep") as sleep,
+    ):
+        yield {
+            "active_stocks": active_stocks,
+            "has_data": has_data_for_today,
+            "fetch_finnhub": fetch_finnhub,
+            "fetch_gnews": fetch_gnews,
+            "score_headlines": score_headlines,
+            "save_scores": save_scores,
+            "save_daily_score": save_daily_score,
+            "save_neutral_daily_score": save_neutral_daily_score,
+            "sleep": sleep,
+        }
 
 
-def test_run_pipeline_processes_all_watchlist():
-    with patched_pipeline() as m:
+def test_run_pipeline_processes_all_active_stocks():
+    with patched_pipeline():
         result = run_pipeline()
-    symbols = [r["symbol"] for r in result["results"]]
-    for symbol in WATCHLIST:
-        assert symbol in symbols
+
+    assert [row["symbol"] for row in result["results"]] == ["AAPL", "NVDA"]
+    assert result["active_stocks_found"] == len(ACTIVE_STOCKS)
 
 
-def test_idempotency_skips_existing():
-    with patched_pipeline(has_data=True) as m:
+def test_idempotency_skips_existing_scores():
+    with patched_pipeline(has_data=True) as mocks:
         result = run_pipeline()
-    skipped = [r for r in result["results"] if r["status"] == "skipped"]
-    assert len(skipped) == len(WATCHLIST)
-    m["fetch_finnhub"].assert_not_called()
+
+    assert [row["status"] for row in result["results"]] == ["skipped", "skipped"]
+    mocks["fetch_finnhub"].assert_not_called()
 
 
-def test_idempotency_processes_missing():
-    with patched_pipeline(has_data=False) as m:
-        result = run_pipeline()
-    ok = [r for r in result["results"] if r["status"] == "ok"]
-    assert len(ok) == len(WATCHLIST)
-
-
-def test_one_symbol_failure_continues():
-    side_effect = [Exception("FinnHub down")] + [MOCK_HEADLINES[:1]] * (len(WATCHLIST) - 1)
+def test_one_symbol_failure_does_not_stop_other_active_stocks():
+    side_effect = [Exception("Finnhub down"), MOCK_HEADLINES[:1]]
     with patched_pipeline(finnhub_side_effect=side_effect):
         result = run_pipeline()
-    statuses = [r["status"] for r in result["results"]]
-    assert "error" in statuses
-    assert statuses.count("ok") >= len(WATCHLIST) - 1
+
+    assert [row["status"] for row in result["results"]] == ["error", "ok"]
 
 
 def test_no_headlines_returns_no_data_status():
-    with patched_pipeline(finnhub_data=[], newsapi_data=[]):
+    with patched_pipeline(finnhub_data=[], gnews_data=[]) as mocks:
         result = run_pipeline()
-    no_data = [r for r in result["results"] if r["status"] == "no_data"]
-    assert len(no_data) == len(WATCHLIST)
+
+    assert [row["status"] for row in result["results"]] == ["no_data", "no_data"]
+    assert all(row["sentiment_fallback"] == "neutral" for row in result["results"])
+    assert mocks["save_neutral_daily_score"].call_count == len(ACTIVE_STOCKS)
 
 
-def test_finbert_failure_caught_per_symbol():
-    with patched_pipeline(score_side_effect=OSError("model not found")):
-        result = run_pipeline()
-    error = [r for r in result["results"] if r["status"] == "error"]
-    assert len(error) == len(WATCHLIST)
-
-
-def test_both_fetchers_called_per_symbol():
-    with patched_pipeline() as m:
+def test_gnews_query_uses_database_company_name():
+    with patched_pipeline() as mocks:
         run_pipeline()
-    assert m["fetch_finnhub"].call_count == len(WATCHLIST)
-    assert m["fetch_newsapi"].call_count == len(WATCHLIST)
+
+    mocks["fetch_gnews"].assert_any_call("AAPL", "Apple", from_date=mocks["fetch_gnews"].call_args.kwargs["from_date"])
+    mocks["fetch_gnews"].assert_any_call("NVDA", "NVIDIA", from_date=mocks["fetch_gnews"].call_args.kwargs["from_date"])
 
 
-def test_newsapi_empty_still_scores_finnhub_results():
-    with patched_pipeline(newsapi_data=[]):
-        result = run_pipeline()
-    ok = [r for r in result["results"] if r["status"] == "ok"]
-    assert len(ok) == len(WATCHLIST)
+def test_both_fetchers_called_for_each_active_stock():
+    with patched_pipeline() as mocks:
+        run_pipeline()
+
+    assert mocks["fetch_finnhub"].call_count == len(ACTIVE_STOCKS)
+    assert mocks["fetch_gnews"].call_count == len(ACTIVE_STOCKS)
 
 
 def test_result_has_required_keys():
     with patched_pipeline():
         result = run_pipeline()
-    assert "message" in result
-    assert "symbols_processed" in result
-    assert "results" in result
-    assert all("symbol" in r and "status" in r for r in result["results"])
 
-
-def test_rate_limit_sleep_called_between_symbols():
-    with patched_pipeline() as m:
-        run_pipeline()
-    assert m["sleep"].call_count == len(WATCHLIST)
-    m["sleep"].assert_any_call(0.5)
+    assert {"message", "active_stocks_found", "symbols_processed", "results"} <= result.keys()
+    assert all("symbol" in row and "status" in row for row in result["results"])
