@@ -4,12 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Premium Dashboard - StockLens{% endblock %}</title>
-    <link rel="stylesheet" href="/static/css/styles.css?v=20260612-4">
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260714-score-theme-fix">
+    <script>
+        try {
+            document.documentElement.dataset.premiumTheme =
+                localStorage.getItem("stocklens-premium-theme") || "midnight";
+        } catch (error) {
+            document.documentElement.dataset.premiumTheme = "midnight";
+        }
+    </script>
 </head>
-<body class="app-page">
+<body class="app-page theme-premium">
     {% include "/includes/top_navbar.html"%}
     <div class="app-layout">
-        <aside class="sidebar">
+        <aside class="sidebar premium-sidebar theme-toggle-sidebar">
             <nav class="sidebar-nav">
                 <a href="/dashboard" class="nav-item {% block nav_dashboard %}{% endblock %}">
                     <span class="nav-icon">&#128202;</span> Dashboard
@@ -39,6 +47,19 @@
                     <span class="nav-icon">📉</span> Financials
                 </a>
             </nav>
+
+            <div class="appearance-theme-control">
+                <button
+                    type="button"
+                    id="premium-theme-toggle"
+                    class="appearance-theme-toggle"
+                    aria-pressed="true"
+                    aria-label="Use StockLens Blue theme"
+                    title="Switch between Blue and Midnight themes"
+                >
+                    <span id="premium-theme-icon" class="theme-icon" aria-hidden="true">&#9728;</span>
+                </button>
+            </div>
         </aside>
 
         <main class="app-main">
@@ -51,5 +72,39 @@
 
     {% block scripts %}
     {% endblock %}
+    <script>
+        (() => {
+            const storageKey = "stocklens-premium-theme";
+            const root = document.documentElement;
+            const toggle = document.getElementById("premium-theme-toggle");
+            const icon = document.getElementById("premium-theme-icon");
+
+            const applyTheme = (theme) => {
+                const selectedTheme = theme === "blue" ? "blue" : "midnight";
+                root.dataset.premiumTheme = selectedTheme;
+                toggle.setAttribute("aria-pressed", String(selectedTheme === "midnight"));
+                toggle.setAttribute(
+                    "aria-label",
+                    selectedTheme === "midnight"
+                        ? "Use StockLens Blue theme"
+                        : "Use Midnight theme"
+                );
+                toggle.title = selectedTheme === "midnight"
+                    ? "Switch to StockLens Blue"
+                    : "Switch to Midnight";
+                icon.textContent = selectedTheme === "midnight" ? "☀" : "☾";
+                try {
+                    localStorage.setItem(storageKey, selectedTheme);
+                } catch (error) {
+                    // The theme still works for this page when storage is unavailable.
+                }
+            };
+
+            applyTheme(root.dataset.premiumTheme);
+            toggle.addEventListener("click", () => {
+                applyTheme(root.dataset.premiumTheme === "midnight" ? "blue" : "midnight");
+            });
+        })();
+    </script>
 </body>
 </html>

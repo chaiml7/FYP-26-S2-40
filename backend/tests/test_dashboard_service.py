@@ -2,11 +2,45 @@ from datetime import date
 from unittest.mock import patch
 
 from backend.services.dashboard_service import (
+    _combined_score,
+    _format_volume,
+    _model_performance_row,
     _price_summary,
     _score_tone,
+    _technical_indicator_groups,
     get_dashboard_stocks,
     get_stock_dashboard,
 )
+
+
+def test_public_market_score_uses_product_weights():
+    assert _combined_score(8, 6, 4) == 6.6
+    assert _combined_score(8, None, 4) is None
+
+
+def test_public_market_volume_is_compact():
+    assert _format_volume(1_250_000) == "1.2M"
+    assert _format_volume(None) == "--"
+
+
+def test_public_model_metrics_formats_registry_metrics():
+    result = _model_performance_row(
+        "Financial",
+        "financial_binary_v1",
+        {
+            "accuracy": 0.5635,
+            "balanced_accuracy": 0.5071,
+            "macro_f1": 0.506,
+            "log_loss": 0.6923,
+        },
+        "holdout",
+    )
+
+    assert result["accuracy"] == 56.4
+    assert result["balanced_accuracy"] == 50.7
+    assert result["macro_f1"] == 50.6
+    assert result["log_loss"] == 0.6923
+    assert result["evaluation_status"] == "Held-out test"
 
 
 def test_score_tone_distinguishes_missing_and_outlook_ranges():
@@ -14,6 +48,28 @@ def test_score_tone_distinguishes_missing_and_outlook_ranges():
     assert _score_tone(3.99) == "bearish"
     assert _score_tone(5) == "neutral"
     assert _score_tone(6) == "bullish"
+
+
+def test_technical_indicator_groups_format_premium_display_values():
+    groups = _technical_indicator_groups({
+        "rsi_14": 56.789,
+        "bb_upper": 205.123,
+        "bb_width": 0.0842,
+        "return_1d": -0.0123,
+        "relative_volume": 1.247,
+    })
+
+    values = {
+        item["label"]: item["value"]
+        for group in groups
+        for item in group["items"]
+    }
+    assert values["RSI (14)"] == "56.79"
+    assert values["Upper band"] == "$205.12"
+    assert values["Band width"] == "8.42%"
+    assert values["1-day return"] == "-1.23%"
+    assert values["Relative volume"] == "1.25x"
+    assert values["SMA (200)"] == "--"
 
 
 @patch("backend.services.dashboard_service._recent_prices")
@@ -113,6 +169,7 @@ def test_stock_dashboard_keeps_missing_score_separate_from_bearish(
     ]
     assert result["chart_history"] == []
     assert result["price_history"] == []
+    assert result["technical_indicator_groups"] == []
     mock_technical.assert_called_once_with("AAPL", selected_date)
     mock_sentiment.assert_called_once_with("AAPL", selected_date)
     mock_financial.assert_called_once_with("AAPL", selected_date)

@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}{{ symbol }} News Feed - StockLens{% endblock %}
+
+{% block nav_news %}active{% endblock %}
+
+{% block content %}
+
+{# ── Macro: convert raw FinBERT label+score → 0-100 display score ── #}
+{% macro sentiment_score(label, score) %}
+  {%- if label == "positive" -%}{{ (50 + score * 50) | round | int }}
+  {%- elif label == "negative" -%}{{ (50 - score * 50) | round | int }}
+  {%- else -%}50{%- endif -%}
+{% endmacro %}
+
+{# ── Macro: map display score → human label ── #}
+{% macro sentiment_label(label, display_score) %}
+  {%- if label == "neutral" or (display_score >= 45 and display_score <= 54) -%}Neutral
+  {%- elif label == "positive" -%}
+    {%- if display_score >= 85 -%}Very Positive
+    {%- elif display_score >= 65 -%}Positive
+    {%- else -%}Slightly Positive{%- endif -%}
+  {%- else -%}
+    {%- if display_score <= 15 -%}Very Negative
+    {%- elif display_score <= 35 -%}Negative
+    {%- else -%}Slightly Negative{%- endif -%}
+  {%- endif -%}
+{% endmacro %}
+
+<div style="max-width: 860px; margin: 0 auto; width: 100%;">
+
+  {# ── Back link ── #}
+  <div style="margin-bottom: 1.25rem;">
+    <a href="/stocks/{{ symbol }}/view" style="color: var(--text-muted); font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px;">
+      ← Back to {{ symbol }}
+    </a>
+  </div>
+
+  {# ── Page header ── #}
+  <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 0.25rem;">
+    <h1 class="text-xl font-bold text-main m-0">{{ symbol }} News Feed</h1>
+    <span class="text-muted" style="font-size: 0.85rem;">{{ company_name }}</span>
+  </div>
+  <p class="text-muted" style="font-size: 0.85rem; margin: 0 0 1.5rem;">
+    {{ summary.headlines | length }} article{{ 's' if summary.headlines | length != 1 }} analysed &middot; last 7 days
+  </p>
+
+  {# ── Summary card ── #}
+  {% set ws = summary.weighted_scores[0] if summary.weighted_scores else None %}
+  <div class="panel-card" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.5rem;">
+    <div>
+      <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Overall Score</div>
+      <div style="font-size: 20px; font-weight: 500; color: {% if ws and ws.bullish_score >= 6 %}#10b981{% elif ws and ws.bullish_score < 4 %}#ef4444{% else %}var(--text-main){% endif %};">
+        {% if ws %}{{ "%.1f" | format(ws.bullish_score) }} / 10{% else %}—{% endif %}
+      </div>
+    </div>
+    <div>
+      <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Signal</div>
+      <div style="font-size: 20px; font-weight: 500; color: {% if ws and ws.sentiment_label == 'bullish' %}#10b981{% elif ws and ws.sentiment_label == 'bearish' %}#ef4444{% else %}var(--text-main){% endif %};">
+        {% if ws %}{{ ws.sentiment_label | title }}{% else %}—{% endif %}
+      </div>
+    </div>
+    <div>
+      <div style="font-size: 11px; color: #10b981; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Positive</div>
+      <div style="font-size: 20px; font-weight: 500; color: #10b981;">
+        {% if ws %}{{ ws.positive_count }}{% else %}{{ summary.headlines | selectattr('label', 'equalto', 'positive') | list | length }}{% endif %}
+      </div>
+    </div>
+    <div>
+      <div style="font-size: 11px; color: #ef4444; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Negative</div>
+      <div style="font-size: 20px; font-weight: 500; color: #ef4444;">
+        {% if ws %}{{ ws.negative_count }}{% else %}{{ summary.headlines | selectattr('label', 'equalto', 'negative') | list | length }}{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ── News cards ── #}
+  {% if summary.headlines %}
+    {% for article in summary.headlines %}
+      {% set dscore = sentiment_score(article.label, article.score) | int %}
+      {% set dlabel = sentiment_label(article.label, dscore) %}
+      {% set is_pos = article.label == "positive" %}
+      {% set is_neg = article.label == "negative" %}
+      {% set color = "#10b981" if is_pos else ("#ef4444" if is_neg else "#94a3b8") %}
+      {% set bg = "rgba(16,185,129,0.12)" if is_pos else ("rgba(239,68,68,0.12)" if is_neg else "rgba(148,163,184,0.10)") %}
+      {% set border_color = "rgba(16,185,129,0.3)" if is_pos else ("rgba(239,68,68,0.3)" if is_neg else "rgba(148,163,184,0.2)") %}
+
+      <div class="panel-card" style="margin-bottom: 10px;">
+        {# Badge + bar row #}
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+          <span style="font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 5px; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; background: {{ bg }}; color: {{ color }}; border: 0.5px solid {{ border_color }};">
+            {{ dlabel }}
+          </span>
+          <div style="flex: 1; display: flex; align-items: center; gap: 8px;">
+            <div style="flex: 1; height: 6px; background: #1e293b; border-radius: 99px; overflow: hidden;">
+              <div style="height: 100%; width: {{ dscore }}%; background: {{ color }}; border-radius: 99px;"></div>
+            </div>
+            <span style="font-size: 12px; font-weight: 500; color: var(--text-muted); min-width: 32px; text-align: right;">{{ dscore }}</span>
+          </div>
+        </div>
+
+        {# Headline #}
+        <p style="font-size: 14px; font-weight: 500; color: #e2e8f0; margin: 0 0 8px; line-height: 1.5;">
+          {% if article.url %}
+            <a href="{{ article.url }}" target="_blank" rel="noopener" style="color: #e2e8f0; text-decoration: none;"
+               onmouseover="this.style.color='#3b82f6'" onmouseout="this.style.color='#e2e8f0'">
+              {{ article.headline }} ↗
+            </a>
+          {% else %}
+            {{ article.headline }}
+          {% endif %}
+        </p>
+
+        {# Meta #}
+        <div style="font-size: 12px; color: #475569; display: flex; align-items: center; gap: 6px;">
+          <span>{{ article.source | title }}</span>
+          <span style="color: #1e293b;">·</span>
+          <span>{{ article.published_at[:10] }}</span>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="panel-card" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+      No news data available for {{ symbol }} in the last 7 days.
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -33,7 +33,12 @@ def fetch_news(symbol: str, from_date: date = None) -> list:
             if not isinstance(data, list):
                 return []
             return [
-                {"headline": item["headline"], "source": "finnhub", "published_at": _unix_to_iso(item["datetime"])}
+                {
+                    "headline": item["headline"],
+                    "source": "finnhub",
+                    "published_at": _unix_to_iso(item["datetime"]),
+                    "url": item.get("url"),
+                }
                 for item in data
                 if item.get("headline") and item.get("datetime")
             ]

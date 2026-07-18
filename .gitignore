@@ -23,10 +23,15 @@ Thumbs.db
 # ML model weights (large files — download at runtime)
 *.h5
 *.pkl
+*.joblib
 *.pt
 *.pth
 *.safetensors
 models/
+backend/artifacts/
+technical_analysis/*.json
+technical_analysis/*.html
+technical_analysis/*.csv
 experiment_*_model/
 
 # Scripts (personal development tools)

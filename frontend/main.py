@@ -15,9 +15,12 @@ from backend.routes.user_routes import router as user_router
 from backend.routes.premium_user_routes import router as premium_user_router
 from backend.routes.admin_routes import router as admin_router
 from backend.routes.dashboard_routes import router as dashboard_router
-from backend.database.supabase_client import supabase
-
+from backend.services.auth_service import AuthServiceError, create_account
 from backend.services.user_profile_service import get_profile
+from backend.services.dashboard_service import (
+    get_public_market_leaders,
+    get_public_model_metrics,
+)
 
 # Load the keys from .env file into Python's memory
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -26,6 +29,10 @@ sys.path.append(root_dir)
 
 dotenv_path = os.path.join(root_dir, "backend", ".env")
 load_dotenv(dotenv_path)
+
+# Separate client instance used only for login/logout auth calls.
+# Never used for DB queries — keeps the shared service-role singleton uncontaminated.
+_supabase_auth = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SECRET_KEY"))
 
 app = FastAPI()
 app.include_router(stock_router)
@@ -50,9 +57,32 @@ templates = Jinja2Templates(directory=template_path)
 # ==========================================
 @app.get("/")
 async def home(request: Request):
+    try:
+        market_leaders = get_public_market_leaders()
+    except Exception as exc:
+        print(f"Public market leaders lookup failed: {exc}")
+        market_leaders = []
+    try:
+        model_metrics = get_public_model_metrics()
+    except Exception as exc:
+        print(f"Public model metrics lookup failed: {exc}")
+        model_metrics = None
+    featured_analysis = next(
+        (
+            stock
+            for stock in market_leaders
+            if stock.get("overall_score") is not None
+        ),
+        None,
+    )
     return templates.TemplateResponse(
-        request=request, 
-        name="index.html"
+        request=request,
+        name="index.html",
+        context={
+            "market_leaders": market_leaders,
+            "featured_analysis": featured_analysis,
+            "model_metrics": model_metrics,
+        },
     )
 
 # ==========================================
@@ -74,7 +104,7 @@ async def process_login(
 ):
     try:
         # Secure Authentication
-        auth_response = supabase.auth.sign_in_with_password({
+        auth_response = _supabase_auth.auth.sign_in_with_password({
             "email": email,
             "password": password
         })
@@ -113,7 +143,7 @@ async def process_login(
 async def logout(request: Request):
     try:
         # Kill active Auth session
-        supabase.auth.sign_out()
+        _supabase_auth.auth.sign_out()
     except Exception as e:
         print(f"Supabase Sign-Out Error: {e}")
 
@@ -129,6 +159,40 @@ async def logout(request: Request):
 @app.get("/signup")
 async def signup(request: Request):
     return templates.TemplateResponse(
-        request=request, 
+        request=request,
         name="signup.html"
     )
+
+@app.post("/signup")
+async def process_signup(
+    request: Request,
+    firstName: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...)
+):
+    try:
+        auth_response = create_account(email, password, firstName)
+    except AuthServiceError as e:
+        return templates.TemplateResponse(
+            request=request,
+            name="signup.html",
+            context={"error": e.detail}
+        )
+
+    # Supabase only issues a session immediately when email confirmation is
+    # disabled; otherwise the response has no access_token and the user must
+    # confirm their email before they can log in.
+    if not auth_response.get("access_token"):
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={"error": "Account created! Please check your email to confirm your address before logging in."}
+        )
+
+    user_id = auth_response.get("user", {}).get("id")
+
+    request.session["user_email"] = email
+    request.session["user_id"] = str(user_id)
+    request.session["user_role"] = "basic_user"
+
+    return RedirectResponse(url="/dashboard", status_code=303)

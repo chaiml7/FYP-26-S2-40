@@ -2,18 +2,24 @@
 
 from fastapi import APIRouter, HTTPException
 
-from backend.schemas import FinancialModelTrainRequest
+from backend.schemas import (
+    FinancialModelTrainRequest,
+    FinancialModelTuneRequest,
+)
 from backend.services.financial.financial_service import (
     generate_all_financial_predictions,
     generate_financial_prediction,
+    import_all_sec_financial_statements,
     import_all_financial_statements,
     import_financial_statements,
+    import_sec_financial_statements,
     read_financial_model_version,
     read_financial_model_versions,
     read_financial_prediction_history,
     read_latest_financial_prediction,
     set_active_financial_model,
     train_financial_model,
+    tune_financial_model,
 )
 
 
@@ -38,6 +44,22 @@ def import_all_statements():
         _raise_financial_error(exc)
 
 
+@router.post("/statements/import-sec")
+def import_all_sec_statements():
+    try:
+        return import_all_sec_financial_statements()
+    except Exception as exc:
+        _raise_financial_error(exc)
+
+
+@router.post("/statements/import-sec/{symbol}")
+def import_sec_statements(symbol: str):
+    try:
+        return import_sec_financial_statements(symbol)
+    except Exception as exc:
+        _raise_financial_error(exc)
+
+
 @router.post("/statements/import/{symbol}")
 def import_statements(symbol: str):
     try:
@@ -50,10 +72,16 @@ def import_statements(symbol: str):
 def train_model(request: FinancialModelTrainRequest = None):
     try:
         request = request or FinancialModelTrainRequest()
-        return train_financial_model(
-            request.training_mode,
-            request.base_version,
-        )
+        return train_financial_model(top_n=request.top_n)
+    except Exception as exc:
+        _raise_financial_error(exc)
+
+
+@router.post("/model/tune")
+def tune_model(request: FinancialModelTuneRequest = None):
+    try:
+        request = request or FinancialModelTuneRequest()
+        return tune_financial_model(top_n=request.top_n)
     except Exception as exc:
         _raise_financial_error(exc)
 

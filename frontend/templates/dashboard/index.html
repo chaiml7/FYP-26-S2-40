@@ -58,6 +58,7 @@
     <table class="stock-browser-table">
         <thead>
             <tr>
+                {% if user_role == "premium_user" %}<th><span class="sr-only">Watchlist</span></th>{% endif %}
                 <th>Company</th>
                 <th>Sector</th>
                 <th>Latest price</th>
@@ -73,9 +74,19 @@
                 data-sector="{{ (stock.sector or '') | lower }}"
                 onclick="window.location='/stocks/{{ stock.symbol }}/view{% if selected_date %}?selected_date={{ selected_date }}{% endif %}'"
             >
+                {% if user_role == "premium_user" %}
+                <td>
+                    <button
+                        class="watchlist-star {% if stock.symbol in watchlisted_symbols %}active{% endif %}"
+                        data-symbol="{{ stock.symbol }}"
+                        aria-pressed="{{ 'true' if stock.symbol in watchlisted_symbols else 'false' }}"
+                        aria-label="Toggle watchlist for {{ stock.symbol }}"
+                        onclick="event.stopPropagation(); toggleWatchlist(this);"
+                    >★</button>
+                </td>
+                {% endif %}
                 <td>
                     <a class="company-cell" href="/stocks/{{ stock.symbol }}/view{% if selected_date %}?selected_date={{ selected_date }}{% endif %}">
-                        <span class="ticker-tile">{{ stock.symbol[:2] }}</span>
                         <span>
                             <strong>{{ stock.symbol }}</strong>
                             <small>{{ stock.company_name }}</small>
@@ -136,5 +147,28 @@
 
     searchInput.addEventListener("input", filterStocks);
     sectorFilter.addEventListener("change", filterStocks);
+
+    function toggleWatchlist(button) {
+        const symbol = button.dataset.symbol;
+        const isActive = button.classList.contains("active");
+        const method = isActive ? "DELETE" : "POST";
+
+        button.disabled = true;
+        fetch(`/premium/watchlist/${symbol}`, { method })
+            .then((response) => {
+                if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+                return response.json();
+            })
+            .then((data) => {
+                button.classList.toggle("active", data.watchlisted);
+                button.setAttribute("aria-pressed", data.watchlisted ? "true" : "false");
+            })
+            .catch((error) => {
+                console.error("Watchlist toggle failed:", error);
+            })
+            .finally(() => {
+                button.disabled = false;
+            });
+    }
 </script>
 {% endblock %}

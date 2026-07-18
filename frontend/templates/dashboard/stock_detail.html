@@ -26,6 +26,15 @@
             <div class="stock-title-line">
                 <h1>{{ stock.symbol }}</h1>
                 <span class="exchange-label">{{ stock.exchange or "Tracked" }}</span>
+                {% if user_role == "premium_user" %}
+                <button
+                    class="watchlist-star watchlist-star-large {% if is_watchlisted %}active{% endif %}"
+                    data-symbol="{{ stock.symbol }}"
+                    aria-pressed="{{ 'true' if is_watchlisted else 'false' }}"
+                    aria-label="Toggle watchlist for {{ stock.symbol }}"
+                    onclick="toggleWatchlist(this);"
+                >★</button>
+                {% endif %}
             </div>
             <p>{{ stock.company_name }}</p>
             <span class="sector-label">{{ stock.sector or "Unclassified" }}</span>
@@ -116,6 +125,13 @@
                     <div><dt>Label</dt><dd>{{ item.detail.sentiment_label | title }}</dd></div>
                     <div><dt>As of</dt><dd>{{ item.detail.score_date }}</dd></div>
                     <div><dt>Articles</dt><dd>{{ item.detail.article_count }}</dd></div>
+                    {% if user_role == "premium_user" %}
+                    <div style="margin-top: 0.75rem;">
+                        <a href="/premium/news/{{ stock.symbol }}" class="btn btn-outline btn-sm" style="width: 100%; text-align: center; display: block;">
+                            View News Feed →
+                        </a>
+                    </div>
+                    {% endif %}
                 {% elif item.name == "Financial" and item.detail %}
                     <div><dt>Outlook</dt><dd>{{ item.detail.prediction | title }}</dd></div>
                     <div><dt>Period</dt><dd>{{ item.detail.period }}</dd></div>
@@ -124,6 +140,39 @@
                     <div><dt>Status</dt><dd>No prediction has been saved</dd></div>
                 {% endif %}
             </dl>
+
+            {% if item.name == "Technical" and user_role == "premium_user" %}
+            <details class="technical-details">
+                <summary>
+                    <span>Technical indicators</span>
+                    <span class="technical-details-chevron" aria-hidden="true">&#8964;</span>
+                </summary>
+                <div class="technical-details-content">
+                    {% if stock.technical_indicator_groups %}
+                        <p class="technical-details-date">
+                            Values as of {{ stock.technical_indicator_date }}
+                        </p>
+                        {% for group in stock.technical_indicator_groups %}
+                        <section class="indicator-group">
+                            <h3>{{ group["title"] }}</h3>
+                            <dl class="indicator-grid">
+                                {% for indicator in group["items"] %}
+                                <div>
+                                    <dt>{{ indicator["label"] }}</dt>
+                                    <dd>{{ indicator["value"] }}</dd>
+                                </div>
+                                {% endfor %}
+                            </dl>
+                        </section>
+                        {% endfor %}
+                    {% else %}
+                        <p class="data-unavailable">
+                            No technical indicator values are available for this date.
+                        </p>
+                    {% endif %}
+                </div>
+            </details>
+            {% endif %}
         </article>
         {% endfor %}
     </div>
@@ -174,6 +223,32 @@
 {% endblock %}
 
 {% block scripts %}
+{% if user_role == "premium_user" %}
+<script>
+    function toggleWatchlist(button) {
+        const symbol = button.dataset.symbol;
+        const isActive = button.classList.contains("active");
+        const method = isActive ? "DELETE" : "POST";
+
+        button.disabled = true;
+        fetch(`/premium/watchlist/${symbol}`, { method })
+            .then((response) => {
+                if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+                return response.json();
+            })
+            .then((data) => {
+                button.classList.toggle("active", data.watchlisted);
+                button.setAttribute("aria-pressed", data.watchlisted ? "true" : "false");
+            })
+            .catch((error) => {
+                console.error("Watchlist toggle failed:", error);
+            })
+            .finally(() => {
+                button.disabled = false;
+            });
+    }
+</script>
+{% endif %}
 {% if stock.chart_history %}
 <script src="/static/js/lightweight-charts.standalone.production.js?v=5.0.9-1"></script>
 <script>

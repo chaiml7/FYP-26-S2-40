@@ -142,6 +142,103 @@ def _technical_prediction(
     return _first(response.data or [])
 
 
+def _technical_indicator_snapshot(
+    symbol: str,
+    indicator_date: date | str = None,
+) -> dict | None:
+    query = (
+        supabase.table("technical_indicators")
+        .select(
+            "date,close,return_1d,return_5d,rsi_14,macd,macd_signal,"
+            "macd_histogram,bb_middle,bb_upper,bb_lower,bb_width,atr_14,"
+            "sma_20,sma_50,sma_200,vwap_20,relative_volume,support_20,"
+            "resistance_20"
+        )
+        .eq("symbol", symbol.upper())
+        .order("date", desc=True)
+        .limit(1)
+    )
+    if indicator_date is not None:
+        date_value = (
+            indicator_date.isoformat()
+            if isinstance(indicator_date, date)
+            else str(indicator_date)
+        )
+        query = query.eq("date", date_value)
+    response = query.execute()
+    return _first(response.data or [])
+
+
+def _format_indicator_value(value, style: str = "number") -> str:
+    if value is None:
+        return "--"
+    number = float(value)
+    if style == "price":
+        return f"${number:,.2f}"
+    if style == "percent":
+        return f"{number * 100:+.2f}%"
+    if style == "unsigned_percent":
+        return f"{number * 100:.2f}%"
+    if style == "multiple":
+        return f"{number:.2f}x"
+    return f"{number:.2f}"
+
+
+def _technical_indicator_groups(snapshot: dict | None) -> list:
+    if not snapshot:
+        return []
+
+    groups = [
+        (
+            "Momentum",
+            [
+                ("RSI (14)", "rsi_14", "number"),
+                ("MACD", "macd", "number"),
+                ("MACD signal", "macd_signal", "number"),
+                ("MACD histogram", "macd_histogram", "number"),
+                ("1-day return", "return_1d", "percent"),
+                ("5-day return", "return_5d", "percent"),
+            ],
+        ),
+        (
+            "Bollinger & volatility",
+            [
+                ("Upper band", "bb_upper", "price"),
+                ("Middle band", "bb_middle", "price"),
+                ("Lower band", "bb_lower", "price"),
+                ("Band width", "bb_width", "unsigned_percent"),
+                ("ATR (14)", "atr_14", "price"),
+                ("Relative volume", "relative_volume", "multiple"),
+            ],
+        ),
+        (
+            "Trend & price levels",
+            [
+                ("Latest close", "close", "price"),
+                ("SMA (20)", "sma_20", "price"),
+                ("SMA (50)", "sma_50", "price"),
+                ("SMA (200)", "sma_200", "price"),
+                ("VWAP (20)", "vwap_20", "price"),
+                ("Support (20)", "support_20", "price"),
+                ("Resistance (20)", "resistance_20", "price"),
+            ],
+        ),
+    ]
+    return [
+        {
+            "title": title,
+            "items": [
+                {
+                    "label": label,
+                    "value": _format_indicator_value(snapshot.get(key), style),
+                }
+                for label, key, style in items
+            ],
+        }
+        for title, items in groups
+    ]
+
+
 def _sentiment_prediction(
     symbol: str,
     selected_date: date = None,
@@ -193,6 +290,197 @@ def _score_card(name: str, score: float | None, detail: dict | None) -> dict:
     }
 
 
+def _format_volume(volume: int | float | None) -> str:
+    if volume is None:
+        return "--"
+    value = float(volume)
+    if value >= 1_000_000_000:
+        return f"{value / 1_000_000_000:.1f}B"
+    if value >= 1_000_000:
+        return f"{value / 1_000_000:.1f}M"
+    if value >= 1_000:
+        return f"{value / 1_000:.1f}K"
+    return f"{int(value):,}"
+
+
+def _combined_score(
+    technical_score: float | None,
+    sentiment_score: float | None,
+    financial_score: float | None,
+) -> float | None:
+    if any(
+        score is None
+        for score in (technical_score, sentiment_score, financial_score)
+    ):
+        return None
+    return round(
+        (float(technical_score) * 0.50)
+        + (float(sentiment_score) * 0.30)
+        + (float(financial_score) * 0.20),
+        1,
+    )
+
+
+def get_public_market_leaders(limit: int = 5) -> list:
+    stocks = get_active_stocks() or []
+    stocks_by_symbol = {
+        str(stock.get("symbol", "")).upper(): stock
+        for stock in stocks
+        if stock.get("symbol")
+    }
+    if not stocks_by_symbol:
+        return []
+
+    latest_response = (
+        supabase.table("daily_ohlcv")
+        .select("trade_date")
+        .in_("symbol", list(stocks_by_symbol))
+        .order("trade_date", desc=True)
+        .limit(1)
+        .execute()
+    )
+    latest_row = _first(latest_response.data or [])
+    if latest_row is None:
+        return []
+
+    market_date = latest_row["trade_date"]
+    volume_response = (
+        supabase.table("daily_ohlcv")
+        .select("symbol,trade_date,close,volume")
+        .in_("symbol", list(stocks_by_symbol))
+        .eq("trade_date", market_date)
+        .order("volume", desc=True)
+        .limit(limit)
+        .execute()
+    )
+
+    leaders = []
+    for rank, row in enumerate(volume_response.data or [], start=1):
+        symbol = str(row.get("symbol", "")).upper()
+        stock = stocks_by_symbol.get(symbol)
+        if stock is None:
+            continue
+
+        technical = _technical_prediction(symbol)
+        sentiment = _sentiment_prediction(symbol)
+        financial = _financial_prediction(symbol)
+        technical_score = technical.get("technical_score") if technical else None
+        sentiment_score = sentiment.get("bullish_score") if sentiment else None
+        financial_score = financial.get("fundamental_score") if financial else None
+        overall_score = _combined_score(
+            technical_score,
+            sentiment_score,
+            financial_score,
+        )
+        leaders.append({
+            "rank": rank,
+            "symbol": symbol,
+            "company_name": stock.get("company_name") or symbol,
+            "market_date": market_date,
+            "volume": row.get("volume"),
+            "volume_display": _format_volume(row.get("volume")),
+            "overall_score": overall_score,
+            "analysis": _score_tone(overall_score),
+            "technical_score": (
+                round(float(technical_score), 1)
+                if technical_score is not None else None
+            ),
+            "sentiment_score": (
+                round(float(sentiment_score), 1)
+                if sentiment_score is not None else None
+            ),
+            "financial_score": (
+                round(float(financial_score), 1)
+                if financial_score is not None else None
+            ),
+        })
+
+    return leaders
+
+
+def _model_performance_row(
+    name: str,
+    version: str | None,
+    metrics: dict | None,
+    evaluation_mode: str | None,
+) -> dict:
+    metrics = metrics or {}
+    return {
+        "name": name,
+        "model_version": version or "Not available",
+        "evaluation_mode": evaluation_mode or "Not evaluated",
+        "evaluation_status": (
+            "Held-out test"
+            if metrics.get("balanced_accuracy") is not None
+            else "Not recorded"
+        ),
+        "accuracy": (
+            round(float(metrics["accuracy"]) * 100, 1)
+            if metrics.get("accuracy") is not None else None
+        ),
+        "balanced_accuracy": (
+            round(float(metrics["balanced_accuracy"]) * 100, 1)
+            if metrics.get("balanced_accuracy") is not None else None
+        ),
+        "macro_f1": (
+            round(float(metrics["macro_f1"]) * 100, 1)
+            if metrics.get("macro_f1") is not None else None
+        ),
+        "log_loss": (
+            round(float(metrics["log_loss"]), 4)
+            if metrics.get("log_loss") is not None else None
+        ),
+    }
+
+
+def get_public_model_metrics() -> list:
+    financial_response = (
+        supabase.table("financial_model_versions")
+        .select("model_version,metrics,evaluation_mode,trained_at")
+        .eq("is_active", True)
+        .limit(1)
+        .execute()
+    )
+    technical_response = (
+        supabase.table("technical_model_versions")
+        .select("model_version,test_metrics,evaluation_mode,trained_at")
+        .eq("is_active", True)
+        .limit(1)
+        .execute()
+    )
+    sentiment_response = (
+        supabase.table("sentiment_scores")
+        .select("model_version,published_at")
+        .order("published_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+
+    financial = _first(financial_response.data or []) or {}
+    technical = _first(technical_response.data or []) or {}
+    sentiment = _first(sentiment_response.data or []) or {}
+    return [
+        _model_performance_row(
+            "Technical",
+            technical.get("model_version"),
+            technical.get("test_metrics"),
+            technical.get("evaluation_mode"),
+        ),
+        _model_performance_row(
+            "Sentiment",
+            sentiment.get("model_version"),
+            None,
+            "Deployed model; held-out evaluation not recorded",
+        ),
+        _model_performance_row(
+            "Financial",
+            financial.get("model_version"),
+            financial.get("metrics"),
+            financial.get("evaluation_mode"),
+        ),
+    ]
+
+
 def get_dashboard_stocks(selected_date: date = None) -> list:
     stocks = get_active_stocks() or []
     dashboard_stocks = []
@@ -227,6 +515,7 @@ def get_dashboard_stocks(selected_date: date = None) -> list:
 def get_stock_dashboard(
     symbol: str,
     selected_date: date = None,
+    include_technical_indicators: bool = False,
 ) -> dict | None:
     stocks = get_stock_by_symbol(symbol)
     stock = _first(stocks or [])
@@ -235,11 +524,27 @@ def get_stock_dashboard(
 
     symbol = stock["symbol"].upper()
     technical = _technical_prediction(symbol, selected_date)
+    indicator_date = (
+        technical.get("latest_date")
+        if technical and technical.get("latest_date")
+        else selected_date
+    )
+    technical_indicators = None
+    if include_technical_indicators:
+        try:
+            technical_indicators = _technical_indicator_snapshot(
+                symbol,
+                indicator_date,
+            )
+        except Exception as exc:
+            print(f"Technical indicator detail lookup failed for {symbol}: {exc}")
     sentiment = _sentiment_prediction(symbol, selected_date)
     financial = _financial_prediction(symbol, selected_date)
-    history = list(reversed(
-        _recent_prices(symbol, limit=10, selected_date=selected_date)
-    ))
+    history = _recent_prices(
+        symbol,
+        limit=10,
+        selected_date=selected_date,
+    )
     chart_history = list(reversed(
         _recent_prices(symbol, limit=60, selected_date=selected_date)
     ))
@@ -269,6 +574,12 @@ def get_stock_dashboard(
                 financial,
             ),
         ],
+        "technical_indicator_date": (
+            technical_indicators.get("date") if technical_indicators else None
+        ),
+        "technical_indicator_groups": _technical_indicator_groups(
+            technical_indicators
+        ),
         "chart_history": chart_history,
         "price_history": history,
     }

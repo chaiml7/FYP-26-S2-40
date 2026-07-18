@@ -29,8 +29,11 @@ class PredictionCreate(BaseModel):
 
 
 class FinancialModelTrainRequest(BaseModel):
-    training_mode: Literal["fresh", "continue"] = "fresh"
-    base_version: Optional[str] = None
+    top_n: int = Field(default=5, ge=1, le=20)
+
+
+class FinancialModelTuneRequest(BaseModel):
+    top_n: int = Field(default=5, ge=1, le=20)
 
 
 class AccountCreate(BaseModel):

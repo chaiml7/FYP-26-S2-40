@@ -28,7 +28,7 @@
                 <td class="text-accent font-bold">{{ stock.ticker }}</td>
                 <td class="text-main">{{ stock.company_name }}</td>
                 <td>{{ stock.exchange }}</td>
-                <td>{{ stock.created_at[:10] }}</td> 
+                <td>{{ stock.created_at[:10] }}</td>
                 <td>
                     {% if stock.status == 'Active' %}
                         <span class="status-active status-text bg-opacity-10 px-2 py-1 rounded-full">Active</span>
@@ -37,14 +37,14 @@
                     {% endif %}
                 </td>
                 <td>
-                    <button class="btn-delete" 
-                            data-symbol="{{ stock.ticker }}" 
-                            data-status="{{ stock.status }}" 
+                    <button class="btn-delete"
+                            data-symbol="{{ stock.ticker }}"
+                            data-status="{{ stock.status }}"
                             title="Toggle Status">
                         {% if stock.status == 'Active' %}
-                            🗑️
+                            Delist
                         {% else %}
-                            🔄
+                            Reactivate
                         {% endif %}
                     </button>
                 </td>
@@ -70,12 +70,11 @@
             button.addEventListener('click', async (e) => {
                 const symbol = e.currentTarget.getAttribute('data-symbol');
                 const currentStatus = e.currentTarget.getAttribute('data-status');
-                
                 const isActive = currentStatus === 'Active';
                 const actionText = isActive ? "delist" : "reactivate";
 
                 if (!confirm(`Are you sure you want to ${actionText} ${symbol}?`)) {
-                    return; 
+                    return;
                 }
 
                 try {
