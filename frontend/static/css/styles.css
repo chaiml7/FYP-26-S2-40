@@ -2652,6 +2652,9 @@ a {
 .stock-browser-table th,
 .history-table th {
     padding: 0.8rem 1rem;
+    border-bottom: 1px solid #303b49;
+    background: var(--bg-dark);
+    color: var(--text-muted);
     font-size: 0.68rem;
     text-align: left;
     text-transform: uppercase;
@@ -3034,93 +3037,7 @@ a {
 
 .score-metadata dd {
     overflow-wrap: anywhere;
-    color: var(--text-main);
-    text-align: right;
-}
-
-.technical-details {
-    margin-top: 1rem;
-    border-top: 1px solid var(--border-color);
-}
-
-.technical-details summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.85rem 0 0;
-    color: var(--accent-blue);
-    font-size: 0.76rem;
-    font-weight: 750;
-    cursor: pointer;
-    list-style: none;
-}
-
-.technical-details summary::-webkit-details-marker {
-    display: none;
-}
-
-.technical-details-chevron {
-    font-size: 1rem;
-    transition: transform 0.2s ease;
-}
-
-.technical-details[open] .technical-details-chevron {
-    transform: rotate(180deg);
-}
-
-.technical-details-content {
-    padding-top: 0.85rem;
-}
-
-.technical-details-date {
-    margin: 0 0 0.9rem;
     color: var(--text-muted);
-    font-size: 0.66rem;
-}
-
-.indicator-group + .indicator-group {
-    margin-top: 1rem;
-}
-
-.indicator-group h3 {
-    margin: 0 0 0.4rem;
-    color: var(--text-main);
-    font-size: 0.68rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
-
-.indicator-grid {
-    margin: 0;
-}
-
-.indicator-grid > div {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.38rem 0;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.indicator-grid > div:last-child {
-    border-bottom: 0;
-}
-
-.indicator-grid dt,
-.indicator-grid dd {
-    margin: 0;
-    font-size: 0.69rem;
-}
-
-.indicator-grid dt {
-    color: var(--text-muted);
-}
-
-.indicator-grid dd {
-    color: var(--text-main);
-    font-variant-numeric: tabular-nums;
-    font-weight: 700;
     text-align: right;
 }
 
@@ -3179,8 +3096,8 @@ a {
         padding: 0 0.7rem;
         border: 1px solid #344152;
         border-radius: 5px;
-        background: #171f29;
-        color: #e8edf3;
+        background: var(--bg-dark);
+        color: var(--text-main);
         font-weight: 700;
     }
 
