@@ -48,6 +48,13 @@ MARKET_CONTEXT_SYMBOLS = {
     "KWEB",
 }
 
+STOCK_SCOPE_ACTIVE = "active"
+STOCK_SCOPE_ALL = "all"
+VALID_STOCK_SCOPES = {
+    STOCK_SCOPE_ACTIVE,
+    STOCK_SCOPE_ALL,
+}
+
 SECTOR_ETF_BY_SYMBOL = {
     "AAPL": "XLK",
     "MSFT": "XLK",
@@ -88,14 +95,17 @@ SECTOR_ETF_BY_SYMBOL = {
 
 def get_stocks_from_supabase(
     include_market_context_symbols: bool = False,
+    stock_scope: str = STOCK_SCOPE_ACTIVE,
 ) -> list[dict[str, Any]]:
-    """Return tracked stocks with usable ticker symbols."""
-    response = (
-        supabase.table("stocks")
-        .select("id, symbol, is_active")
-        .eq("is_active", True)
-        .execute()
-    )
+    """Return either active stocks or every tracked stock."""
+    if stock_scope not in VALID_STOCK_SCOPES:
+        raise ValueError(
+            "stock_scope must be one of: " + ", ".join(sorted(VALID_STOCK_SCOPES))
+        )
+    query = supabase.table("stocks").select("id, symbol, is_active")
+    if stock_scope == STOCK_SCOPE_ACTIVE:
+        query = query.eq("is_active", True)
+    response = query.execute()
     rows = response.data or []
 
     stocks = []

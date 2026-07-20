@@ -4,11 +4,11 @@
         <span style="font-weight: bold; font-size: 1.1rem; color: var(--text-main, white);">📈 StockLens</span>
         
         {% if user_role == 'premium_user' %}
-            <span style="color: #fbbf24; border: 1px solid #fbbf24; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">PREMIUM</span>
-        {% elif user_role == 'user_admin' %}
-            <span style="color: #ef4444; border: 1px solid #ef4444; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">ADMIN</span>
+            <span class="role-badge role-badge-premium">PREMIUM</span>
+        {% elif user_role == 'frontend_admin' %}
+            <span class="role-badge role-badge-admin">ADMIN</span>
         {% else %}
-            <span style="color: #94a3b8; border: 1px solid #94a3b8; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">FREE</span>
+            <span class="role-badge role-badge-free">FREE</span>
         {% endif %}
     </div>
 

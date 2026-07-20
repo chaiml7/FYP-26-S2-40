@@ -7,6 +7,8 @@ from backend.services.technical.indicator_service import (
 )
 from backend.services.technical.price_service import get_stock_by_symbol
 from backend.services.technical.technical_service import (
+    backtest_binary_xgboost_technical_model,
+    evaluate_binary_xgboost_walk_forward,
     generate_all_technical_predictions,
     generate_technical_prediction,
     import_all_technical_prices,
@@ -16,6 +18,7 @@ from backend.services.technical.technical_service import (
     read_model_versions,
     read_prediction_history,
     set_active_technical_model,
+    train_binary_xgboost_technical_model,
     train_technical_model,
 )
 
@@ -36,9 +39,13 @@ def _raise_technical_error(exc: Exception):
 @router.post("/prices/import")
 def import_all_prices(
     period: str = Query(default="10y"),
+    stock_scope: str = Query(
+        default="active",
+        description="active or all",
+    ),
 ):
     try:
-        return import_all_technical_prices(period)
+        return import_all_technical_prices(period, stock_scope=stock_scope)
     except Exception as exc:
         _raise_technical_error(exc)
 
@@ -58,6 +65,56 @@ def import_prices(
 def train_model():
     try:
         return train_technical_model()
+    except Exception as exc:
+        _raise_technical_error(exc)
+
+
+@router.post("/model/train/binary-xgboost")
+def train_binary_xgboost_model(
+    return_threshold: float = Query(default=0.01, ge=0.0, le=0.10),
+    train_before_date: str = Query(default=None),
+    prediction_horizon_days: int = Query(default=5, ge=1, le=20),
+    use_sentiment_features: bool = Query(default=False),
+    stock_scope: str = Query(
+        default="active",
+        description="active or all",
+    ),
+    activate: bool = Query(default=True),
+):
+    try:
+        return train_binary_xgboost_technical_model(
+            return_threshold=return_threshold,
+            train_before_date=train_before_date,
+            prediction_horizon_days=prediction_horizon_days,
+            use_sentiment_features=use_sentiment_features,
+            stock_scope=stock_scope,
+            activate=activate,
+        )
+    except Exception as exc:
+        _raise_technical_error(exc)
+
+
+@router.post("/model/evaluate/binary-xgboost/walk-forward")
+def evaluate_binary_xgboost_model_walk_forward(
+    return_threshold: float = Query(default=0.01, ge=0.0, le=0.10),
+    prediction_horizon_days: int = Query(default=5, ge=1, le=20),
+    use_sentiment_features: bool = Query(default=False),
+    stock_scope: str = Query(
+        default="active",
+        description="active or all",
+    ),
+    test_window_dates: int = Query(default=63, ge=20, le=252),
+    max_folds: int = Query(default=4, ge=1, le=10),
+):
+    try:
+        return evaluate_binary_xgboost_walk_forward(
+            return_threshold=return_threshold,
+            prediction_horizon_days=prediction_horizon_days,
+            use_sentiment_features=use_sentiment_features,
+            stock_scope=stock_scope,
+            test_window_dates=test_window_dates,
+            max_folds=max_folds,
+        )
     except Exception as exc:
         _raise_technical_error(exc)
 
@@ -123,6 +180,28 @@ def view_latest_prediction(symbol: str):
 @router.get("/predictions/{symbol}")
 def view_prediction_history(symbol: str):
     return read_prediction_history(symbol)
+
+
+@router.get("/backtests/binary-xgboost/{symbol}")
+def view_binary_xgboost_backtest(
+    symbol: str,
+    model_version: str = Query(default=None),
+    start_date: str = Query(default=None),
+    end_date: str = Query(default=None),
+    confidence_threshold: float = Query(default=0.60, ge=0.0, le=1.0),
+    transaction_cost_bps: float = Query(default=10.0, ge=0.0, le=500.0),
+):
+    try:
+        return backtest_binary_xgboost_technical_model(
+            symbol,
+            model_version=model_version,
+            start_date=start_date,
+            end_date=end_date,
+            confidence_threshold=confidence_threshold,
+            transaction_cost_bps=transaction_cost_bps,
+        )
+    except Exception as exc:
+        _raise_technical_error(exc)
 
 
 @router.get("/indicators/{symbol}")

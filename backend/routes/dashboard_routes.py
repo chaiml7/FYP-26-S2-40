@@ -86,7 +86,11 @@ async def stock_detail(
     if session is None:
         return RedirectResponse(url="/login", status_code=303)
 
-    stock = get_stock_dashboard(symbol, selected_date)
+    stock = get_stock_dashboard(
+        symbol,
+        selected_date,
+        include_technical_indicators=(session["user_role"] == "premium_user"),
+    )
     if stock is None:
         return templates.TemplateResponse(
             request=request,

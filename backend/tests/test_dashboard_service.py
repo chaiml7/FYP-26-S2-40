@@ -7,6 +7,7 @@ from backend.services.dashboard_service import (
     _model_performance_row,
     _price_summary,
     _score_tone,
+    _technical_indicator_groups,
     get_dashboard_stocks,
     get_stock_dashboard,
 )
@@ -47,6 +48,28 @@ def test_score_tone_distinguishes_missing_and_outlook_ranges():
     assert _score_tone(3.99) == "bearish"
     assert _score_tone(5) == "neutral"
     assert _score_tone(6) == "bullish"
+
+
+def test_technical_indicator_groups_format_premium_display_values():
+    groups = _technical_indicator_groups({
+        "rsi_14": 56.789,
+        "bb_upper": 205.123,
+        "bb_width": 0.0842,
+        "return_1d": -0.0123,
+        "relative_volume": 1.247,
+    })
+
+    values = {
+        item["label"]: item["value"]
+        for group in groups
+        for item in group["items"]
+    }
+    assert values["RSI (14)"] == "56.79"
+    assert values["Upper band"] == "$205.12"
+    assert values["Band width"] == "8.42%"
+    assert values["1-day return"] == "-1.23%"
+    assert values["Relative volume"] == "1.25x"
+    assert values["SMA (200)"] == "--"
 
 
 @patch("backend.services.dashboard_service._recent_prices")
@@ -146,6 +169,7 @@ def test_stock_dashboard_keeps_missing_score_separate_from_bearish(
     ]
     assert result["chart_history"] == []
     assert result["price_history"] == []
+    assert result["technical_indicator_groups"] == []
     mock_technical.assert_called_once_with("AAPL", selected_date)
     mock_sentiment.assert_called_once_with("AAPL", selected_date)
     mock_financial.assert_called_once_with("AAPL", selected_date)

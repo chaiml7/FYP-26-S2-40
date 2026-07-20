@@ -4,6 +4,7 @@ from datetime import date
 
 from backend.services.sentiment.sentiment_aggregator import (
     calculate_daily_sentiment_score,
+    save_neutral_daily_sentiment_score,
     save_scores,
     get_sentiment_summary,
     has_data_for_today,
@@ -178,6 +179,21 @@ def test_has_data_for_today_true(mock_supa):
 def test_has_data_for_today_false(mock_supa):
     mock_supa.table.return_value.select.return_value.eq.return_value.gte.return_value.limit.return_value.execute.return_value.data = []
     assert has_data_for_today("AAPL") is False
+
+
+@patch(f"{MODULE}._get_stock_id", return_value=1)
+@patch(f"{MODULE}.supabase")
+def test_save_neutral_daily_score_uses_zero_article_neutral_payload(mock_supa, _mock_get_stock_id):
+    mock_supa.table.return_value.upsert.return_value.execute.return_value.data = [{}]
+
+    result = save_neutral_daily_sentiment_score("AAPL", date(2026, 7, 14))
+
+    payload = mock_supa.table.return_value.upsert.call_args.args[0]
+    assert payload["score_date"] == "2026-07-14"
+    assert payload["article_count"] == 0
+    assert payload["bullish_score"] == 5.0
+    assert payload["sentiment_label"] == "neutral"
+    assert result["rows_saved"] == 1
 
 
 def test_calculate_daily_sentiment_score_weights_labels():

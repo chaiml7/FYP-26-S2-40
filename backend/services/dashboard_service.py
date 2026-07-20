@@ -142,6 +142,103 @@ def _technical_prediction(
     return _first(response.data or [])
 
 
+def _technical_indicator_snapshot(
+    symbol: str,
+    indicator_date: date | str = None,
+) -> dict | None:
+    query = (
+        supabase.table("technical_indicators")
+        .select(
+            "date,close,return_1d,return_5d,rsi_14,macd,macd_signal,"
+            "macd_histogram,bb_middle,bb_upper,bb_lower,bb_width,atr_14,"
+            "sma_20,sma_50,sma_200,vwap_20,relative_volume,support_20,"
+            "resistance_20"
+        )
+        .eq("symbol", symbol.upper())
+        .order("date", desc=True)
+        .limit(1)
+    )
+    if indicator_date is not None:
+        date_value = (
+            indicator_date.isoformat()
+            if isinstance(indicator_date, date)
+            else str(indicator_date)
+        )
+        query = query.eq("date", date_value)
+    response = query.execute()
+    return _first(response.data or [])
+
+
+def _format_indicator_value(value, style: str = "number") -> str:
+    if value is None:
+        return "--"
+    number = float(value)
+    if style == "price":
+        return f"${number:,.2f}"
+    if style == "percent":
+        return f"{number * 100:+.2f}%"
+    if style == "unsigned_percent":
+        return f"{number * 100:.2f}%"
+    if style == "multiple":
+        return f"{number:.2f}x"
+    return f"{number:.2f}"
+
+
+def _technical_indicator_groups(snapshot: dict | None) -> list:
+    if not snapshot:
+        return []
+
+    groups = [
+        (
+            "Momentum",
+            [
+                ("RSI (14)", "rsi_14", "number"),
+                ("MACD", "macd", "number"),
+                ("MACD signal", "macd_signal", "number"),
+                ("MACD histogram", "macd_histogram", "number"),
+                ("1-day return", "return_1d", "percent"),
+                ("5-day return", "return_5d", "percent"),
+            ],
+        ),
+        (
+            "Bollinger & volatility",
+            [
+                ("Upper band", "bb_upper", "price"),
+                ("Middle band", "bb_middle", "price"),
+                ("Lower band", "bb_lower", "price"),
+                ("Band width", "bb_width", "unsigned_percent"),
+                ("ATR (14)", "atr_14", "price"),
+                ("Relative volume", "relative_volume", "multiple"),
+            ],
+        ),
+        (
+            "Trend & price levels",
+            [
+                ("Latest close", "close", "price"),
+                ("SMA (20)", "sma_20", "price"),
+                ("SMA (50)", "sma_50", "price"),
+                ("SMA (200)", "sma_200", "price"),
+                ("VWAP (20)", "vwap_20", "price"),
+                ("Support (20)", "support_20", "price"),
+                ("Resistance (20)", "resistance_20", "price"),
+            ],
+        ),
+    ]
+    return [
+        {
+            "title": title,
+            "items": [
+                {
+                    "label": label,
+                    "value": _format_indicator_value(snapshot.get(key), style),
+                }
+                for label, key, style in items
+            ],
+        }
+        for title, items in groups
+    ]
+
+
 def _sentiment_prediction(
     symbol: str,
     selected_date: date = None,
@@ -418,6 +515,7 @@ def get_dashboard_stocks(selected_date: date = None) -> list:
 def get_stock_dashboard(
     symbol: str,
     selected_date: date = None,
+    include_technical_indicators: bool = False,
 ) -> dict | None:
     stocks = get_stock_by_symbol(symbol)
     stock = _first(stocks or [])
@@ -426,11 +524,27 @@ def get_stock_dashboard(
 
     symbol = stock["symbol"].upper()
     technical = _technical_prediction(symbol, selected_date)
+    indicator_date = (
+        technical.get("latest_date")
+        if technical and technical.get("latest_date")
+        else selected_date
+    )
+    technical_indicators = None
+    if include_technical_indicators:
+        try:
+            technical_indicators = _technical_indicator_snapshot(
+                symbol,
+                indicator_date,
+            )
+        except Exception as exc:
+            print(f"Technical indicator detail lookup failed for {symbol}: {exc}")
     sentiment = _sentiment_prediction(symbol, selected_date)
     financial = _financial_prediction(symbol, selected_date)
-    history = list(reversed(
-        _recent_prices(symbol, limit=10, selected_date=selected_date)
-    ))
+    history = _recent_prices(
+        symbol,
+        limit=10,
+        selected_date=selected_date,
+    )
     chart_history = list(reversed(
         _recent_prices(symbol, limit=60, selected_date=selected_date)
     ))
@@ -460,6 +574,12 @@ def get_stock_dashboard(
                 financial,
             ),
         ],
+        "technical_indicator_date": (
+            technical_indicators.get("date") if technical_indicators else None
+        ),
+        "technical_indicator_groups": _technical_indicator_groups(
+            technical_indicators
+        ),
         "chart_history": chart_history,
         "price_history": history,
     }

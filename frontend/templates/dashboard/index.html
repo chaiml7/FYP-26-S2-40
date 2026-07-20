@@ -87,7 +87,6 @@
                 {% endif %}
                 <td>
                     <a class="company-cell" href="/stocks/{{ stock.symbol }}/view{% if selected_date %}?selected_date={{ selected_date }}{% endif %}">
-                        <span class="ticker-tile">{{ stock.symbol[:2] }}</span>
                         <span>
                             <strong>{{ stock.symbol }}</strong>
                             <small>{{ stock.company_name }}</small>

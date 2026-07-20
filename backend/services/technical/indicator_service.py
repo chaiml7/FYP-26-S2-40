@@ -252,10 +252,12 @@ def get_technical_indicators_from_supabase(
     )
 
 
-def get_all_technical_indicators_from_supabase() -> pd.DataFrame:
-    """Read stored technical indicators for every prediction-target stock."""
+def get_all_technical_indicators_from_supabase(
+    stock_scope: str = "active",
+) -> pd.DataFrame:
+    """Read stored technical indicators for the requested stock universe."""
     frames = []
-    for stock in get_stocks_from_supabase():
+    for stock in get_stocks_from_supabase(stock_scope=stock_scope):
         stock_id = stock["id"]
         symbol = stock["symbol"]
         stock_df = get_technical_indicators_from_supabase(stock_id, symbol)
