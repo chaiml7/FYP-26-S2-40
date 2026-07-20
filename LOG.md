@@ -617,6 +617,59 @@ Date: 2026-06-29
 
 ---
 
+
+### 2026-07-20 — Bali — Merged changes from main (commit `992c00e`)
+
+**What changed on main:**
+
+Teammate: cyhaddison (113153995+cyhaddison@users.noreply.github.com)
+Commit: `992c00e55fa2c3d52f4e14ecc58477cf2d771eb0`
+Date: 2026-07-18
+
+- `992c00e` — Visual Changes
+- `6c64bb1` — integrated techinical model and new featuures to dashboard
+- `e1119d2` — Bug fix for Free users
+
+
+**Files changed (c8e3922..fe77143):**
+```
+ .gitignore                                         |   7 +-
+ backend/requirements-ml.txt                        |   1 +
+ backend/routes/dashboard_routes.py                 |   6 +-
+ backend/routes/technical_routes.py                 |  81 +-
+ backend/services/dashboard_service.py              | 126 ++-
+ backend/services/sentiment/sentiment_aggregator.py |  61 +-
+ backend/services/sentiment/sentiment_pipeline.py   |  38 +-
+ backend/services/technical/binary_xgboost_model.py | 918 +++++++++++++++++++++
+ backend/services/technical/indicator_service.py    |   8 +-
+ backend/services/technical/price_service.py        |  24 +-
+ backend/services/technical/technical_service.py    | 173 +++-
+ .../tests/sentiment/test_sentiment_aggregator.py   |  16 +
+ backend/tests/sentiment/test_sentiment_pipeline.py | 160 ++--
+ .../tests/technical/test_binary_xgboost_model.py   |  55 ++
+ backend/tests/test_dashboard_service.py            |  24 +
+ frontend/static/css/styles.css                     | 243 +++++-
+ frontend/templates/dashboard/index.html            |   1 -
+ frontend/templates/dashboard/stock_detail.html     |  33 +
+ frontend/templates/free_users/base.html            |   8 +-
+ frontend/templates/includes/top_navbar.html        |  10 +-
+ frontend/templates/premium_users/base.html         |  61 +-
+ .../premium_users/user_model_weightage.html        |   2 +-
+ frontend/templates/user_admin/base.html            |  63 +-
+ frontend/templates/user_admin/stock_database.html  |  17 +-
+ 24 files changed, 1976 insertions(+), 160 deletions(-)
+```
+
+**Integration impact:**
+- [x] Reviewed changes and documented integration impact on sentiment pipeline
+- `sentiment_aggregator.py`: `has_data_for_today()` now queries the `sentiment_daily_scores` table (by `score_date`) instead of the old `sentiment_scores` table (by `created_at`) — confirms the team has fully migrated to the daily-aggregate table. New `save_neutral_daily_sentiment_score()` writes an explicit neutral row (bullish_score 5.0) when no articles are found for a symbol/day, and `get_all_daily_sentiment_scores()` paginates the full history for ML feature assembly (used by the technical/XGBoost model integration).
+- `sentiment_pipeline.py`: `run_pipeline()` now pulls the watchlist dynamically via `get_active_stocks()` (stock_list_service) instead of the old hardcoded `WATCHLIST`/`COMPANY_NAMES` dicts, and calls `save_neutral_daily_sentiment_score()` on the "no headlines found" path instead of just logging `no_data`.
+- No merge conflicts in these files — main's changes layered cleanly on top of local sentiment work. Worth a follow-up pass to make sure any local-only sentiment scripts still reference `sentiment_daily_scores` (not the retired `sentiment_scores` table) and that `get_active_stocks()` returns `company_name` for every active row (pipeline now depends on it for GNews queries).
+- Non-sentiment changes (technical/XGBoost binary model, dashboard service, frontend templates) are outside sentiment scope — no action needed here.
+
+---
+
+
 ## Issues / Bugs Tracker
 
 | Date | Issue | Status | Resolution |
