@@ -221,7 +221,7 @@ async def premium_news_feed(request: Request, symbol: str, days: int = 7):
 
     return templates.TemplateResponse(
         request=request,
-        name="news_feed.html",
+        name="premium_users/news_feed.html",
         context={
             "request": request,
             "symbol": target_symbol,
