@@ -23,7 +23,9 @@ from backend.services.auth_service import (
     update_email,
     update_password,
 )
-from backend.services.stock_list_service import get_stock_by_symbol
+from backend.services.sentiment.sentiment_aggregator import get_recent_news
+from backend.services.session_context import get_session_context
+from backend.services.stock_list_service import get_active_stocks, get_stock_by_symbol
 from backend.services.user_profile_service import (
     get_profile,
     get_profiles,
@@ -332,18 +334,16 @@ def edit_admin_user_status(
 
 @router.get("/user/watchlist")
 async def watchlist(request: Request):
-    role = request.session.get("user_role")
-    if not role:
+    session = get_session_context(request)
+    if not session:
         return RedirectResponse(url="/login", status_code=303)
 
-    # DYNAMIC LAYOUT SELECTOR: Chooses the shell based on the user's role
-    layout = "premium_users/base.html" if role == "premium_user" else "free_users/base.html"
-    is_premium = role == "premium_user"
+    is_premium = session["user_role"] == "premium_user"
 
     watchlist_rows = []
     if is_premium:
         try:
-            watchlist_rows = get_user_watchlist_summary(request.session.get("user_id"))
+            watchlist_rows = get_user_watchlist_summary(session["user_id"])
         except Exception:
             watchlist_rows = []
 
@@ -351,8 +351,8 @@ async def watchlist(request: Request):
         request=request,
         name="free_users/watchlist.html",
         context={
+            **session,
             "request": request,
-            "base_layout": layout,  # Passes the chosen layout to Jinja2
             "is_premium": is_premium,
             "watchlist_rows": watchlist_rows,
         }
@@ -360,34 +360,65 @@ async def watchlist(request: Request):
 
 @router.get("/user/market_overview")
 async def market_overview(request: Request):
-    role = request.session.get("user_role")
-    if not role:
+    session = get_session_context(request)
+    if not session:
         return RedirectResponse(url="/login", status_code=303)
 
-    layout = "premium_users/base.html" if role == "premium_user" else "free_users/base.html"
-
     return templates.TemplateResponse(
-        request=request, 
+        request=request,
         name="free_users/user_market_overview.html",
-        context={
-            "request": request,
-            "base_layout": layout
-        }
+        context={**session, "request": request}
     )
 
 @router.get("/user/news_social")
-async def news_social(request: Request):
-    role = request.session.get("user_role")
-    if not role:
+async def news_social(
+    request: Request,
+    q: str = None,
+    label: str = None,
+    symbol: str = None,
+):
+    session = get_session_context(request)
+    if not session:
         return RedirectResponse(url="/login", status_code=303)
 
-    layout = "premium_users/base.html" if role == "premium_user" else "free_users/base.html"
+    try:
+        active_stocks = get_active_stocks() or []
+    except Exception:
+        active_stocks = []
+
+    company_names = {s["symbol"]: s.get("company_name") for s in active_stocks}
+
+    label_filter = label if label in ("positive", "neutral", "negative") else None
+    symbol_filter = symbol.upper() if symbol else None
+
+    try:
+        articles = get_recent_news(symbol=symbol_filter, label=label_filter, days=30, limit=200)
+    except Exception:
+        articles = []
+
+    for article in articles:
+        article["company_name"] = company_names.get(article["symbol"])
+
+    search_query = (q or "").strip()
+    if search_query:
+        needle = search_query.lower()
+        articles = [
+            a for a in articles
+            if needle in (a.get("symbol") or "").lower()
+            or needle in (a.get("company_name") or "").lower()
+            or needle in (a.get("headline") or "").lower()
+        ]
 
     return templates.TemplateResponse(
-        request=request, 
+        request=request,
         name="free_users/news_social.html",
         context={
+            **session,
             "request": request,
-            "base_layout": layout
+            "articles": articles,
+            "active_stocks": active_stocks,
+            "q": search_query,
+            "selected_label": label if label in ("positive", "neutral", "negative") else "all",
+            "selected_symbol": symbol_filter or "",
         }
     )

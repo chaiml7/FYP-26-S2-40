@@ -10,6 +10,7 @@ from backend.services.dashboard_service import (
     get_dashboard_stocks,
     get_stock_dashboard,
 )
+from backend.services.session_context import get_session_context
 from backend.services.user_watchlist_service import get_user_watchlist_symbols
 
 
@@ -18,27 +19,7 @@ templates = Jinja2Templates(directory="frontend/templates")
 
 
 def _session_context(request: Request) -> dict | None:
-    role = request.session.get("user_role")
-    if not role:
-        return None
-
-    email = request.session.get("user_email", "")
-    if role == "premium_user":
-        base_layout = "premium_users/base.html"
-    elif role == "basic_user":
-        base_layout = "free_users/base.html"
-    elif role == "frontend_admin":
-        base_layout = "user_admin/base.html"
-    else:
-        return
-
-    return {
-        "user_role": role,
-        "user_id": request.session.get("user_id"),
-        "user_email": email,
-        "user_initial": email[:1].upper() if email else "U",
-        "base_layout": base_layout,
-    }
+    return get_session_context(request)
 
 
 @router.get("/dashboard")

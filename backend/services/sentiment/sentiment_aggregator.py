@@ -187,6 +187,51 @@ def get_sentiment_summary(symbol: str, days: int = 7) -> dict:
     }
 
 
+def get_recent_news(
+    symbol: str = None,
+    label: str = None,
+    days: int = 30,
+    limit: int = 100,
+) -> list[dict]:
+    """Return recent news articles across all stocks (or one symbol), newest first.
+
+    Only includes rows sourced from gnews with a usable (non-dead) URL, mirroring
+    the filtering rule used by get_sentiment_summary.
+    """
+    from_date = (date.today() - timedelta(days=days)).isoformat()
+
+    query = (
+        supabase.table("sentiment_scores")
+        .select("*")
+        .gte("published_at", f"{from_date}T00:00:00Z")
+        .order("published_at", desc=True)
+    )
+
+    if symbol:
+        query = query.eq("symbol", symbol.upper())
+    if label:
+        query = query.eq("label", label)
+
+    response = query.limit(limit).execute()
+    rows = response.data or []
+
+    articles = [
+        {
+            "symbol": r.get("symbol"),
+            "headline": r["headline"],
+            "source": r["source"],
+            "published_at": r["published_at"],
+            "label": r["label"],
+            "score": r["score"],
+            "url": _clean_url(r.get("url")),
+        }
+        for r in rows
+        if r.get("source") == "gnews" and _clean_url(r.get("url"))
+    ]
+
+    return articles
+
+
 def get_weighted_sentiment_score(symbol: str, score_date: date = None) -> dict:
     score_date = score_date or date.today()
 
