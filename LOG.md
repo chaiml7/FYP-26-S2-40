@@ -669,6 +669,29 @@ Date: 2026-07-18
 
 ---
 
+### 2026-07-30 — Bali — Fixed news feed 500 + role badge bug; dynamic news filtering & ticker search (subagent-driven development)
+
+**Fix 1 — `/premium/news/{symbol}` 500 error:**
+- `premium_news_feed()` referenced the template as `name="news_feed.html"` instead of `"premium_users/news_feed.html"`, and the template itself extended `"base.html"` instead of `"premium_users/base.html"` — both missing the subfolder prefix every other file in `premium_users/` uses. Bug had existed unnoticed since the route was first written (2026-06-26, PR #9).
+- Verified the fix by scripting an in-process request against the running app with a forged premium-role session cookie (`itsdangerous.TimestampSigner` over the app's `SessionMiddleware` secret) rather than trusting a browser click — this technique became the standard way to smoke-test session-gated routes for the rest of the session.
+
+**Fix 2 — role badge/user chip falling back to FREE:**
+- `dashboard_routes.py`, `premium_user_routes.py`, and `user_routes.py` each had their own ad hoc copy of the `user_role`/`user_email`/`user_initial`/`base_layout` template-context logic, and several copies were incomplete — pages that forgot a field silently rendered the "FREE" badge / "StockLens user" chip even for a logged-in premium session.
+- Extracted `backend/services/session_context.py::get_session_context()` as the single source of truth; all three route files now delegate to it and spread `**session` into their template context.
+- Also wired `/user/news_social` up to real `sentiment_scores` data (new `get_recent_news()` in `sentiment_aggregator.py`) with working search/symbol/label filters, replacing the fully-hardcoded mock cards that were there before. Watchlist rows made clickable through to the stock detail page.
+
+**Feature — dynamic news filtering + ticker search autocomplete (built via subagent-driven-development):**
+- Design: `docs/superpowers/specs/2026-07-30-dynamic-news-filter-and-ticker-search-design.md`; plan: `docs/superpowers/plans/2026-07-30-dynamic-news-filter-and-ticker-search.md`
+- `/user/news_social` filters (search text, symbol, sentiment label) now update live via debounced AJAX (300ms on text, immediate on select change) instead of a full-page form submit; results are paginated server-side at 20/page with Prev/Next controls instead of dumping up to 200 articles on one page.
+- Top-nav "search ticker symbol" box was completely dead (posted to a nonexistent `/search` route) — replaced with a click-to-select autocomplete: typing shows matching stocks (symbol-prefix ranked before company-name match, capped at 8), and navigation only happens on click or Arrow-key+Enter on a highlighted suggestion — a bare Enter intentionally does nothing.
+- New service functions: `get_recent_news()` extended with `page`/`page_size`/`q` (sentiment_aggregator.py), `search_active_stocks()` (stock_list_service.py). New JSON endpoints: `GET /api/news`, `GET /api/stocks/search` (user_routes.py), both session-gated (any role), 401 via `HTTPException` rather than redirect since these are `fetch()` targets.
+- 5-task plan, fresh implementer + reviewer subagent per task. Task 4 needed one fix round: a stale `onchange="this.form.submit()"` attribute survived on the symbol/label `<select>` elements and silently defeated the new `submit`-preventDefault JS guard (`HTMLFormElement.submit()` doesn't dispatch a `submit` event) — every select change was still causing a full page reload underneath the new AJAX call. Fixed by removing the dead attribute; the JS `change` listeners already added were sufficient on their own.
+- Final whole-branch review (Opus) found the cross-task integration solid (JSON contracts match field-for-field, SSR/JS card markup identical, no route/ID/CSS collisions, XSS handled via `textContent` not `innerHTML`) but caught two shared-asset issues invisible to any single task's diff: the CSS cache-buster (`?v=...` on `styles.css`) wasn't bumped despite new CSS being appended, and the autocomplete dropdown's keyboard-highlight color (`rgba(255,255,255,0.08)`) was invisible against the app's default light theme (`--bg-card: #ffffff`) — only looked right on the opt-in dark themes. Both fixed in one follow-up commit and re-reviewed clean.
+- All 6 feature commits + the earlier 2 fix commits pushed to `origin/bali` (`e7ef1fc..9a5a673`).
+
+**Known deferred items (logged, not urgent):** no-JS users can now only reach the first page of news (`/user/news_social` doesn't accept a `page` query param even though the route exists); filters don't sync to the URL so a refresh loses them; `tests/sentiment/test_finbert_service.py` has 10 pre-existing failures unrelated to this work (module moved to a lazy `transformers` import, test patches a target that no longer exists at that path).
+
+---
 
 ## Issues / Bugs Tracker
 
@@ -680,6 +703,7 @@ Date: 2026-07-18
 | 2026-06-26 | FinnHub URLs route to FinnHub homepage, not articles | Resolved | `_clean_url()` strips all `finnhub.io` URLs; FinnHub headlines score-only, no links shown |
 | 2026-06-26 | NewsAPI free-tier URLs frequently 404 | Resolved | Replaced NewsAPI with gnews in pipeline; gnews provides working Google News redirect URLs |
 | 2026-06-26 | `upsert(on_conflict=...)` on `sentiment_scores` fails silently (no unique constraint) | Resolved | Switched to `insert()`; `has_data_for_today()` guard prevents duplicates |
+| 2026-07-30 | Orphaned TCP listener on localhost:8000 (uni machine) — `netstat`/`Get-NetTCPConnection` reported it LISTENING under a PID that `Get-Process`/`Stop-Process`/`taskkill` all say doesn't exist; served stale pre-fix code (500s, missing routes) while a fresh `uvicorn` instance tried to bind alongside it | Worked around | Ruled out WSL (Ubuntu distro was stopped, not the source). Couldn't kill the phantom listener by any means — moved local dev server to port 8005 instead. Likely needs a machine restart to actually clear; revisit if it recurs |
 
 ---
 
