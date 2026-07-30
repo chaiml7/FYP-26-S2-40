@@ -3505,7 +3505,7 @@ html[data-premium-theme="midnight"] .theme-premium .dashboard-date-form input {
     background-color: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
     max-height: 300px;
     overflow-y: auto;
     z-index: 50;
@@ -3522,7 +3522,7 @@ html[data-premium-theme="midnight"] .theme-premium .dashboard-date-form input {
 
 .ticker-dropdown-item:hover,
 .ticker-dropdown-item.highlighted {
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: var(--bg-dark);
 }
 
 .ticker-dropdown-symbol {
