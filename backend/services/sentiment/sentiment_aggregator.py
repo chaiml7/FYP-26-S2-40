@@ -1,10 +1,18 @@
 import time
 from datetime import date, timedelta
+from math import ceil
+
 from backend.database.supabase_client import supabase
+from backend.services.stock_list_service import get_active_stocks
 
 MAX_RETRIES = 3
 BACKOFF_BASE = 2
 MODEL_VERSION = "balibpt/finbert-stocklens"
+
+# Upper bound on rows fetched before Python-side q filtering + pagination.
+# At this project's scale (~11 active stocks, 30-day window) this
+# comfortably covers "all" articles without unbounded queries.
+MAX_RECENT_NEWS_FETCH = 1000
 
 LABEL_WEIGHTS = {
     "positive": 1,
@@ -184,6 +192,79 @@ def get_sentiment_summary(symbol: str, days: int = 7) -> dict:
         "daily_scores": daily_scores,
         "weighted_scores": score_response.data or [],
         "headlines": headlines,
+    }
+
+
+def get_recent_news(
+    symbol: str = None,
+    label: str = None,
+    q: str = None,
+    days: int = 30,
+    page: int = 1,
+    page_size: int = 20,
+) -> dict:
+    """Return a page of recent news articles across all stocks (or one symbol),
+    newest first. Only includes rows sourced from gnews with a usable
+    (non-dead) URL, mirroring the filtering rule used by get_sentiment_summary.
+
+    `q` matches case-insensitively against symbol, company name, or headline.
+    Returns {"articles": [...], "page": int, "total_pages": int, "total_count": int}.
+    """
+    from_date = (date.today() - timedelta(days=days)).isoformat()
+
+    query = (
+        supabase.table("sentiment_scores")
+        .select("*")
+        .gte("published_at", f"{from_date}T00:00:00Z")
+        .order("published_at", desc=True)
+    )
+
+    if symbol:
+        query = query.eq("symbol", symbol.upper())
+    if label:
+        query = query.eq("label", label)
+
+    response = query.limit(MAX_RECENT_NEWS_FETCH).execute()
+    rows = response.data or []
+
+    stocks = get_active_stocks() or []
+    company_names = {s["symbol"]: s.get("company_name") for s in stocks}
+
+    articles = [
+        {
+            "symbol": r.get("symbol"),
+            "company_name": company_names.get(r.get("symbol")),
+            "headline": r["headline"],
+            "source": r["source"],
+            "published_at": r["published_at"],
+            "label": r["label"],
+            "score": r["score"],
+            "url": _clean_url(r.get("url")),
+        }
+        for r in rows
+        if r.get("source") == "gnews" and _clean_url(r.get("url"))
+    ]
+
+    needle = (q or "").strip().lower()
+    if needle:
+        articles = [
+            a for a in articles
+            if needle in (a.get("symbol") or "").lower()
+            or needle in (a.get("company_name") or "").lower()
+            or needle in (a.get("headline") or "").lower()
+        ]
+
+    total_count = len(articles)
+    total_pages = ceil(total_count / page_size) if total_count else 0
+    page = max(1, page)
+    start = (page - 1) * page_size
+    page_articles = articles[start:start + page_size]
+
+    return {
+        "articles": page_articles,
+        "page": page,
+        "total_pages": total_pages,
+        "total_count": total_count,
     }
 
 

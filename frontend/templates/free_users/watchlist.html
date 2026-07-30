@@ -27,7 +27,7 @@
                 </thead>
                 <tbody>
                     {% for row in watchlist_rows %}
-                    <tr data-symbol="{{ row.symbol }}">
+                    <tr data-symbol="{{ row.symbol }}" style="cursor: pointer;" onclick="goToStock(event, '{{ row.symbol }}');">
                         <td class="font-bold text-accent">{{ row.symbol }}</td>
                         <td class="text-muted">{{ row.company_name }}</td>
                         <td>
@@ -61,7 +61,7 @@
                         <td class="text-muted">
                             {% if row.prediction_signal %}{{ row.prediction_signal | upper }}{% else %}<span class="data-unavailable">N/A</span>{% endif %}
                         </td>
-                        <td>
+                        <td onclick="event.stopPropagation();">
                             <button
                                 class="watchlist-star active"
                                 data-symbol="{{ row.symbol }}"
@@ -135,6 +135,11 @@
 {% block scripts %}
 {% if is_premium %}
 <script>
+    function goToStock(event, symbol) {
+        if (event.target.closest("button")) return;
+        window.location = `/stocks/${symbol}/view`;
+    }
+
     function removeFromWatchlist(button) {
         const symbol = button.dataset.symbol;
 

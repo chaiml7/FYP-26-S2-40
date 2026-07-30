@@ -12,6 +12,7 @@ from backend.services.user_watchlist_service import (
     remove_watchlist_by_symbol,
 )
 from backend.database.supabase_client import supabase
+from backend.services.session_context import get_session_context
 
 router = APIRouter()
 templates = Jinja2Templates(directory="frontend/templates")
@@ -19,10 +20,10 @@ templates = Jinja2Templates(directory="frontend/templates")
 @router.get("/premium/recommendations")
 async def premium_recommendations(request: Request):
     # Session
-    role = request.session.get("user_role")
-    if not role or role != "premium_user":
+    session = get_session_context(request)
+    if not session or session["user_role"] != "premium_user":
         return RedirectResponse(url="/login", status_code=303)
-    
+
     active_stocks = get_active_stocks()
 
     # 2. Build the Data Transformation Layer
@@ -49,6 +50,7 @@ async def premium_recommendations(request: Request):
         request=request, 
         name="premium_users/stock_recommendations.html",
         context={
+            **session,
             "request": request,
             "recommendations": display_recommendations
         }
@@ -56,11 +58,11 @@ async def premium_recommendations(request: Request):
 
 @router.get("/premium/prediction_breakdown")
 async def premium_prediction_breakdown(request: Request, symbol: str = "NVDA"):
-    role = request.session.get("user_role")
-    user_id = request.session.get("user_id")
-    if not role or role != "premium_user":
+    session = get_session_context(request)
+    if not session or session["user_role"] != "premium_user":
         return RedirectResponse(url="/login", status_code=303)
-    
+    user_id = session["user_id"]
+
     target_symbol = symbol.upper()
 
     try:
@@ -128,6 +130,7 @@ async def premium_prediction_breakdown(request: Request, symbol: str = "NVDA"):
         request=request, 
         name="premium_users/prediction_breakdown.html",
         context={
+            **session,
             "request": request,
             "data": display_data
         }
@@ -135,12 +138,11 @@ async def premium_prediction_breakdown(request: Request, symbol: str = "NVDA"):
 
 @router.get("/premium/weightages")
 async def premium_user_weightages(request: Request):
-    role = request.session.get("user_role")
-    user_id = request.session.get("user_id")
-
-    if not role or role != "premium_user":
+    session = get_session_context(request)
+    if not session or session["user_role"] != "premium_user":
         return RedirectResponse(url="/login", status_code=303)
-    
+    user_id = session["user_id"]
+
     admin_defaults = {"technical": 40, "sentiment": 30, "financial": 30}
     try:
         admin_response = supabase.table("weightages").select(
@@ -164,7 +166,7 @@ async def premium_user_weightages(request: Request):
     return templates.TemplateResponse(
         request=request, 
         name="premium_users/user_model_weightage.html",
-        context={"request": request, "weights": user_weights, "defaults": admin_defaults}
+        context={**session, "request": request, "weights": user_weights, "defaults": admin_defaults}
     )
 
 @router.post("/premium/weightages")
@@ -202,8 +204,8 @@ async def save_premium_weightages(
 
 @router.get("/premium/news/{symbol}")
 async def premium_news_feed(request: Request, symbol: str, days: int = 7):
-    role = request.session.get("user_role")
-    if role != "premium_user":
+    session = get_session_context(request)
+    if not session or session["user_role"] != "premium_user":
         return RedirectResponse(url="/dashboard", status_code=303)
 
     target_symbol = symbol.upper()
@@ -216,19 +218,15 @@ async def premium_news_feed(request: Request, symbol: str, days: int = 7):
         target_symbol,
     )
 
-    user_email = request.session.get("user_email", "")
-    user_initial = user_email[0].upper() if user_email else "U"
-
     return templates.TemplateResponse(
         request=request,
         name="premium_users/news_feed.html",
         context={
+            **session,
             "request": request,
             "symbol": target_symbol,
             "company_name": company_name,
             "summary": summary,
-            "user_email": user_email,
-            "user_initial": user_initial,
         },
     )
 
