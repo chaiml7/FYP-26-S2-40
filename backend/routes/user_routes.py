@@ -25,7 +25,7 @@ from backend.services.auth_service import (
 )
 from backend.services.sentiment.sentiment_aggregator import get_recent_news
 from backend.services.session_context import get_session_context
-from backend.services.stock_list_service import get_active_stocks, get_stock_by_symbol
+from backend.services.stock_list_service import get_active_stocks, get_stock_by_symbol, search_active_stocks
 from backend.services.user_profile_service import (
     get_profile,
     get_profiles,
@@ -386,28 +386,14 @@ async def news_social(
     except Exception:
         active_stocks = []
 
-    company_names = {s["symbol"]: s.get("company_name") for s in active_stocks}
-
     label_filter = label if label in ("positive", "neutral", "negative") else None
     symbol_filter = symbol.upper() if symbol else None
+    search_query = (q or "").strip()
 
     try:
-        articles = get_recent_news(symbol=symbol_filter, label=label_filter, days=30, limit=200)
+        result = get_recent_news(symbol=symbol_filter, label=label_filter, q=search_query, page=1)
     except Exception:
-        articles = []
-
-    for article in articles:
-        article["company_name"] = company_names.get(article["symbol"])
-
-    search_query = (q or "").strip()
-    if search_query:
-        needle = search_query.lower()
-        articles = [
-            a for a in articles
-            if needle in (a.get("symbol") or "").lower()
-            or needle in (a.get("company_name") or "").lower()
-            or needle in (a.get("headline") or "").lower()
-        ]
+        result = {"articles": [], "page": 1, "total_pages": 0, "total_count": 0}
 
     return templates.TemplateResponse(
         request=request,
@@ -415,10 +401,41 @@ async def news_social(
         context={
             **session,
             "request": request,
-            "articles": articles,
+            "articles": result["articles"],
+            "page": result["page"],
+            "total_pages": result["total_pages"],
+            "total_count": result["total_count"],
             "active_stocks": active_stocks,
             "q": search_query,
-            "selected_label": label if label in ("positive", "neutral", "negative") else "all",
+            "selected_label": label_filter or "all",
             "selected_symbol": symbol_filter or "",
         }
     )
+
+
+@router.get("/api/news")
+async def api_news(
+    request: Request,
+    q: str = None,
+    label: str = None,
+    symbol: str = None,
+    page: int = 1,
+):
+    session = get_session_context(request)
+    if not session:
+        raise HTTPException(status_code=401, detail="Login required")
+
+    label_filter = label if label in ("positive", "neutral", "negative") else None
+    symbol_filter = symbol.upper() if symbol else None
+
+    return get_recent_news(symbol=symbol_filter, label=label_filter, q=q, page=page)
+
+
+@router.get("/api/stocks/search")
+async def api_stocks_search(request: Request, q: str = ""):
+    session = get_session_context(request)
+    if not session:
+        raise HTTPException(status_code=401, detail="Login required")
+
+    matches = search_active_stocks(q)
+    return [{"symbol": s["symbol"], "company_name": s.get("company_name")} for s in matches]
