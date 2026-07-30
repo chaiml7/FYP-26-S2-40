@@ -32,7 +32,7 @@
             {% if q %}
             <input type="hidden" name="q" value="{{ q }}">
             {% endif %}
-            <select name="symbol" id="newsSymbolSelect" class="form-control" onchange="this.form.submit()">
+            <select name="symbol" id="newsSymbolSelect" class="form-control">
                 <option value="">All stocks</option>
                 {% for stock in active_stocks %}
                 <option value="{{ stock.symbol }}" {% if selected_symbol == stock.symbol %}selected{% endif %}>
@@ -40,7 +40,7 @@
                 </option>
                 {% endfor %}
             </select>
-            <select name="label" id="newsLabelSelect" class="form-control" onchange="this.form.submit()">
+            <select name="label" id="newsLabelSelect" class="form-control">
                 <option value="all" {% if selected_label == 'all' %}selected{% endif %}>All sentiment</option>
                 <option value="positive" {% if selected_label == 'positive' %}selected{% endif %}>Positive</option>
                 <option value="neutral" {% if selected_label == 'neutral' %}selected{% endif %}>Neutral</option>
