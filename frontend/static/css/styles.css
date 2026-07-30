@@ -3476,3 +3476,20 @@ html[data-premium-theme="midnight"] .theme-premium .sector-filter select,
 html[data-premium-theme="midnight"] .theme-premium .dashboard-date-form input {
     color-scheme: dark;
 }
+
+/* =========================================
+   17. NEWS & SOCIAL — PAGINATION
+   ========================================= */
+.pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.pagination-bar .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
