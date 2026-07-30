@@ -3493,3 +3493,49 @@ html[data-premium-theme="midnight"] .theme-premium .dashboard-date-form input {
     cursor: not-allowed;
     pointer-events: none;
 }
+
+/* =========================================
+   18. TOP NAV — TICKER SEARCH AUTOCOMPLETE
+   ========================================= */
+.ticker-search-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 50;
+}
+
+.ticker-dropdown-item {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    color: var(--text-main);
+}
+
+.ticker-dropdown-item:hover,
+.ticker-dropdown-item.highlighted {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.ticker-dropdown-symbol {
+    font-weight: 700;
+}
+
+.ticker-dropdown-name {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.ticker-dropdown-empty {
+    padding: 0.75rem 1rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
