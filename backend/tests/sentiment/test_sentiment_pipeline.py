@@ -126,3 +126,32 @@ def test_result_has_required_keys():
 
     assert {"message", "active_stocks_found", "symbols_processed", "results"} <= result.keys()
     assert all("symbol" in row and "status" in row for row in result["results"])
+
+
+def test_finnhub_skipped_for_sgx_symbol():
+    sgx_stocks = [{"symbol": "D05.SI", "company_name": "DBS Group Holdings Ltd"}]
+    with patched_pipeline() as mocks:
+        mocks["active_stocks"].return_value = sgx_stocks
+        result = run_pipeline()
+
+    mocks["fetch_finnhub"].assert_not_called()
+    mocks["sleep"].assert_not_called()
+    mocks["fetch_gnews"].assert_called_once_with(
+        "D05.SI", "DBS Group Holdings Ltd", from_date=mocks["fetch_gnews"].call_args.kwargs["from_date"]
+    )
+    assert result["results"][0]["status"] == "ok"
+
+
+def test_finnhub_called_only_for_non_sgx_symbols_in_mixed_batch():
+    mixed_stocks = [
+        {"symbol": "AAPL", "company_name": "Apple"},
+        {"symbol": "D05.SI", "company_name": "DBS Group Holdings Ltd"},
+    ]
+    with patched_pipeline() as mocks:
+        mocks["active_stocks"].return_value = mixed_stocks
+        run_pipeline()
+
+    assert mocks["fetch_finnhub"].call_count == 1
+    called_symbols = [c.args[0] for c in mocks["fetch_finnhub"].call_args_list]
+    assert called_symbols == ["AAPL"]
+    assert mocks["fetch_gnews"].call_count == 2
