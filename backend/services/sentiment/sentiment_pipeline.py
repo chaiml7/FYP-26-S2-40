@@ -30,8 +30,10 @@ def run_pipeline() -> dict:
             results.append({"symbol": symbol, "headlines_scored": 0, "status": "skipped"})
             continue
         try:
-            headlines = list(fetch_finnhub(symbol, from_date=from_date))
-            time.sleep(0.5)
+            headlines = []
+            if not symbol.endswith(".SI"):
+                headlines = list(fetch_finnhub(symbol, from_date=from_date))
+                time.sleep(0.5)
             headlines += list(fetch_gnews(symbol, company_name, from_date=from_date))
             if not headlines:
                 daily_score_result = save_neutral_daily_sentiment_score(symbol, from_date)
