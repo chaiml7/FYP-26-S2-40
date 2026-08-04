@@ -8,6 +8,7 @@ from backend.routes.stock_routes import router as stock_router
 from backend.routes.technical_routes import router as technical_router
 from backend.routes.user_routes import router as user_router
 from backend.services.sentiment.sentiment_pipeline import run_pipeline
+from backend.services.email_service import send_daily_watchlist_emails
 
 scheduler = BackgroundScheduler()
 
@@ -20,6 +21,11 @@ async def lifespan(app: FastAPI):
         scheduler.add_job(run_pipeline, "cron", hour=1,  minute=0)
         scheduler.add_job(run_pipeline, "cron", hour=3,  minute=0)
         scheduler.start()
+
+    if os.getenv("ENABLE_EMAIL_SCHEDULER", "false").lower() == "true":
+        scheduler.add_job(send_daily_watchlist_emails, "cron", hour=8, minute=0)
+        if not scheduler.running:
+            scheduler.start()
 
     yield
 
