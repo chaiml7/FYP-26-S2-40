@@ -2,10 +2,20 @@ from fastapi import APIRouter, Request, Form
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 from backend.database.supabase_client import supabase
+from backend.services.admin_report_service import build_admin_report
+from backend.services.session_context import get_session_context
 from backend.services.stock_list_service import get_all_stocks
 
 router = APIRouter()
 templates = Jinja2Templates(directory="frontend/templates")
+ADMIN_REPORT_ROLES = {"frontend_admin"}
+
+
+def _admin_report_session(request: Request):
+    session = get_session_context(request)
+    if session and session["user_role"] in ADMIN_REPORT_ROLES:
+        return session
+    return None
 
 @router.get("/admin/user_management")
 async def user_management_page(request: Request, filter: str = "all"):
@@ -235,6 +245,40 @@ async def admin_sentiment_watchlist(request: Request):
         request=request, 
         name="user_admin/admin_sentiment_watchlist.html"
         # context={"sources": sources_list}
+    )
+
+@router.get("/admin/reports")
+async def admin_reports_page(request: Request):
+    session = _admin_report_session(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=303)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="user_admin/performance_reports.html",
+        context={
+            **session,
+            "request": request,
+            "report": None,
+        },
+    )
+
+@router.post("/admin/reports/generate")
+async def generate_admin_report_page(request: Request):
+    session = _admin_report_session(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=303)
+
+    report = build_admin_report(session.get("user_email", ""))
+
+    return templates.TemplateResponse(
+        request=request,
+        name="user_admin/performance_reports.html",
+        context={
+            **session,
+            "request": request,
+            "report": report,
+        },
     )
 
 @router.get("/admin/stocks/new")

@@ -1537,6 +1537,239 @@ a {
     justify-content: center;
 }
 
+/* Admin performance reports */
+.admin-report-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 2rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-report-header p {
+    margin-top: 0.35rem;
+}
+
+.report-empty-state {
+    display: flex;
+    min-height: 260px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 2rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-card);
+    text-align: center;
+}
+
+.report-empty-state p {
+    max-width: 620px;
+}
+
+.report-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.report-meta-row span {
+    padding: 0.45rem 0.7rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+
+.report-meta-row strong {
+    color: var(--text-main);
+}
+
+.admin-report-kpis {
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.report-stat-value {
+    overflow-wrap: anywhere;
+    font-size: 1.6rem;
+    line-height: 1.15;
+}
+
+.report-section {
+    margin-bottom: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.report-grid-two {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.report-panel {
+    min-width: 0;
+}
+
+.report-panel h3 {
+    margin: 0 0 0.8rem;
+    color: var(--text-main);
+    font-size: 1rem;
+}
+
+.watchlist-overview-grid {
+    grid-template-columns: repeat(3, minmax(140px, 1fr));
+    max-width: 760px;
+}
+
+.model-performance-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.model-performance-card {
+    min-width: 0;
+    padding: 1.1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-card);
+}
+
+.model-performance-card h3 {
+    margin: 0 0 1rem;
+    color: var(--text-main);
+    font-size: 1rem;
+}
+
+.model-performance-card dl {
+    display: grid;
+    gap: 0.7rem;
+    margin: 0;
+}
+
+.model-performance-card dl div {
+    display: grid;
+    grid-template-columns: minmax(90px, 0.8fr) minmax(0, 1.2fr);
+    gap: 0.75rem;
+    padding-bottom: 0.7rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.model-performance-card dl div:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.model-performance-card dt,
+.model-performance-card dd {
+    margin: 0;
+    font-size: 0.78rem;
+}
+
+.model-performance-card dt {
+    color: var(--text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.model-performance-card dd {
+    min-width: 0;
+    color: var(--text-main);
+    font-weight: 650;
+    overflow-wrap: anywhere;
+}
+
+.report-mini-grid,
+.report-weight-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.report-mini-grid div,
+.report-weight-grid div {
+    padding: 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-card);
+}
+
+.report-mini-grid span,
+.report-weight-grid span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.report-mini-grid strong,
+.report-weight-grid strong {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--text-main);
+    font-size: 1.35rem;
+    line-height: 1.1;
+}
+
+.report-table-card {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-card);
+}
+
+.report-table {
+    min-width: 620px;
+}
+
+.report-table th {
+    white-space: nowrap;
+}
+
+.report-table td {
+    vertical-align: top;
+}
+
+.report-subtext {
+    display: block;
+    margin-top: 0.15rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.report-mono {
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    font-size: 0.78rem;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+    .admin-report-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .admin-report-header .btn {
+        width: 100%;
+    }
+
+    .report-grid-two {
+        grid-template-columns: 1fr;
+    }
+
+    .watchlist-overview-grid,
+    .model-performance-grid {
+        grid-template-columns: 1fr;
+        max-width: none;
+    }
+}
+
 /* Text and Plan Badges */
 .font-medium { font-weight: 500; }
 .text-main { color: var(--text-main); }
