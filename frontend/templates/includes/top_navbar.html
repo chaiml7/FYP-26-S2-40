@@ -21,7 +21,25 @@
     </div>
     
     <div class="topbar-actions" style="flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 20px; min-width: 0;">
-        <button class="btn-icon">🔔</button>
+
+        <!-- Notification Bell -->
+        <div style="position: relative;">
+            <button class="btn-icon" id="notifBell" onclick="toggleNotifications()" style="position: relative;">
+                🔔
+                <span id="notifBadge" style="display: none; position: absolute; top: -4px; right: -4px; background: #e24b4a; color: white; font-size: 10px; font-weight: bold; border-radius: 50%; width: 16px; height: 16px; line-height: 16px; text-align: center;"></span>
+            </button>
+
+            <!-- Notification Dropdown -->
+            <div id="notifDropdown" style="display: none; position: absolute; right: 0; top: 40px; width: 320px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; z-index: 999; overflow: hidden;">
+                <div style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 600; font-size: 14px; color: var(--text-main);">Notifications</span>
+                    <button onclick="clearNotifications()" style="background: none; border: none; color: var(--text-muted); font-size: 12px; cursor: pointer;">Clear all</button>
+                </div>
+                <div id="notifList" style="max-height: 300px; overflow-y: auto;">
+                    <div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;">Loading notifications...</div>
+                </div>
+            </div>
+        </div>
         
         <div class="user-chip" style="display: flex; align-items: center; gap: 10px;">
             <span class="avatar-sm">{{ user_initial or "U" }}</span>
@@ -82,8 +100,6 @@
                 item.innerHTML = `<span class="ticker-dropdown-symbol"></span> <span class="ticker-dropdown-name"></span>`;
                 item.querySelector(".ticker-dropdown-symbol").textContent = stock.symbol;
                 item.querySelector(".ticker-dropdown-name").textContent = stock.company_name || "";
-                // mousedown (not click) fires before the input's blur/outside-click
-                // handler would otherwise close the dropdown first.
                 item.addEventListener("mousedown", (event) => {
                     event.preventDefault();
                     selectStock(stock);
@@ -107,10 +123,7 @@
         input.addEventListener("input", () => {
             clearTimeout(debounceTimer);
             const query = input.value.trim();
-            if (!query) {
-                closeDropdown();
-                return;
-            }
+            if (!query) { closeDropdown(); return; }
             debounceTimer = setTimeout(() => search(query), 200);
         });
 
@@ -126,19 +139,77 @@
                 updateHighlight();
             } else if (event.key === "Enter") {
                 event.preventDefault();
-                if (highlightedIndex >= 0) {
-                    selectStock(matches[highlightedIndex]);
-                }
-                // Enter with nothing highlighted intentionally does nothing.
+                if (highlightedIndex >= 0) selectStock(matches[highlightedIndex]);
             } else if (event.key === "Escape") {
                 closeDropdown();
             }
         });
 
         form.addEventListener("submit", (event) => event.preventDefault());
-
         document.addEventListener("click", (event) => {
             if (!form.contains(event.target)) closeDropdown();
         });
     })();
+
+    // ==========================================
+    // Notification Bell
+    // ==========================================
+    let notifOpen = false;
+    let notifLoaded = false;
+
+    function toggleNotifications() {
+        const dropdown = document.getElementById("notifDropdown");
+        notifOpen = !notifOpen;
+        dropdown.style.display = notifOpen ? "block" : "none";
+        if (notifOpen && !notifLoaded) loadNotifications();
+    }
+
+    document.addEventListener("click", (e) => {
+        const bell = document.getElementById("notifBell");
+        const dropdown = document.getElementById("notifDropdown");
+        if (bell && dropdown && !bell.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.style.display = "none";
+            notifOpen = false;
+        }
+    });
+
+    async function loadNotifications() {
+        const list = document.getElementById("notifList");
+        const badge = document.getElementById("notifBadge");
+        try {
+            const res = await fetch("/user/notifications");
+            const data = await res.json();
+            const notifications = data.notifications || [];
+
+            if (!notifications.length) {
+                list.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;">No new notifications</div>`;
+                return;
+            }
+
+            badge.textContent = notifications.length;
+            badge.style.display = "block";
+
+            list.innerHTML = notifications.map(n => `
+                <div style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; gap: 10px; align-items: flex-start;">
+                    <span style="font-size: 18px;">${n.icon}</span>
+                    <div>
+                        <p style="margin: 0; font-size: 13px; color: var(--text-main); font-weight: 500;">${n.title}</p>
+                        <p style="margin: 2px 0 0; font-size: 12px; color: var(--text-muted);">${n.message}</p>
+                    </div>
+                </div>
+            `).join("");
+
+            notifLoaded = true;
+        } catch (e) {
+            list.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;">Could not load notifications</div>`;
+        }
+    }
+
+    function clearNotifications() {
+        const list = document.getElementById("notifList");
+        const badge = document.getElementById("notifBadge");
+        list.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;">No new notifications</div>`;
+        badge.style.display = "none";
+        notifLoaded = true;
+    }
 </script>

@@ -17,6 +17,7 @@ from backend.routes.admin_routes import router as admin_router
 from backend.routes.dashboard_routes import router as dashboard_router
 from backend.services.auth_service import AuthServiceError, create_account
 from backend.services.user_profile_service import get_profile
+from backend.routes.notification_routes import router as notification_router
 from backend.services.dashboard_service import (
     get_public_market_leaders,
     get_public_model_metrics,
@@ -40,6 +41,7 @@ app.include_router(user_router)
 app.include_router(premium_user_router)
 app.include_router(admin_router)
 app.include_router(dashboard_router)
+app.include_router(notification_router)
 
 # Session Middleware
 app.add_middleware(SessionMiddleware, secret_key="my-super-secret-key")
