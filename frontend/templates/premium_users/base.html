@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Premium Dashboard - StockLens{% endblock %}</title>
-    <link rel="stylesheet" href="/static/css/styles.css?v=20260714-score-theme-fix">
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260730-feedback">
     <script>
         try {
             document.documentElement.dataset.premiumTheme =
@@ -45,6 +45,9 @@
                 </a>
                 <a href="/user/financials" class="nav-item">
                     <span class="nav-icon">📉</span> Financials
+                </a>
+                <a href="/user/feedback" class="nav-item {% block nav_feedback %}{% endblock %}">
+                    <span class="nav-icon">&#128172;</span> Feedback
                 </a>
             </nav>
 

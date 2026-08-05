@@ -1,0 +1,84 @@
+{% extends "user_admin/base.html" %}
+
+{% block title %}User Feedback - StockLens{% endblock %}
+{% block nav_feedback %}active{% endblock %}
+
+{% block content %}
+<header class="admin-header feedback-admin-header">
+    <div>
+        <p class="workspace-eyebrow">User insights</p>
+        <h1>User feedback</h1>
+        <p>Review ratings, suggestions and reported problems from StockLens users.</p>
+    </div>
+</header>
+
+{% if load_error %}
+<div class="feedback-alert feedback-alert-error" role="alert">{{ load_error }}</div>
+{% endif %}
+
+<section class="stats-grid feedback-stats">
+    <article class="panel-card stat-card">
+        <span class="stat-title">SUBMISSIONS</span>
+        <strong class="stat-value">{{ stats.total }}</strong>
+    </article>
+    <article class="panel-card stat-card">
+        <span class="stat-title">AVERAGE RATING</span>
+        <strong class="stat-value">
+            {% if stats.average_rating is not none %}
+                {{ "%.1f" | format(stats.average_rating) }}/5
+            {% else %}
+                --
+            {% endif %}
+        </strong>
+    </article>
+    <article class="panel-card stat-card">
+        <span class="stat-title">FIVE-STAR REVIEWS</span>
+        <strong class="stat-value">{{ stats.five_star }}</strong>
+    </article>
+</section>
+
+<section class="panel-card table-card feedback-inbox">
+    {% if feedback_rows %}
+    <div class="feedback-table-scroll">
+        <table class="admin-table feedback-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>User</th>
+                    <th>Topic</th>
+                    <th>Rating</th>
+                    <th>Preview</th>
+                    <th><span class="sr-only">Action</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for feedback in feedback_rows %}
+                <tr>
+                    <td>{{ feedback.created_at[:10] if feedback.created_at else "--" }}</td>
+                    <td>{{ feedback.username or "Unknown user" }}</td>
+                    <td><span class="feedback-topic-badge">{{ feedback.topic or "General" }}</span></td>
+                    <td>
+                        <span class="feedback-rating">
+                            {{ feedback.rating or 0 }} &#9733;
+                        </span>
+                    </td>
+                    <td class="feedback-preview">
+                        {{ (feedback.description or "")[:90] }}{% if (feedback.description or "") | length > 90 %}&hellip;{% endif %}
+                    </td>
+                    <td>
+                        <a class="row-action" href="/admin/feedback/{{ feedback.id }}">Read</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="feedback-empty-state">
+        <span aria-hidden="true">&#128172;</span>
+        <h2>No feedback yet</h2>
+        <p>User submissions will appear here.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

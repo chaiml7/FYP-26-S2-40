@@ -3476,3 +3476,317 @@ html[data-premium-theme="midnight"] .theme-premium .sector-filter select,
 html[data-premium-theme="midnight"] .theme-premium .dashboard-date-form input {
     color-scheme: dark;
 }
+
+/* =========================================
+   21. USER FEEDBACK
+   ========================================= */
+.feedback-page {
+    width: min(680px, 100%);
+    margin: 0 auto;
+}
+
+.feedback-page-header {
+    margin-bottom: 1.5rem;
+}
+
+.feedback-page-header h1,
+.feedback-admin-header h1,
+.feedback-detail-card h1 {
+    margin: 0.2rem 0 0.35rem;
+    color: var(--text-main);
+}
+
+.feedback-page-header > p:last-child,
+.feedback-admin-header p:last-child {
+    margin: 0;
+    color: var(--text-muted);
+}
+
+.feedback-alert {
+    margin-bottom: 1.25rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid;
+    border-radius: 8px;
+    font-size: 0.88rem;
+}
+
+.feedback-alert-success {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+}
+
+.feedback-alert-error {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.09);
+    color: #dc2626;
+}
+
+.feedback-form {
+    display: grid;
+    gap: 1.25rem;
+    padding: 1.5rem;
+}
+
+.feedback-field label,
+.feedback-rating-field legend {
+    display: block;
+    margin-bottom: 0.45rem;
+    color: var(--text-main);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.feedback-field input,
+.feedback-field select,
+.feedback-field textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    background: var(--bg-dark);
+    color: var(--text-main);
+    font: inherit;
+}
+
+.feedback-field input[readonly] {
+    color: var(--text-muted);
+    cursor: not-allowed;
+}
+
+.feedback-field textarea {
+    min-height: 150px;
+    resize: vertical;
+}
+
+.feedback-field > small {
+    display: block;
+    margin-top: 0.4rem;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+}
+
+.feedback-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.feedback-label-row span {
+    color: var(--text-muted);
+    font-size: 0.68rem;
+}
+
+.feedback-rating-field {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.feedback-rating-options {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.feedback-rating-options label {
+    min-width: 0;
+    cursor: pointer;
+}
+
+.feedback-rating-options input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.feedback-rating-options span {
+    display: grid;
+    place-items: center;
+    min-height: 58px;
+    padding: 0.45rem;
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    background: var(--bg-dark);
+    color: var(--text-muted);
+    text-align: center;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.feedback-rating-options strong {
+    color: var(--text-main);
+    font-size: 0.8rem;
+}
+
+.feedback-rating-options small {
+    margin-top: 0.15rem;
+    font-size: 0.62rem;
+}
+
+.feedback-rating-options input:checked + span {
+    border-color: var(--accent-blue);
+    background: color-mix(in srgb, var(--accent-blue) 12%, var(--bg-card));
+    color: var(--accent-blue);
+}
+
+.feedback-rating-options input:focus-visible + span {
+    outline: 3px solid color-mix(in srgb, var(--accent-blue) 30%, transparent);
+    outline-offset: 2px;
+}
+
+.feedback-submit {
+    justify-self: start;
+    min-width: 170px;
+}
+
+.feedback-admin-header {
+    justify-content: flex-start;
+    padding-bottom: 1.5rem;
+}
+
+.feedback-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.feedback-inbox {
+    overflow: hidden;
+}
+
+.feedback-table-scroll {
+    overflow-x: auto;
+}
+
+.feedback-table td {
+    vertical-align: middle;
+}
+
+.feedback-preview {
+    max-width: 360px;
+    color: var(--text-muted);
+}
+
+.feedback-topic-badge {
+    display: inline-flex;
+    padding: 0.25rem 0.55rem;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    color: var(--text-main);
+    font-size: 0.7rem;
+    white-space: nowrap;
+}
+
+.feedback-rating,
+.feedback-detail-rating {
+    color: #d99b3d;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.feedback-empty-state {
+    padding: 4rem 1.5rem;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.feedback-empty-state > span {
+    display: block;
+    margin-bottom: 0.75rem;
+    font-size: 2rem;
+}
+
+.feedback-empty-state h2 {
+    margin: 0;
+    color: var(--text-main);
+}
+
+.feedback-empty-state p {
+    margin-bottom: 0;
+}
+
+.feedback-detail-page {
+    max-width: 850px;
+    padding-top: 1.5rem;
+}
+
+.feedback-detail-card {
+    margin-top: 1.25rem;
+    padding: 1.5rem;
+}
+
+.feedback-detail-card > header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.feedback-detail-rating {
+    padding: 0.45rem 0.7rem;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+}
+
+.feedback-detail-meta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    margin: 1.25rem 0;
+}
+
+.feedback-detail-meta div {
+    min-width: 0;
+}
+
+.feedback-detail-meta dt {
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+}
+
+.feedback-detail-meta dd {
+    margin: 0.25rem 0 0;
+    overflow-wrap: anywhere;
+    color: var(--text-main);
+    font-size: 0.82rem;
+}
+
+.feedback-message {
+    padding: 1.25rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-dark);
+}
+
+.feedback-message h2 {
+    margin: 0 0 0.75rem;
+    color: var(--text-main);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
+.feedback-message p {
+    margin: 0;
+    color: var(--text-main);
+    line-height: 1.7;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 760px) {
+    .feedback-stats,
+    .feedback-detail-meta {
+        grid-template-columns: 1fr;
+    }
+
+    .feedback-rating-options {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .feedback-detail-card > header {
+        flex-direction: column;
+    }
+}
