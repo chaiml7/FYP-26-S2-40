@@ -379,7 +379,7 @@ async def get_user_accounts(user_id: str):
         user_res = supabase.table("user_profiles").select("snaptrade_secret").eq("id", user_id).execute()
         if not user_res.data or not user_res.data[0].get("snaptrade_secret"):
             return {"connected": False, "accounts": []}
-            
+
         user_secret = user_res.data[0]["snaptrade_secret"]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
@@ -403,14 +403,14 @@ async def get_user_holdings(user_id: str):
         user_res = supabase.table("user_profiles").select("snaptrade_secret").eq("id", user_id).execute()
         if not user_res.data or not user_res.data[0].get("snaptrade_secret"):
             raise HTTPException(status_code=404, detail="No connected broker found.")
-            
+
         user_secret = user_res.data[0]["snaptrade_secret"]
-        
+
         accounts_res = snaptrade_client.account_information.list_user_accounts(
             user_id=user_id,
             user_secret=user_secret
         )
-        
+
         if not accounts_res.body:
             return {"holdings": []}
 
