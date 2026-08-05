@@ -122,9 +122,15 @@
             </div>
 
             <!-- Number of Units -->
-            <div style="flex: 1; min-width: 160px;">
-                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.4rem;">Shares / Units</label>
+            <div style="flex: 1; min-width: 120px;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.4rem;">Shares</label>
                 <input type="number" id="tradeUnitsInput" min="0.0001" step="any" placeholder="1.0" required style="width: 100%; padding: 0.65rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white;">
+            </div>
+
+            <!-- Limit Price (Optional) -->
+            <div style="flex: 1; min-width: 120px;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.4rem;">Limit Price ($)</label>
+                <input type="number" id="tradePriceInput" min="0.01" step="0.01" placeholder="Market (Any)" style="width: 100%; padding: 0.65rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white;">
             </div>
 
             <!-- Action Buttons -->
@@ -136,6 +142,12 @@
                     SELL {{ stock.symbol }}
                 </button>
             </div>
+        </div>
+
+        <!-- Position Display Box (Placed below flex inputs with width: 100%) -->
+        <div id="activePositionBox" style="display: none; margin-top: 1rem; width: 100%; padding: 0.75rem 1rem; background: #0f172a; border-radius: 8px; border: 1px solid #334155; font-size: 0.9rem;">
+            <span style="color: #4ade80; font-weight: 600;">Active Position:</span> 
+            <span id="positionDetailsText" style="color: #cbd5e1;"></span>
         </div>
 
         <div id="tradeStatusMessage" style="margin-top: 1rem; font-size: 0.9rem; display: none;"></div>
@@ -354,13 +366,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // 3. Handle Buy & Sell Actions
     const executeTrade = async (action) => {
-        const units = parseFloat(unitsInput.value);
+        const units = parseFloat(document.getElementById("tradeUnitsInput").value);
+        const priceVal = document.getElementById("tradePriceInput").value;
+        const price = priceVal ? parseFloat(priceVal) : null; // Send null if empty
         const accountId = accountSelect.value;
 
         if (!units || units <= 0) {
-            alert("Please enter a valid number of units.");
-            return;
-        }
+                alert("Please enter a valid number of units.");
+                return;
+            }
 
         buyBtn.disabled = true;
         sellBtn.disabled = true;
@@ -377,7 +391,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                     account_id: accountId,
                     symbol: symbol,
                     action: action,
-                    units: units
+                    units: units,
+                    price: price
                 })
             });
 
@@ -404,6 +419,40 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (buyBtn) buyBtn.addEventListener("click", () => executeTrade("BUY"));
     if (sellBtn) sellBtn.addEventListener("click", () => executeTrade("SELL"));
 });
+
+    async function loadUserPositionAndDrawChartLine(seriesInstance) {
+        const userId = "{{ request.session.get('user_id', '') }}";
+        const symbol = "{{ stock.symbol }}";
+        
+        try {
+            const res = await fetch(`/api/broker/position/${userId}/${symbol}`);
+            const data = await res.json();
+            
+            if (data.has_position) {
+                const posBox = document.getElementById("activePositionBox");
+                const posText = document.getElementById("positionDetailsText");
+                
+                if (posBox && posText) {
+                    posBox.style.display = "block";
+                    posText.textContent = `${data.units} shares held in ${data.account_name} at an average cost of $${Number(data.average_price).toFixed(2)}`;
+                }
+                
+                // Draw average cost price line on the TradingView chart
+                if (seriesInstance && data.average_price) {
+                    seriesInstance.createPriceLine({
+                        price: Number(data.average_price),
+                        color: '#3b82f6',
+                        lineWidth: 2,
+                        lineStyle: 2, // Dashed line style
+                        axisLabelVisible: true,
+                        title: `Avg Entry: $${Number(data.average_price).toFixed(2)}`,
+                    });
+                }
+            }
+        } catch (err) {
+            console.error("Failed to load position data for chart:", err);
+        }
+    }
 </script>
 
 {% if user_role == "premium_user" %}
@@ -498,6 +547,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             close: Number(row.close)
         })));
         chart.timeScale().fitContent();
+
+        if (typeof loadUserPositionAndDrawChartLine === "function") {
+            loadUserPositionAndDrawChartLine(series);
+        }
 
         const resizeChart = () => {
             chart.applyOptions({

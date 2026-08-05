@@ -9,7 +9,10 @@ from datetime import date
 
 from pydantic import BaseModel
 from snaptrade_client import SnapTrade, SnapTradeAuth
-from snaptrade_client.exceptions import ApiException    
+from snaptrade_client.exceptions import ApiException
+from typing import Optional
+
+import asyncio
 
 from backend.services.stock_list_service import get_active_stocks
 from backend.services.prediction_service import get_latest_prediction_by_symbol, get_technical_score, get_financial_score
@@ -48,6 +51,14 @@ snaptrade = SnapTrade(
 
 class ConnectRequest(BaseModel):
     user_id: str
+
+class TradeRequest(BaseModel):
+    user_id: str
+    account_id: str
+    action: str  
+    symbol: str  
+    units: float 
+    price: Optional[float] = None
 
 @router.get("/premium/recommendations")
 async def premium_recommendations(request: Request):
@@ -348,7 +359,8 @@ async def generate_connection_link(req: ConnectRequest):
     try:
         login_res = snaptrade.authentication.login_snap_trade_user(
             user_id=user_id,
-            user_secret=user_secret
+            user_secret=user_secret,
+            connection_type="trade"
         )
         return {"redirect_url": login_res.body["redirectURI"]}
     except ApiException as e:
@@ -397,11 +409,143 @@ async def get_user_holdings(user_id: str):
             return {"holdings": []}
 
         account_id = accounts_res.body[0]["id"]
-        holdings = snaptrade.account_information.get_user_holdings(
+        positions_res = snaptrade.account_information.get_user_account_positions(
             account_id=account_id,
             user_id=user_id,
             user_secret=user_secret
         )
-        return holdings.body
+        return positions_res.body
     except ApiException as e:
         raise HTTPException(status_code=400, detail=f"Failed to retrieve holdings: {e.body}")
+    
+@router.post("/api/broker/trade")
+async def execute_trade(req: TradeRequest):
+    # 1. Fetch the user secret from Supabase
+    try:
+        user_res = supabase.table("user_profiles").select("snaptrade_secret").eq("id", req.user_id).execute()
+            
+        if not user_res.data or not user_res.data[0].get("snaptrade_secret"):
+            raise HTTPException(status_code=400, detail="Broker not connected.")
+            
+        user_secret = user_res.data[0]["snaptrade_secret"]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Real DB Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+    # 2. Look up the universal_symbol_id for the requested stock
+    try:
+        symbol_res = snaptrade.reference_data.get_symbols_by_ticker(
+            query=req.symbol.upper()
+        )
+    except ApiException as e:
+        # If we hit the short-term burst limit, pause and retry automatically
+        if e.status == 429:
+            print("SnapTrade burst rate limit hit. Pausing for 2.5 seconds...")
+            await asyncio.sleep(2.5) # Sleep just slightly longer than the requested 2 seconds
+            
+            # Retry the exact same request
+            symbol_res = snaptrade.reference_data.get_symbols_by_ticker(
+                query=req.symbol.upper()
+            )
+        else:
+            raise HTTPException(status_code=400, detail=f"Symbol Lookup Failed: {str(e.body)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
+
+    # Extract the UUID securely
+    if isinstance(symbol_res.body, list) and len(symbol_res.body) > 0:
+        u_symbol_id = symbol_res.body[0]["id"]
+    elif isinstance(symbol_res.body, dict) and "id" in symbol_res.body:
+        u_symbol_id = symbol_res.body["id"]
+    else:
+        raise HTTPException(status_code=400, detail="Unexpected symbol format returned from SnapTrade")
+
+    # 3. Determine order type
+    order_type = "Limit" if req.price else "Market"
+    
+    # 4. Build the order arguments
+    order_kwargs = {
+        "user_id": req.user_id,
+        "user_secret": user_secret,
+        "account_id": req.account_id,
+        "action": req.action.upper(),
+        "universal_symbol_id": u_symbol_id, 
+        "order_type": order_type,
+        "time_in_force": "Day",
+        "units": req.units
+    }
+    
+    if req.price:
+        order_kwargs["price"] = req.price
+
+    # 5. Place the trade
+    try:
+        trade_res = snaptrade.trading.place_force_order(**order_kwargs)
+        return {
+            "status": "success", 
+            "message": "Order placed successfully!",
+            "trade_details": trade_res.body
+        }
+    except ApiException as e:
+        raise HTTPException(status_code=400, detail=f"Trade Failed: {str(e.body)}")
+
+@router.get("/api/broker/position/{user_id}/{symbol}")
+async def get_specific_position(user_id: str, symbol: str):
+    """Fetches user holding details for a specific stock symbol."""
+    try:
+        user_res = supabase.table("user_profiles").select("snaptrade_secret").eq("id", user_id).execute()
+        if not user_res.data or not user_res.data[0].get("snaptrade_secret"):
+            return {"has_position": False}
+            
+        user_secret = user_res.data[0]["snaptrade_secret"]
+        
+        accounts_res = snaptrade.account_information.list_user_accounts(
+            user_id=user_id,
+            user_secret=user_secret
+        )
+        
+        if not accounts_res.body:
+            return {"has_position": False}
+
+        # Scan accounts for holdings matching the target symbol
+        for account in accounts_res.body:
+            account_id = account["id"]
+            
+            positions_res = snaptrade.account_information.get_user_account_positions(
+                account_id=account_id,
+                user_id=user_id,
+                user_secret=user_secret
+            )
+            
+            positions = positions_res.body
+            for pos in positions:
+                # 1. Grab the outer 'symbol' dict (Brokerage Symbol)
+                brokerage_sym = pos.get("symbol", {})
+                
+                # 2. Grab the inner 'symbol' dict (Universal Symbol)
+                universal_sym = brokerage_sym.get("symbol", {})
+                
+                # 3. Extract the actual string ticker safely
+                ticker = ""
+                if isinstance(universal_sym, dict):
+                    ticker = universal_sym.get("symbol", "")
+                elif isinstance(universal_sym, str):
+                    ticker = universal_sym
+                
+                # 4. Compare the extracted string
+                if ticker and ticker.upper() == symbol.upper():
+                    return {
+                        "has_position": True,
+                        "account_name": account.get("name"),
+                        "units": pos.get("units"),
+                        "average_price": pos.get("average_purchase_price"),
+                        "current_price": pos.get("price")
+                    }
+                    
+        return {"has_position": False}
+    except Exception as e:
+        print(f"Error fetching position: {e}")
+        return {"has_position": False}
