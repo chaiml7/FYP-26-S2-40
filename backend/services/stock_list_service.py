@@ -114,3 +114,23 @@ def update_last_imported_at(symbol: str):
     )
 
     return response.data
+
+
+def search_active_stocks(q: str, limit: int = 8) -> list[dict]:
+    """Case-insensitive search over active stocks by symbol-prefix or
+    company-name substring. Symbol-prefix matches rank before company-name
+    matches; each group preserves get_active_stocks()'s original order."""
+    if not q or not q.strip():
+        return []
+
+    needle = q.strip().lower()
+    stocks = get_active_stocks() or []
+
+    symbol_matches = [s for s in stocks if s.get("symbol", "").lower().startswith(needle)]
+    name_matches = [
+        s for s in stocks
+        if not s.get("symbol", "").lower().startswith(needle)
+        and needle in (s.get("company_name") or "").lower()
+    ]
+
+    return (symbol_matches + name_matches)[:limit]

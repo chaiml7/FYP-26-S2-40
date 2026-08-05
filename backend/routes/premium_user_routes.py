@@ -1,7 +1,23 @@
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+import uuid
 from fastapi import APIRouter, Request, Form, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 from datetime import date
+
+from pydantic import BaseModel
+
+try:
+    from snaptrade_client import SnapTrade, SnapTradeAuth
+    from snaptrade_client.exceptions import ApiException
+except ImportError:
+    SnapTrade = None
+    SnapTradeAuth = None
+
+    class ApiException(Exception):
+        """Fallback type used when the optional SnapTrade SDK is unavailable."""
 
 from backend.services.stock_list_service import get_active_stocks
 from backend.services.prediction_service import get_latest_prediction_by_symbol, get_technical_score, get_financial_score
@@ -12,27 +28,59 @@ from backend.services.user_watchlist_service import (
     remove_watchlist_by_symbol,
 )
 from backend.database.supabase_client import supabase
+from backend.services.session_context import get_session_context
 
 router = APIRouter()
 templates = Jinja2Templates(directory="frontend/templates")
 
+env_path = Path(__file__).resolve().parent.parent / ".env"
+
+load_dotenv(dotenv_path=env_path, override=True)
+
+client_id = os.environ.get("SNAPTRADE_CLIENT_ID")
+consumer_key = os.environ.get("SNAPTRADE_CONSUMER_KEY")
+
+snaptrade = None
+if SnapTrade is not None and client_id and consumer_key:
+    snaptrade = SnapTrade(
+        auth=SnapTradeAuth.commercial_api_key(
+            client_id=client_id,
+            consumer_key=consumer_key,
+        )
+    )
+
+
+def _require_snaptrade_client():
+    if snaptrade is None:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Broker integration is unavailable. Install the SnapTrade Python "
+                "SDK and configure SNAPTRADE_CLIENT_ID and SNAPTRADE_CONSUMER_KEY."
+            ),
+        )
+    return snaptrade
+
+class ConnectRequest(BaseModel):
+    user_id: str
+
 @router.get("/premium/recommendations")
 async def premium_recommendations(request: Request):
     # Session
-    role = request.session.get("user_role")
-    if not role or role != "premium_user":
+    session = get_session_context(request)
+    if not session or session["user_role"] != "premium_user":
         return RedirectResponse(url="/login", status_code=303)
-    
+
     active_stocks = get_active_stocks()
 
     # 2. Build the Data Transformation Layer
     display_recommendations = []
     for stock in active_stocks:
         symbol = stock.get("symbol", "").upper()
-        
+
         # Grab the latest AI prediction for this specific stock
         raw_pred = get_latest_prediction_by_symbol(symbol)
-        
+
         # If a prediction exists in the DB, format it for the HTML
         if raw_pred and len(raw_pred) > 0:
             pred = raw_pred[0]
@@ -49,6 +97,7 @@ async def premium_recommendations(request: Request):
         request=request, 
         name="premium_users/stock_recommendations.html",
         context={
+            **session,
             "request": request,
             "recommendations": display_recommendations
         }
@@ -56,11 +105,11 @@ async def premium_recommendations(request: Request):
 
 @router.get("/premium/prediction_breakdown")
 async def premium_prediction_breakdown(request: Request, symbol: str = "NVDA"):
-    role = request.session.get("user_role")
-    user_id = request.session.get("user_id")
-    if not role or role != "premium_user":
+    session = get_session_context(request)
+    if not session or session["user_role"] != "premium_user":
         return RedirectResponse(url="/login", status_code=303)
-    
+    user_id = session["user_id"]
+
     target_symbol = symbol.upper()
 
     try:
@@ -128,6 +177,7 @@ async def premium_prediction_breakdown(request: Request, symbol: str = "NVDA"):
         request=request, 
         name="premium_users/prediction_breakdown.html",
         context={
+            **session,
             "request": request,
             "data": display_data
         }
@@ -135,12 +185,11 @@ async def premium_prediction_breakdown(request: Request, symbol: str = "NVDA"):
 
 @router.get("/premium/weightages")
 async def premium_user_weightages(request: Request):
-    role = request.session.get("user_role")
-    user_id = request.session.get("user_id")
-
-    if not role or role != "premium_user":
+    session = get_session_context(request)
+    if not session or session["user_role"] != "premium_user":
         return RedirectResponse(url="/login", status_code=303)
-    
+    user_id = session["user_id"]
+
     admin_defaults = {"technical": 40, "sentiment": 30, "financial": 30}
     try:
         admin_response = supabase.table("weightages").select(
@@ -164,7 +213,7 @@ async def premium_user_weightages(request: Request):
     return templates.TemplateResponse(
         request=request, 
         name="premium_users/user_model_weightage.html",
-        context={"request": request, "weights": user_weights, "defaults": admin_defaults}
+        context={**session, "request": request, "weights": user_weights, "defaults": admin_defaults}
     )
 
 @router.post("/premium/weightages")
@@ -202,8 +251,8 @@ async def save_premium_weightages(
 
 @router.get("/premium/news/{symbol}")
 async def premium_news_feed(request: Request, symbol: str, days: int = 7):
-    role = request.session.get("user_role")
-    if role != "premium_user":
+    session = get_session_context(request)
+    if not session or session["user_role"] != "premium_user":
         return RedirectResponse(url="/dashboard", status_code=303)
 
     target_symbol = symbol.upper()
@@ -216,19 +265,15 @@ async def premium_news_feed(request: Request, symbol: str, days: int = 7):
         target_symbol,
     )
 
-    user_email = request.session.get("user_email", "")
-    user_initial = user_email[0].upper() if user_email else "U"
-
     return templates.TemplateResponse(
         request=request,
         name="premium_users/news_feed.html",
         context={
+            **session,
             "request": request,
             "symbol": target_symbol,
             "company_name": company_name,
             "summary": summary,
-            "user_email": user_email,
-            "user_initial": user_initial,
         },
     )
 
@@ -269,3 +314,112 @@ async def remove_premium_watchlist_stock(symbol: str, request: Request):
 async def view_premium_watchlist_symbols(request: Request):
     user_id = _require_premium_session(request)
     return {"symbols": get_user_watchlist_symbols(user_id)}
+
+# ==========================================
+# Connect Broker & Trading Routes
+# ==========================================
+
+@router.post("/api/broker/connect")
+async def generate_connection_link(req: ConnectRequest):
+    snaptrade_client = _require_snaptrade_client()
+    user_id = req.user_id
+    user_secret = None
+
+    # 1. Check if user already has a saved SnapTrade secret in user_profiles
+    try:
+        user_res = supabase.table("user_profiles").select("snaptrade_secret").eq("user_id", user_id).execute()
+        if not user_res.data:
+            user_res = supabase.table("user_profiles").select("snaptrade_secret").eq("id", user_id).execute()
+
+        if user_res.data and user_res.data[0].get("snaptrade_secret"):
+            user_secret = user_res.data[0]["snaptrade_secret"]
+    except Exception as e:
+        print(f"Supabase fetch error: {e}")
+
+    # 2. If no secret exists in DB, register user with SnapTrade & save the secret
+    if not user_secret:
+        try:
+            register_res = snaptrade_client.authentication.register_snap_trade_user(
+                body={"userId": user_id}
+            )
+            user_secret = register_res.body["userSecret"]
+        except ApiException as e:
+            # FAILSAFE: If the user already exists on SnapTrade but not in DB, reset them!
+            if e.status == 400:
+                snaptrade_client.authentication.delete_snap_trade_user(user_id=user_id)
+                register_res = snaptrade_client.authentication.register_snap_trade_user(
+                    body={"userId": user_id}
+                )
+                user_secret = register_res.body["userSecret"]
+            else:
+                raise HTTPException(status_code=400, detail=f"SnapTrade registration failed: {e.body}")
+
+        # Save the generated secret to user_profiles
+        try:
+            supabase.table("user_profiles").update({"snaptrade_secret": user_secret}).eq("user_id", user_id).execute()
+        except Exception:
+            supabase.table("user_profiles").update({"snaptrade_secret": user_secret}).eq("id", user_id).execute()
+
+    # 3. Generate the portal link using the valid user_secret
+    try:
+        login_res = snaptrade_client.authentication.login_snap_trade_user(
+            user_id=user_id,
+            user_secret=user_secret
+        )
+        return {"redirect_url": login_res.body["redirectURI"]}
+    except ApiException as e:
+        raise HTTPException(status_code=400, detail=f"Failed to generate connection link: {e.body}")
+
+@router.get("/api/broker/accounts/{user_id}")
+async def get_user_accounts(user_id: str):
+    """Fetches all brokerage accounts linked to this user."""
+    snaptrade_client = _require_snaptrade_client()
+    # Retrieve secret from DB
+    try:
+        user_res = supabase.table("user_profiles").select("snaptrade_secret").eq("id", user_id).execute()
+        if not user_res.data or not user_res.data[0].get("snaptrade_secret"):
+            return {"connected": False, "accounts": []}
+            
+        user_secret = user_res.data[0]["snaptrade_secret"]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
+
+    # Query SnapTrade for connected accounts
+    try:
+        accounts_res = snaptrade_client.account_information.list_user_accounts(
+            user_id=user_id,
+            user_secret=user_secret
+        )
+        return {"connected": True, "accounts": accounts_res.body}
+    except ApiException as e:
+        raise HTTPException(status_code=400, detail=f"Failed to retrieve accounts: {e.body}")
+
+
+@router.get("/api/broker/holdings/{user_id}")
+async def get_user_holdings(user_id: str):
+    """Fetches holdings across connected accounts."""
+    snaptrade_client = _require_snaptrade_client()
+    try:
+        user_res = supabase.table("user_profiles").select("snaptrade_secret").eq("id", user_id).execute()
+        if not user_res.data or not user_res.data[0].get("snaptrade_secret"):
+            raise HTTPException(status_code=404, detail="No connected broker found.")
+            
+        user_secret = user_res.data[0]["snaptrade_secret"]
+        
+        accounts_res = snaptrade_client.account_information.list_user_accounts(
+            user_id=user_id,
+            user_secret=user_secret
+        )
+        
+        if not accounts_res.body:
+            return {"holdings": []}
+
+        account_id = accounts_res.body[0]["id"]
+        holdings = snaptrade_client.account_information.get_user_holdings(
+            account_id=account_id,
+            user_id=user_id,
+            user_secret=user_secret
+        )
+        return holdings.body
+    except ApiException as e:
+        raise HTTPException(status_code=400, detail=f"Failed to retrieve holdings: {e.body}")

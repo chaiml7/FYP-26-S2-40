@@ -4,6 +4,7 @@ from datetime import date
 
 from backend.services.sentiment.sentiment_aggregator import (
     calculate_daily_sentiment_score,
+    get_recent_news,
     save_neutral_daily_sentiment_score,
     save_scores,
     get_sentiment_summary,
@@ -209,3 +210,107 @@ def test_calculate_daily_sentiment_score_weights_labels():
     assert result["bullish_score"] == 5.33
     assert result["sentiment_label"] == "neutral"
     assert result["article_count"] == 3
+
+
+@patch(f"{MODULE}.get_active_stocks")
+@patch(f"{MODULE}.supabase")
+def test_get_recent_news_paginates(mock_supa, mock_get_stocks):
+    mock_get_stocks.return_value = [{"symbol": "AAPL", "company_name": "Apple Inc."}]
+    rows = [
+        {
+            "symbol": "AAPL",
+            "headline": f"Headline {i}",
+            "source": "gnews",
+            "published_at": f"2026-07-{i + 1:02d}T09:00:00+00:00",
+            "label": "positive",
+            "score": 0.9,
+            "url": f"https://example.com/{i}",
+        }
+        for i in range(25)
+    ]
+    mock_supa.table.return_value.select.return_value.gte.return_value.order.return_value.limit.return_value.execute.return_value.data = rows
+
+    result = get_recent_news(page=1, page_size=20)
+
+    assert result["total_count"] == 25
+    assert result["total_pages"] == 2
+    assert result["page"] == 1
+    assert len(result["articles"]) == 20
+
+
+@patch(f"{MODULE}.get_active_stocks")
+@patch(f"{MODULE}.supabase")
+def test_get_recent_news_second_page(mock_supa, mock_get_stocks):
+    mock_get_stocks.return_value = [{"symbol": "AAPL", "company_name": "Apple Inc."}]
+    rows = [
+        {
+            "symbol": "AAPL",
+            "headline": f"Headline {i}",
+            "source": "gnews",
+            "published_at": f"2026-07-{i + 1:02d}T09:00:00+00:00",
+            "label": "positive",
+            "score": 0.9,
+            "url": f"https://example.com/{i}",
+        }
+        for i in range(25)
+    ]
+    mock_supa.table.return_value.select.return_value.gte.return_value.order.return_value.limit.return_value.execute.return_value.data = rows
+
+    result = get_recent_news(page=2, page_size=20)
+
+    assert result["page"] == 2
+    assert len(result["articles"]) == 5
+
+
+@patch(f"{MODULE}.get_active_stocks")
+@patch(f"{MODULE}.supabase")
+def test_get_recent_news_filters_by_query_text(mock_supa, mock_get_stocks):
+    mock_get_stocks.return_value = [
+        {"symbol": "AAPL", "company_name": "Apple Inc."},
+        {"symbol": "TSLA", "company_name": "Tesla Inc."},
+    ]
+    rows = [
+        {"symbol": "AAPL", "headline": "Apple posts strong earnings", "source": "gnews",
+         "published_at": "2026-07-20T09:00:00+00:00", "label": "positive", "score": 0.9,
+         "url": "https://example.com/a"},
+        {"symbol": "TSLA", "headline": "Tesla recalls vehicles", "source": "gnews",
+         "published_at": "2026-07-21T09:00:00+00:00", "label": "negative", "score": 0.8,
+         "url": "https://example.com/b"},
+    ]
+    mock_supa.table.return_value.select.return_value.gte.return_value.order.return_value.limit.return_value.execute.return_value.data = rows
+
+    result = get_recent_news(q="tesla")
+
+    assert result["total_count"] == 1
+    assert result["articles"][0]["symbol"] == "TSLA"
+
+
+@patch(f"{MODULE}.get_active_stocks")
+@patch(f"{MODULE}.supabase")
+def test_get_recent_news_excludes_non_gnews_and_dead_urls(mock_supa, mock_get_stocks):
+    mock_get_stocks.return_value = [{"symbol": "AAPL", "company_name": "Apple Inc."}]
+    rows = [
+        {"symbol": "AAPL", "headline": "From finnhub", "source": "finnhub",
+         "published_at": "2026-07-20T09:00:00+00:00", "label": "positive", "score": 0.9,
+         "url": "https://finnhub.io/api/news?id=1"},
+        {"symbol": "AAPL", "headline": "Good gnews article", "source": "gnews",
+         "published_at": "2026-07-21T09:00:00+00:00", "label": "positive", "score": 0.9,
+         "url": "https://news.google.com/rss/articles/xyz"},
+    ]
+    mock_supa.table.return_value.select.return_value.gte.return_value.order.return_value.limit.return_value.execute.return_value.data = rows
+
+    result = get_recent_news()
+
+    assert result["total_count"] == 1
+    assert result["articles"][0]["headline"] == "Good gnews article"
+
+
+@patch(f"{MODULE}.get_active_stocks")
+@patch(f"{MODULE}.supabase")
+def test_get_recent_news_empty_result(mock_supa, mock_get_stocks):
+    mock_get_stocks.return_value = []
+    mock_supa.table.return_value.select.return_value.gte.return_value.order.return_value.limit.return_value.execute.return_value.data = []
+
+    result = get_recent_news()
+
+    assert result == {"articles": [], "page": 1, "total_pages": 0, "total_count": 0}
