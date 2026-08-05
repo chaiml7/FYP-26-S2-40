@@ -8,8 +8,16 @@ from fastapi.responses import RedirectResponse
 from datetime import date
 
 from pydantic import BaseModel
-from snaptrade_client import SnapTrade, SnapTradeAuth
-from snaptrade_client.exceptions import ApiException
+try:
+    from snaptrade_client import SnapTrade, SnapTradeAuth
+    from snaptrade_client.exceptions import ApiException
+except ImportError:
+    SnapTrade = None
+    SnapTradeAuth = None
+
+    class ApiException(Exception):
+        """Fallback type used when the optional SnapTrade SDK is unavailable."""
+
 from typing import Optional
 
 import asyncio
@@ -35,19 +43,26 @@ load_dotenv(dotenv_path=env_path, override=True)
 client_id = os.environ.get("SNAPTRADE_CLIENT_ID")
 consumer_key = os.environ.get("SNAPTRADE_CONSUMER_KEY")
 
-if not client_id or not consumer_key:
-    raise RuntimeError(
-        f"CRITICAL ERROR: SnapTrade credentials missing! "
-        f"Client ID loaded: {bool(client_id)} | Consumer Key loaded: {bool(consumer_key)}"
+snaptrade = None
+if SnapTrade is not None and client_id and consumer_key:
+    snaptrade = SnapTrade(
+        auth=SnapTradeAuth.commercial_api_key(
+            client_id=client_id,
+            consumer_key=consumer_key,
+        )
     )
 
-# 4. Initialize SnapTrade only if keys exist
-snaptrade = SnapTrade(
-    auth=SnapTradeAuth.commercial_api_key(
-        client_id=os.environ.get("SNAPTRADE_CLIENT_ID"),
-        consumer_key=os.environ.get("SNAPTRADE_CONSUMER_KEY")
-    )
-)
+
+def _require_snaptrade_client():
+    if snaptrade is None:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Broker integration is unavailable. Install the SnapTrade Python "
+                "SDK and configure SNAPTRADE_CLIENT_ID and SNAPTRADE_CONSUMER_KEY."
+            ),
+        )
+    return snaptrade
 
 class ConnectRequest(BaseModel):
     user_id: str
@@ -70,13 +85,13 @@ async def premium_recommendations(request: Request):
     active_stocks = get_active_stocks()
 
     # 2. Build the Data Transformation Layer
-    display_recommendations = []    
+    display_recommendations = []
     for stock in active_stocks:
         symbol = stock.get("symbol", "").upper()
-        
+
         # Grab the latest AI prediction for this specific stock
         raw_pred = get_latest_prediction_by_symbol(symbol)
-        
+
         # If a prediction exists in the DB, format it for the HTML
         if raw_pred and len(raw_pred) > 0:
             pred = raw_pred[0]
@@ -317,6 +332,7 @@ async def view_premium_watchlist_symbols(request: Request):
 
 @router.post("/api/broker/connect")
 async def generate_connection_link(req: ConnectRequest):
+    snaptrade_client = _require_snaptrade_client()
     user_id = req.user_id
     user_secret = None
 
@@ -334,15 +350,15 @@ async def generate_connection_link(req: ConnectRequest):
     # 2. If no secret exists in DB, register user with SnapTrade & save the secret
     if not user_secret:
         try:
-            register_res = snaptrade.authentication.register_snap_trade_user(
+            register_res = snaptrade_client.authentication.register_snap_trade_user(
                 body={"userId": user_id}
             )
             user_secret = register_res.body["userSecret"]
         except ApiException as e:
             # FAILSAFE: If the user already exists on SnapTrade but not in DB, reset them!
             if e.status == 400:
-                snaptrade.authentication.delete_snap_trade_user(user_id=user_id)
-                register_res = snaptrade.authentication.register_snap_trade_user(
+                snaptrade_client.authentication.delete_snap_trade_user(user_id=user_id)
+                register_res = snaptrade_client.authentication.register_snap_trade_user(
                     body={"userId": user_id}
                 )
                 user_secret = register_res.body["userSecret"]
@@ -357,7 +373,7 @@ async def generate_connection_link(req: ConnectRequest):
 
     # 3. Generate the portal link using the valid user_secret
     try:
-        login_res = snaptrade.authentication.login_snap_trade_user(
+        login_res = snaptrade_client.authentication.login_snap_trade_user(
             user_id=user_id,
             user_secret=user_secret,
             connection_type="trade"
@@ -369,19 +385,20 @@ async def generate_connection_link(req: ConnectRequest):
 @router.get("/api/broker/accounts/{user_id}")
 async def get_user_accounts(user_id: str):
     """Fetches all brokerage accounts linked to this user."""
+    snaptrade_client = _require_snaptrade_client()
     # Retrieve secret from DB
     try:
         user_res = supabase.table("user_profiles").select("snaptrade_secret").eq("id", user_id).execute()
         if not user_res.data or not user_res.data[0].get("snaptrade_secret"):
             return {"connected": False, "accounts": []}
-            
+
         user_secret = user_res.data[0]["snaptrade_secret"]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
 
     # Query SnapTrade for connected accounts
     try:
-        accounts_res = snaptrade.account_information.list_user_accounts(
+        accounts_res = snaptrade_client.account_information.list_user_accounts(
             user_id=user_id,
             user_secret=user_secret
         )
@@ -393,18 +410,19 @@ async def get_user_accounts(user_id: str):
 @router.get("/api/broker/holdings/{user_id}")
 async def get_user_holdings(user_id: str):
     """Fetches holdings across connected accounts."""
+    snaptrade_client = _require_snaptrade_client()
     try:
         user_res = supabase.table("user_profiles").select("snaptrade_secret").eq("id", user_id).execute()
         if not user_res.data or not user_res.data[0].get("snaptrade_secret"):
             raise HTTPException(status_code=404, detail="No connected broker found.")
-            
+
         user_secret = user_res.data[0]["snaptrade_secret"]
-        
-        accounts_res = snaptrade.account_information.list_user_accounts(
+
+        accounts_res = snaptrade_client.account_information.list_user_accounts(
             user_id=user_id,
             user_secret=user_secret
         )
-        
+
         if not accounts_res.body:
             return {"holdings": []}
 

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}User - StockLens{% endblock %}</title>
-    <link rel="stylesheet" href="/static/css/styles.css?v=20260730-live-news-search">
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260805-feedback-news-search">
 </head>
 <body class="app-page theme-free">
     {% include "/includes/top_navbar.html" %}
@@ -25,6 +25,9 @@
                 </a>
                 <a href="/user/financials" class="nav-item {% block nav_financials %}{% endblock %}">
                     <span class="nav-icon">📉</span> Financials
+                </a>
+                <a href="/user/feedback" class="nav-item {% block nav_feedback %}{% endblock %}">
+                    <span class="nav-icon">&#128172;</span> Feedback
                 </a>
             </nav>
         </aside>
