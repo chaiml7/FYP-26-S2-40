@@ -59,10 +59,18 @@
         <thead>
             <tr>
                 {% if user_role == "premium_user" %}<th><span class="sr-only">Watchlist</span></th>{% endif %}
-                <th>Company</th>
+                <th class="sortable-column" aria-sort="ascending">
+                    <button type="button" class="table-sort-button" data-sort="company" data-first-direction="asc">
+                        Company <span class="sort-indicator" aria-hidden="true">&#8593;</span>
+                    </button>
+                </th>
                 <th>Sector</th>
                 <th>Latest price</th>
-                <th>Daily move</th>
+                <th class="sortable-column" aria-sort="none">
+                    <button type="button" class="table-sort-button" data-sort="daily-move" data-first-direction="desc">
+                        Daily move <span class="sort-indicator" aria-hidden="true">&#8645;</span>
+                    </button>
+                </th>
                 <th><span class="sr-only">Open stock</span></th>
             </tr>
         </thead>
@@ -72,6 +80,9 @@
                 class="stock-browser-row"
                 data-search="{{ stock.symbol | lower }} {{ stock.company_name | lower }}"
                 data-sector="{{ (stock.sector or '') | lower }}"
+                data-company="{{ (stock.company_name or stock.symbol) | lower }}"
+                data-symbol="{{ stock.symbol | lower }}"
+                data-daily-move="{{ stock.change_percent if stock.change_percent is not none else '' }}"
                 onclick="window.location='/stocks/{{ stock.symbol }}/view{% if selected_date %}?selected_date={{ selected_date }}{% endif %}'"
             >
                 {% if user_role == "premium_user" %}
@@ -127,7 +138,66 @@
     const searchInput = document.getElementById("stock-search");
     const sectorFilter = document.getElementById("sector-filter");
     const rows = Array.from(document.querySelectorAll(".stock-browser-row"));
+    const tableBody = document.getElementById("stock-table-body");
     const emptyState = document.getElementById("stock-empty-state");
+    const sortButtons = Array.from(document.querySelectorAll(".table-sort-button"));
+    let sortState = { key: "company", direction: "asc" };
+
+    function sortStocks(key, direction) {
+        const multiplier = direction === "asc" ? 1 : -1;
+        const sortedRows = [...rows].sort((left, right) => {
+            if (key === "daily-move") {
+                const leftValue = Number.parseFloat(left.dataset.dailyMove);
+                const rightValue = Number.parseFloat(right.dataset.dailyMove);
+                const leftMissing = Number.isNaN(leftValue);
+                const rightMissing = Number.isNaN(rightValue);
+                if (leftMissing || rightMissing) {
+                    if (leftMissing && rightMissing) {
+                        return left.dataset.company.localeCompare(right.dataset.company);
+                    }
+                    return leftMissing ? 1 : -1;
+                }
+                if (leftValue !== rightValue) {
+                    return (leftValue - rightValue) * multiplier;
+                }
+            }
+            const companyOrder = left.dataset.company.localeCompare(
+                right.dataset.company,
+                undefined,
+                { sensitivity: "base" }
+            );
+            if (companyOrder !== 0) {
+                return companyOrder * (key === "company" ? multiplier : 1);
+            }
+            return left.dataset.symbol.localeCompare(right.dataset.symbol);
+        });
+
+        sortedRows.forEach((row) => tableBody.appendChild(row));
+        sortState = { key, direction };
+        sortButtons.forEach((button) => {
+            const active = button.dataset.sort === key;
+            const header = button.closest("th");
+            header.setAttribute(
+                "aria-sort",
+                active ? (direction === "asc" ? "ascending" : "descending") : "none"
+            );
+            button.querySelector(".sort-indicator").textContent = active
+                ? (direction === "asc" ? "\u2191" : "\u2193")
+                : "\u21c5";
+        });
+    }
+
+    sortButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            const key = button.dataset.sort;
+            const direction = sortState.key === key
+                ? (sortState.direction === "asc" ? "desc" : "asc")
+                : button.dataset.firstDirection;
+            sortStocks(key, direction);
+        });
+    });
+
+    sortStocks("company", "asc");
 
     function filterStocks() {
         const query = searchInput.value.trim().toLowerCase();

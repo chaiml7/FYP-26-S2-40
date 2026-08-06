@@ -1,4 +1,5 @@
 from datetime import date
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from backend.services.dashboard_service import (
@@ -8,7 +9,9 @@ from backend.services.dashboard_service import (
     _price_summary,
     _score_tone,
     _technical_indicator_groups,
+    _weighted_overall_score,
     get_dashboard_stocks,
+    get_model_weights,
     get_stock_dashboard,
 )
 
@@ -16,6 +19,40 @@ from backend.services.dashboard_service import (
 def test_public_market_score_uses_product_weights():
     assert _combined_score(8, 6, 4) == 6.6
     assert _combined_score(8, None, 4) is None
+
+
+def test_weighted_overall_score_uses_saved_weightages():
+    weights = {"technical": 50, "sentiment": 30, "financial": 20}
+
+    assert _weighted_overall_score(8, 6, 4, weights) == 6.6
+    assert _weighted_overall_score(8, None, 4, weights) is None
+    assert _weighted_overall_score(
+        8,
+        None,
+        4,
+        {"technical": 80, "sentiment": 0, "financial": 20},
+    ) == 7.2
+
+
+@patch("backend.services.dashboard_service.supabase")
+def test_model_weights_prefer_premium_user_record(mock_supabase):
+    execute = (
+        mock_supabase.table.return_value
+        .select.return_value
+        .eq.return_value
+        .limit.return_value
+        .execute
+    )
+    execute.return_value = SimpleNamespace(
+        data=[{"technical": 60, "sentiment": 25, "financial": 15}]
+    )
+
+    assert get_model_weights("premium-user-id") == {
+        "technical": 60,
+        "sentiment": 25,
+        "financial": 15,
+    }
+    mock_supabase.table.assert_called_once_with("weightages")
 
 
 def test_public_market_volume_is_compact():
@@ -95,8 +132,8 @@ def test_dashboard_stocks_are_sorted_and_use_company_name(
     mock_prices,
 ):
     mock_stocks.return_value = [
-        {"id": 2, "symbol": "MSFT", "company_name": "Microsoft"},
-        {"id": 1, "symbol": "AAPL", "company_name": "Apple"},
+        {"id": 2, "symbol": "AAPL", "company_name": "Zeta Holdings"},
+        {"id": 1, "symbol": "MSFT", "company_name": "Alpha Limited"},
     ]
     mock_prices.return_value = {
         symbol: {
@@ -110,8 +147,8 @@ def test_dashboard_stocks_are_sorted_and_use_company_name(
 
     result = get_dashboard_stocks()
 
-    assert [stock["symbol"] for stock in result] == ["AAPL", "MSFT"]
-    assert result[0]["company_name"] == "Apple"
+    assert [stock["symbol"] for stock in result] == ["MSFT", "AAPL"]
+    assert result[0]["company_name"] == "Alpha Limited"
 
 
 @patch("backend.services.dashboard_service._dashboard_price_summaries")
@@ -130,6 +167,7 @@ def test_failed_price_lookup_does_not_hide_stock(mock_stocks, mock_prices):
 
 
 @patch("backend.services.dashboard_service._recent_prices", return_value=[])
+@patch("backend.services.dashboard_service.get_model_weights")
 @patch("backend.services.dashboard_service._price_summary")
 @patch("backend.services.dashboard_service._financial_prediction")
 @patch("backend.services.dashboard_service._sentiment_prediction")
@@ -141,6 +179,7 @@ def test_stock_dashboard_keeps_missing_score_separate_from_bearish(
     mock_sentiment,
     mock_financial,
     mock_price,
+    mock_weights,
     _mock_history,
 ):
     mock_stock.return_value = [{
@@ -158,6 +197,11 @@ def test_stock_dashboard_keeps_missing_score_separate_from_bearish(
         "change_percent": 1,
         "trade_date": "2026-06-11",
     }
+    mock_weights.return_value = {
+        "technical": 40,
+        "sentiment": 30,
+        "financial": 30,
+    }
 
     selected_date = date(2026, 6, 11)
     result = get_stock_dashboard("aapl", selected_date)
@@ -170,6 +214,13 @@ def test_stock_dashboard_keeps_missing_score_separate_from_bearish(
     assert result["chart_history"] == []
     assert result["price_history"] == []
     assert result["technical_indicator_groups"] == []
+    assert result["overall_score"] is None
+    assert result["model_weights"] == mock_weights.return_value
+    assert result["component_scores"] == {
+        "technical": 3.5,
+        "sentiment": None,
+        "financial": 6.5,
+    }
     mock_technical.assert_called_once_with("AAPL", selected_date)
     mock_sentiment.assert_called_once_with("AAPL", selected_date)
     mock_financial.assert_called_once_with("AAPL", selected_date)

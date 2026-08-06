@@ -71,6 +71,11 @@ async def stock_detail(
         symbol,
         selected_date,
         include_technical_indicators=(session["user_role"] == "premium_user"),
+        weight_user_id=(
+            session["user_id"]
+            if session["user_role"] == "premium_user"
+            else None
+        ),
     )
     if stock is None:
         return templates.TemplateResponse(

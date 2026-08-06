@@ -1,6 +1,6 @@
 from datetime import date
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from backend.services.stock_list_service import (
     get_all_stocks,
     get_active_stocks,
@@ -22,6 +22,10 @@ from backend.services.stock_history_service import (
 )
 from backend.services.sentiment.sentiment_aggregator import (get_weighted_sentiment_score, save_daily_sentiment_score)
 from backend.services.sentiment.sentiment_pipeline import run_pipeline as run_sentiment_pipeline
+from backend.services.notification_service import (
+    auto_dispatch_enabled,
+    dispatch_analysis_ready_emails,
+)
 from backend.services.prediction_service import (
     save_prediction,
     get_predictions_by_symbol,
@@ -332,8 +336,11 @@ def create_stock_daily_sentiment_score(symbol: str, score_date: date = None):
 
 
 @router.post("/sentiment/run-pipeline")
-def trigger_sentiment_pipeline():
+def trigger_sentiment_pipeline(background_tasks: BackgroundTasks):
     try:
-        return run_sentiment_pipeline()
+        result = run_sentiment_pipeline()
+        if auto_dispatch_enabled():
+            background_tasks.add_task(dispatch_analysis_ready_emails)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

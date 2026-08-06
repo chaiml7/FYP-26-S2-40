@@ -6,6 +6,13 @@ from backend.database.supabase_client import supabase
 from backend.services.stock_list_service import get_active_stocks, get_stock_by_symbol
 
 
+DEFAULT_MODEL_WEIGHTS = {
+    "technical": 40,
+    "sentiment": 30,
+    "financial": 30,
+}
+
+
 def _first(rows: list) -> dict | None:
     return rows[0] if rows else None
 
@@ -18,6 +25,84 @@ def _score_tone(score: float | None) -> str:
     if score < 4:
         return "bearish"
     return "neutral"
+
+
+def _validated_model_weights(row: dict | None) -> dict[str, int] | None:
+    if not isinstance(row, dict):
+        return None
+    try:
+        weights = {
+            name: int(row.get(name))
+            for name in DEFAULT_MODEL_WEIGHTS
+        }
+    except (TypeError, ValueError):
+        return None
+    if any(value < 0 or value > 100 for value in weights.values()):
+        return None
+    return weights if sum(weights.values()) == 100 else None
+
+
+def get_model_weights(user_id: str | None = None) -> dict[str, int]:
+    """Return premium-user weights, then platform defaults, then safe defaults."""
+    try:
+        if user_id:
+            user_response = (
+                supabase.table("weightages")
+                .select("technical,sentiment,financial")
+                .eq("user_id", user_id)
+                .limit(1)
+                .execute()
+            )
+            user_rows = user_response.data or []
+            user_weights = _validated_model_weights(
+                user_rows[0] if isinstance(user_rows, list) and user_rows else None
+            )
+            if user_weights:
+                return user_weights
+
+        default_response = (
+            supabase.table("weightages")
+            .select("technical,sentiment,financial")
+            .eq("id", "1")
+            .limit(1)
+            .execute()
+        )
+        default_rows = default_response.data or []
+        default_weights = _validated_model_weights(
+            default_rows[0]
+            if isinstance(default_rows, list) and default_rows
+            else None
+        )
+        if default_weights:
+            return default_weights
+    except Exception as exc:
+        print(f"Model weightage lookup failed: {exc}")
+
+    return DEFAULT_MODEL_WEIGHTS.copy()
+
+
+def _weighted_overall_score(
+    technical_score: float | None,
+    sentiment_score: float | None,
+    financial_score: float | None,
+    weights: dict[str, int],
+) -> float | None:
+    scores = {
+        "technical": technical_score,
+        "sentiment": sentiment_score,
+        "financial": financial_score,
+    }
+    active_weight = sum(weights.values())
+    if active_weight <= 0:
+        return None
+    if any(scores[name] is None for name, weight in weights.items() if weight > 0):
+        return None
+    weighted_total = sum(
+        float(scores[name]) * weight
+        for name, weight in weights.items()
+        if weight > 0
+    )
+    return round(weighted_total / active_weight, 1)
 
 
 def _recent_prices(
@@ -484,7 +569,13 @@ def get_public_model_metrics() -> list:
 def get_dashboard_stocks(selected_date: date = None) -> list:
     stocks = get_active_stocks() or []
     dashboard_stocks = []
-    sorted_stocks = sorted(stocks, key=lambda item: item.get("symbol", ""))
+    sorted_stocks = sorted(
+        stocks,
+        key=lambda item: (
+            str(item.get("company_name") or item.get("symbol") or "").casefold(),
+            str(item.get("symbol") or "").casefold(),
+        ),
+    )
     symbols = [
         stock.get("symbol", "").upper()
         for stock in sorted_stocks
@@ -516,6 +607,7 @@ def get_stock_dashboard(
     symbol: str,
     selected_date: date = None,
     include_technical_indicators: bool = False,
+    weight_user_id: str | None = None,
 ) -> dict | None:
     stocks = get_stock_by_symbol(symbol)
     stock = _first(stocks or [])
@@ -540,6 +632,16 @@ def get_stock_dashboard(
             print(f"Technical indicator detail lookup failed for {symbol}: {exc}")
     sentiment = _sentiment_prediction(symbol, selected_date)
     financial = _financial_prediction(symbol, selected_date)
+    technical_score = technical.get("technical_score") if technical else None
+    sentiment_score = sentiment.get("bullish_score") if sentiment else None
+    financial_score = financial.get("fundamental_score") if financial else None
+    model_weights = get_model_weights(weight_user_id)
+    overall_score = _weighted_overall_score(
+        technical_score,
+        sentiment_score,
+        financial_score,
+        model_weights,
+    )
     history = _recent_prices(
         symbol,
         limit=10,
@@ -560,20 +662,28 @@ def get_stock_dashboard(
         "scores": [
             _score_card(
                 "Technical",
-                technical.get("technical_score") if technical else None,
+                technical_score,
                 technical,
             ),
             _score_card(
                 "Sentiment",
-                sentiment.get("bullish_score") if sentiment else None,
+                sentiment_score,
                 sentiment,
             ),
             _score_card(
                 "Financial",
-                financial.get("fundamental_score") if financial else None,
+                financial_score,
                 financial,
             ),
         ],
+        "overall_score": overall_score,
+        "overall_tone": _score_tone(overall_score),
+        "model_weights": model_weights,
+        "component_scores": {
+            "technical": technical_score,
+            "sentiment": sentiment_score,
+            "financial": financial_score,
+        },
         "technical_indicator_date": (
             technical_indicators.get("date") if technical_indicators else None
         ),

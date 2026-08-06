@@ -39,7 +39,7 @@
                             <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px;">
                                 <input type="number" name="technical" class="form-control weight-input" 
                                     value="{{ weights.technical if weights else 40 }}" min="0" max="100" 
-                                    style="width: 70px; text-align: center; padding: 0.5rem; background-color: rgba(11, 17, 32, 0.8);"> 
+                                    style="width: 70px; text-align: center; padding: 0.5rem;">
                                 <span class="text-muted">%</span>
                             </div>
                         </td>
@@ -51,7 +51,7 @@
                             <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px;">
                                 <input type="number" name="sentiment" class="form-control weight-input" 
                                     value="{{ weights.sentiment if weights else 30 }}" min="0" max="100" 
-                                    style="width: 70px; text-align: center; padding: 0.5rem; background-color: rgba(11, 17, 32, 0.8);"> 
+                                    style="width: 70px; text-align: center; padding: 0.5rem;">
                                 <span class="text-muted">%</span>
                             </div>
                         </td>
@@ -63,14 +63,14 @@
                             <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px;">
                                 <input type="number" name="financial" class="form-control weight-input" 
                                     value="{{ weights.financial if weights else 30 }}" min="0" max="100" 
-                                    style="width: 70px; text-align: center; padding: 0.5rem; background-color: rgba(11, 17, 32, 0.8);"> 
+                                    style="width: 70px; text-align: center; padding: 0.5rem;">
                                 <span class="text-muted">%</span>
                             </div>
                         </td>
                     </tr>
                 </tbody>
                 <tfoot>
-                    <tr style="background-color: rgba(30, 41, 59, 0.3);">
+                    <tr class="weight-total-row">
                         <td colspan="2" class="font-bold text-muted" style="letter-spacing: 1px; padding: 1.25rem 1.5rem;">TOTAL</td>
                         <td style="text-align: right; padding: 1.25rem 1.5rem;">
                             <span id="total-weight" style="font-weight: 800; font-size: 1.1rem; color: #10b981;">100%</span>

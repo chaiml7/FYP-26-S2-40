@@ -252,8 +252,22 @@ async def save_premium_weightages(
             "financial": financial
         }
         
-        # This properly creates a row if it doesn't exist, and updates if it does!
-        supabase.table("weightages").upsert(payload).execute()
+        existing_response = (
+            supabase.table("weightages")
+            .select("id")
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+        )
+        if existing_response.data:
+            (
+                supabase.table("weightages")
+                .update(payload)
+                .eq("user_id", user_id)
+                .execute()
+            )
+        else:
+            supabase.table("weightages").insert(payload).execute()
 
     except Exception as e:
         print(f"Database error saving weightages: {e}")

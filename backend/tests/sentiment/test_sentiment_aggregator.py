@@ -21,11 +21,32 @@ MODULE = "backend.services.sentiment.sentiment_aggregator"
 def test_save_scores_upserts_rows(mock_supa, mock_get_stock_id):
     save_scores("AAPL", SAMPLE_SCORED_HEADLINES)
     mock_supa.table.assert_called_with("sentiment_scores")
-    rows = mock_supa.table.return_value.upsert.call_args[0][0]
+    upsert_call = mock_supa.table.return_value.upsert.call_args
+    rows = upsert_call.args[0]
     assert len(rows) == 3
     assert rows[0]["symbol"] == "AAPL"
     assert rows[0]["stock_id"] == 1
     assert rows[0]["model_version"] == "balibpt/finbert-stocklens"
+    assert upsert_call.kwargs == {
+        "on_conflict": "stock_id,headline,published_at",
+    }
+
+
+@patch(f"{MODULE}._get_stock_id", return_value=1)
+@patch(f"{MODULE}.supabase")
+def test_save_scores_deduplicates_same_batch(mock_supa, mock_get_stock_id):
+    duplicate = {
+        **SAMPLE_SCORED_HEADLINES[0],
+        "label": "neutral",
+        "score": 0.51,
+    }
+
+    save_scores("AAPL", [SAMPLE_SCORED_HEADLINES[0], duplicate])
+
+    rows = mock_supa.table.return_value.upsert.call_args.args[0]
+    assert len(rows) == 1
+    assert rows[0]["label"] == "neutral"
+    assert rows[0]["score"] == 0.51
 
 
 @patch(f"{MODULE}.supabase")
