@@ -274,16 +274,15 @@
             <div class="performance-table-scroll">
                 <table class="performance-table">
                     <thead>
-                        <tr><th>Model</th><th>Accuracy</th><th>Balanced accuracy</th><th>Macro F1</th><th>Log loss</th><th>Evaluation</th></tr>
+                        <tr><th>Model</th><th>Accuracy</th><th>Balanced accuracy</th><th>F1</th><th>Evaluation</th></tr>
                     </thead>
                     <tbody>
                         {% for model in model_metrics %}
                         <tr>
-                            <td><strong>{{ model.name }}</strong></td>
-                            <td>{% if model.accuracy is not none %}{{ model.accuracy }}%{% else %}<span class="metric-pending">--</span>{% endif %}</td>
-                            <td>{% if model.balanced_accuracy is not none %}{{ model.balanced_accuracy }}%{% else %}<span class="metric-pending">--</span>{% endif %}</td>
-                            <td>{% if model.macro_f1 is not none %}{{ model.macro_f1 }}%{% else %}<span class="metric-pending">--</span>{% endif %}</td>
-                            <td>{% if model.log_loss is not none %}{{ model.log_loss }}{% else %}<span class="metric-pending">--</span>{% endif %}</td>
+                            <td><strong>{{ model.name }}</strong><small>{{ model.model_version }}</small></td>
+                            <td>{% if model.accuracy is not none %}{{ model.accuracy }}%{% else %}<span class="metric-pending">Not recorded</span>{% endif %}</td>
+                            <td>{% if model.balanced_accuracy is not none %}{{ model.balanced_accuracy }}%{% else %}<span class="metric-pending">Not recorded</span>{% endif %}</td>
+                            <td>{% if model.f1 is not none %}{{ model.f1 }}%{% else %}<span class="metric-pending">Not recorded</span>{% endif %}</td>
                             <td><span class="evaluation-status{% if model.evaluation_status == 'Not recorded' %} status-pending{% endif %}">{{ model.evaluation_status }}</span></td>
                         </tr>
                         {% endfor %}

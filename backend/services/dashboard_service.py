@@ -490,13 +490,18 @@ def _model_performance_row(
     evaluation_mode: str | None,
 ) -> dict:
     metrics = metrics or {}
+    f1_value = (
+        metrics.get("macro_f1")
+        if metrics.get("macro_f1") is not None
+        else metrics.get("f1_score")
+    )
     return {
         "name": name,
         "model_version": version or "Not available",
         "evaluation_mode": evaluation_mode or "Not evaluated",
         "evaluation_status": (
             "Held-out test"
-            if metrics.get("balanced_accuracy") is not None
+            if metrics
             else "Not recorded"
         ),
         "accuracy": (
@@ -510,6 +515,10 @@ def _model_performance_row(
         "macro_f1": (
             round(float(metrics["macro_f1"]) * 100, 1)
             if metrics.get("macro_f1") is not None else None
+        ),
+        "f1": (
+            round(float(f1_value) * 100, 1)
+            if f1_value is not None else None
         ),
         "log_loss": (
             round(float(metrics["log_loss"]), 4)
@@ -534,9 +543,9 @@ def get_public_model_metrics() -> list:
         .execute()
     )
     sentiment_response = (
-        supabase.table("sentiment_scores")
-        .select("model_version,published_at")
-        .order("published_at", desc=True)
+        supabase.table("sentiment_model_versions")
+        .select("model_version,metrics,evaluation_mode,trained_at")
+        .eq("is_active", True)
         .limit(1)
         .execute()
     )
@@ -554,8 +563,8 @@ def get_public_model_metrics() -> list:
         _model_performance_row(
             "Sentiment",
             sentiment.get("model_version"),
-            None,
-            "Deployed model; held-out evaluation not recorded",
+            sentiment.get("metrics"),
+            sentiment.get("evaluation_mode"),
         ),
         _model_performance_row(
             "Financial",

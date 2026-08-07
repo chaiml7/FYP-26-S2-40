@@ -76,7 +76,38 @@ def test_public_model_metrics_formats_registry_metrics():
     assert result["accuracy"] == 56.4
     assert result["balanced_accuracy"] == 50.7
     assert result["macro_f1"] == 50.6
+    assert result["f1"] == 50.6
     assert result["log_loss"] == 0.6923
+    assert result["evaluation_status"] == "Held-out test"
+
+
+def test_public_model_metrics_uses_binary_f1_when_macro_f1_is_unavailable():
+    result = _model_performance_row(
+        "Technical",
+        "technical_binary_v1",
+        {"accuracy": 0.5272, "f1_score": 0.4354},
+        "train_validation_test",
+    )
+
+    assert result["accuracy"] == 52.7
+    assert result["macro_f1"] is None
+    assert result["f1"] == 43.5
+    assert result["log_loss"] is None
+    assert result["evaluation_status"] == "Held-out test"
+
+
+def test_sentiment_registry_metrics_format_for_homepage():
+    result = _model_performance_row(
+        "Sentiment",
+        "balibpt/finbert-stocklens",
+        {"accuracy": 0.872, "macro_f1": 0.83},
+        "held_out_70_15_15_test_split",
+    )
+
+    assert result["accuracy"] == 87.2
+    assert result["f1"] == 83.0
+    assert result["balanced_accuracy"] is None
+    assert result["log_loss"] is None
     assert result["evaluation_status"] == "Held-out test"
 
 
