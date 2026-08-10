@@ -54,28 +54,34 @@ def save_scores(symbol: str, scored_headlines: list) -> dict:
     if stock_id is None:
         return {"rows_saved": 0, "reason": "stock_not_found"}
 
-    rows = [
-        {
+    rows_by_key = {}
+    for headline in scored_headlines:
+        row = {
             "symbol": symbol.upper(),
             "stock_id": stock_id,
-            "headline": h["headline"],
-            "source": h["source"],
-            "published_at": h["published_at"],
-            "label": h["label"],
-            "score": h["score"],
+            "headline": headline["headline"],
+            "source": headline["source"],
+            "published_at": headline["published_at"],
+            "label": headline["label"],
+            "score": headline["score"],
             "model_version": MODEL_VERSION,
-            "url": h.get("url"),
+            "url": headline.get("url"),
         }
-        for h in scored_headlines
-    ]
+        key = (stock_id, row["headline"], row["published_at"])
+        rows_by_key[key] = row
+
+    rows = list(rows_by_key.values())
     for attempt in range(MAX_RETRIES):
         try:
             response = (
                 supabase.table("sentiment_scores")
-                .insert(rows)
+                .upsert(
+                    rows,
+                    on_conflict="stock_id,headline,published_at",
+                )
                 .execute()
             )
-            return {"rows_saved": len(response.data)}
+            return {"rows_saved": len(response.data or [])}
         except Exception:
             if attempt < MAX_RETRIES - 1:
                 time.sleep(BACKOFF_BASE ** (attempt + 1))

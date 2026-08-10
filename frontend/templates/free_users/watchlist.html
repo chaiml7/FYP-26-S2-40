@@ -10,6 +10,36 @@
     <h1 class="text-2xl font-bold text-main mb-6">My Watchlist</h1>
 
     {% if is_premium %}
+        <section class="card watchlist-email-settings mb-6" aria-labelledby="watchlist-email-title">
+            <div>
+                <h2 id="watchlist-email-title" class="text-main">Email notifications</h2>
+                <p class="text-muted">
+                    Get one daily email when technical and sentiment analysis is ready for every active stock in your watchlist.
+                    The latest available financial analysis is included and does not delay the email.
+                </p>
+                {% if notification_status == "updated" %}
+                    <p class="notification-preference-success" role="status">Your email preference was saved.</p>
+                {% endif %}
+                {% if notification_preference.unavailable %}
+                    <p class="notification-preference-error" role="alert">Email preferences are temporarily unavailable.</p>
+                {% endif %}
+            </div>
+            <form method="post" action="/user/notifications/email" class="watchlist-email-form">
+                <label class="email-notification-toggle">
+                    <input
+                        type="checkbox"
+                        name="analysis_ready_email"
+                        value="true"
+                        {% if notification_preference.analysis_ready_email %}checked{% endif %}
+                        {% if notification_preference.unavailable %}disabled{% endif %}
+                    >
+                    <span aria-hidden="true"></span>
+                    <strong>{{ "On" if notification_preference.analysis_ready_email else "Off" }}</strong>
+                </label>
+                <button class="btn btn-primary btn-sm" type="submit" {% if notification_preference.unavailable %}disabled{% endif %}>Save preference</button>
+            </form>
+        </section>
+
         <div class="card table-card mb-6">
             {% if watchlist_rows %}
             <table class="data-table">

@@ -175,6 +175,53 @@
         </span>
     </div>
 
+    <article class="overall-score-card score-{{ stock.overall_tone }}{% if user_role in ["premium_user", "frontend_admin"] %} overall-score-adjustable{% endif %}" id="overall-score-card">
+        <div class="overall-score-copy">
+            <p class="workspace-eyebrow">Weighted outlook</p>
+            <h3>Overall score</h3>
+            <p>
+                Based on <span data-weight-summary="technical">{{ stock.model_weights.technical }}</span>% technical,
+                <span data-weight-summary="sentiment">{{ stock.model_weights.sentiment }}</span>% sentiment and
+                <span data-weight-summary="financial">{{ stock.model_weights.financial }}</span>% financial analysis.
+            </p>
+        </div>
+
+        {% if user_role in ["premium_user", "frontend_admin"] %}
+        <div class="overall-weight-controls" aria-label="Temporary model weight simulator">
+            <div class="overall-weight-controls-heading">
+                <strong>Try different weights</strong>
+                <span><b id="overall-weight-total">100</b>% total</span>
+            </div>
+            {% for model, label in [("technical", "Technical"), ("sentiment", "Sentiment"), ("financial", "Financial")] %}
+            <label class="overall-weight-control">
+                <span>{{ label }}</span>
+                <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value="{{ stock.model_weights[model] }}"
+                    data-overall-weight="{{ model }}"
+                    data-model-score="{{ stock.component_scores[model] if stock.component_scores[model] is not none else '' }}"
+                    aria-label="{{ label }} weight"
+                >
+                <output data-weight-output="{{ model }}">{{ stock.model_weights[model] }}%</output>
+            </label>
+            {% endfor %}
+            <small>Preview only. These changes are not saved and reset when the page is refreshed.</small>
+        </div>
+        {% endif %}
+
+        <div class="overall-score-result" id="overall-score-result" {% if stock.overall_score is none %}hidden{% endif %}>
+            <span class="score-status" id="overall-score-tone">{{ stock.overall_tone | title }}</span>
+            <strong><span id="overall-score-value">{{ "%.1f" | format(stock.overall_score) if stock.overall_score is not none else '' }}</span><small>/10</small></strong>
+        </div>
+        <div class="overall-score-unavailable" id="overall-score-unavailable" {% if stock.overall_score is not none %}hidden{% endif %}>
+            <strong>Not available</strong>
+            <span>Each model with a weight above 0% needs a saved score.</span>
+        </div>
+    </article>
+
     <div class="score-grid">
         {% for item in stock.scores %}
         <article class="panel-card score-panel score-{{ item.tone }}">
@@ -299,6 +346,79 @@
 {% endblock %}
 
 {% block scripts %}
+{% if user_role in ["premium_user", "frontend_admin"] %}
+<script>
+(() => {
+    const card = document.getElementById("overall-score-card");
+    const sliders = Array.from(card.querySelectorAll("[data-overall-weight]"));
+    const totalOutput = document.getElementById("overall-weight-total");
+    const result = document.getElementById("overall-score-result");
+    const unavailable = document.getElementById("overall-score-unavailable");
+    const scoreValue = document.getElementById("overall-score-value");
+    const scoreTone = document.getElementById("overall-score-tone");
+
+    function redistributeWeights(changedSlider) {
+        const changedValue = Number(changedSlider.value);
+        const otherSliders = sliders.filter((slider) => slider !== changedSlider);
+        const remaining = 100 - changedValue;
+        const otherTotal = otherSliders.reduce(
+            (sum, slider) => sum + Number(slider.value),
+            0
+        );
+        const firstValue = otherTotal > 0
+            ? Math.round(remaining * (Number(otherSliders[0].value) / otherTotal))
+            : Math.floor(remaining / 2);
+        otherSliders[0].value = firstValue;
+        otherSliders[1].value = remaining - firstValue;
+    }
+
+    function updateOverallScore() {
+        let weightedTotal = 0;
+        let totalWeight = 0;
+        let missingWeightedScore = false;
+
+        sliders.forEach((slider) => {
+            const model = slider.dataset.overallWeight;
+            const weight = Number(slider.value);
+            const score = Number.parseFloat(slider.dataset.modelScore);
+            totalWeight += weight;
+            if (weight > 0 && Number.isNaN(score)) {
+                missingWeightedScore = true;
+            } else if (weight > 0) {
+                weightedTotal += score * weight;
+            }
+            card.querySelector(`[data-weight-output="${model}"]`).textContent = `${weight}%`;
+            card.querySelector(`[data-weight-summary="${model}"]`).textContent = weight;
+        });
+
+        totalOutput.textContent = totalWeight;
+        if (missingWeightedScore || totalWeight === 0) {
+            result.hidden = true;
+            unavailable.hidden = false;
+            card.classList.remove("score-bullish", "score-neutral", "score-bearish");
+            card.classList.add("score-unavailable");
+            return;
+        }
+
+        const overall = weightedTotal / totalWeight;
+        const tone = overall >= 6 ? "bullish" : (overall < 4 ? "bearish" : "neutral");
+        scoreValue.textContent = overall.toFixed(1);
+        scoreTone.textContent = tone.charAt(0).toUpperCase() + tone.slice(1);
+        result.hidden = false;
+        unavailable.hidden = true;
+        card.classList.remove("score-bullish", "score-neutral", "score-bearish", "score-unavailable");
+        card.classList.add(`score-${tone}`);
+    }
+
+    sliders.forEach((slider) => {
+        slider.addEventListener("input", () => {
+            redistributeWeights(slider);
+            updateOverallScore();
+        });
+    });
+})();
+</script>
+{% endif %}
 <!-- BROKER & TRADING JAVASCRIPT LOGIC -->
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
