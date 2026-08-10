@@ -345,7 +345,12 @@ async def view_premium_watchlist_symbols(request: Request):
 # ==========================================
 
 @router.post("/api/broker/connect")
-async def generate_connection_link(req: ConnectRequest):
+async def generate_connection_link(req: ConnectRequest, request: Request):
+
+    role = request.session.get("user_role")
+    if role != "premium_user":
+        raise HTTPException(status_code=403, detail="Trading is restricted to Premium accounts.")
+    
     snaptrade_client = _require_snaptrade_client()
     user_id = req.user_id
     user_secret = None
@@ -397,7 +402,12 @@ async def generate_connection_link(req: ConnectRequest):
         raise HTTPException(status_code=400, detail=f"Failed to generate connection link: {e.body}")
 
 @router.get("/api/broker/accounts/{user_id}")
-async def get_user_accounts(user_id: str):
+async def get_user_accounts(user_id: str, request: Request):
+
+    role = request.session.get("user_role")
+    if role != "premium_user":
+        raise HTTPException(status_code=403, detail="Trading is restricted to Premium accounts.")
+
     """Fetches all brokerage accounts linked to this user."""
     snaptrade_client = _require_snaptrade_client()
     # Retrieve secret from DB
@@ -529,7 +539,12 @@ async def execute_trade(req: TradeRequest, request: Request):
         raise HTTPException(status_code=400, detail=f"Trade Failed: {str(e.body)}")
 
 @router.get("/api/broker/position/{user_id}/{symbol}")
-async def get_specific_position(user_id: str, symbol: str):
+async def get_specific_position(user_id: str, symbol: str, request: Request):
+
+    role = request.session.get("user_role")
+    if role != "premium_user":
+        raise HTTPException(status_code=403, detail="Trading is restricted to Premium accounts.")
+    
     """Fetches user holding details for a specific stock symbol."""
     try:
         user_res = supabase.table("user_profiles").select("snaptrade_secret").eq("id", user_id).execute()
