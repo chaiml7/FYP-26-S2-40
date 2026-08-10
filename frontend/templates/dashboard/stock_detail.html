@@ -88,6 +88,8 @@
     {% endif %}
 </section>
 
+{% if user_role == "premium_user" %}
+<!-- 2. BROKER INTEGRATION & TRADING PANEL (PREMIUM USERS ONLY) -->
 <section class="card trade-panel" style="margin-top: 1.5rem; margin-bottom: 1.5rem; padding: 1.5rem; background: #1e293b; border-radius: 12px; border: 1px solid #334155;">
     <div class="section-title-row" style="margin-bottom: 1rem;">
         <div>
@@ -101,7 +103,7 @@
         <span>Checking broker connection status...</span>
     </div>
 
-    <!-- State 1: Disconnected (Prompt Login) -->
+    <!-- State 1: Disconnected -->
     <div id="brokerDisconnected" style="display: none; padding: 1rem 0; text-align: center;">
         <p style="color: #cbd5e1; margin-bottom: 1rem;">Log in to your brokerage account to place live Buy and Sell orders directly from StockLens.</p>
         <button id="connectBrokerPageBtn" class="btn btn-primary" type="button" style="padding: 0.75rem 1.5rem; font-weight: 600;">
@@ -109,31 +111,25 @@
         </button>
     </div>
 
-    <!-- State 2: Connected (Trading Form) -->
+    <!-- State 2: Connected -->
     <div id="brokerConnected" style="display: none;">
         <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-end;">
-
-            <!-- Account Selector -->
+            
             <div style="flex: 1; min-width: 220px;">
                 <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.4rem;">Select Account</label>
-                <select id="tradingAccountSelect" style="width: 100%; padding: 0.65rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white;">
-                    <!-- Options populated via JS -->
-                </select>
+                <select id="tradingAccountSelect" style="width: 100%; padding: 0.65rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white;"></select>
             </div>
 
-            <!-- Number of Units -->
             <div style="flex: 1; min-width: 120px;">
                 <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.4rem;">Shares</label>
                 <input type="number" id="tradeUnitsInput" min="0.0001" step="any" placeholder="1.0" required style="width: 100%; padding: 0.65rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white;">
             </div>
 
-            <!-- Limit Price (Optional) -->
             <div style="flex: 1; min-width: 120px;">
                 <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.4rem;">Limit Price ($)</label>
                 <input type="number" id="tradePriceInput" min="0.01" step="0.01" placeholder="Market (Any)" style="width: 100%; padding: 0.65rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white;">
             </div>
 
-            <!-- Action Buttons -->
             <div style="display: flex; gap: 1rem; flex: 1; min-width: 220px;">
                 <button type="button" id="buyStockBtn" style="flex: 1; padding: 0.65rem 1rem; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">
                     BUY {{ stock.symbol }}
@@ -144,7 +140,6 @@
             </div>
         </div>
 
-        <!-- Position Display Box (Placed below flex inputs with width: 100%) -->
         <div id="activePositionBox" style="display: none; margin-top: 1rem; width: 100%; padding: 0.75rem 1rem; background: #0f172a; border-radius: 8px; border: 1px solid #334155; font-size: 0.9rem;">
             <span style="color: #4ade80; font-weight: 600;">Active Position:</span> 
             <span id="positionDetailsText" style="color: #cbd5e1;"></span>
@@ -153,6 +148,19 @@
         <div id="tradeStatusMessage" style="margin-top: 1rem; font-size: 0.9rem; display: none;"></div>
     </div>
 </section>
+
+{% else %}
+<section class="card trade-panel-locked" style="margin-top: 1.5rem; margin-bottom: 1.5rem; padding: 1.5rem; background: #1e293b; border-radius: 12px; border: 1px solid #334155; text-align: center;">
+    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔒</div>
+    <h3 style="margin: 0 0 0.5rem 0; color: white;">Live Trading is a Premium Feature</h3>
+    <p style="color: #94a3b8; max-width: 500px; margin: 0 auto 1rem auto; font-size: 0.9rem;">
+        Upgrade your account to connect your brokerage, execute trades, and view position entry points directly from your StockLens charts.
+    </p>
+    <a href="/pricing" class="btn btn-primary" style="padding: 0.6rem 1.2rem; font-weight: 600; text-decoration: none; display: inline-block;">
+        Upgrade to Premium
+    </a>
+</section>
+{% endif %}
 
 
 <section class="analysis-section">

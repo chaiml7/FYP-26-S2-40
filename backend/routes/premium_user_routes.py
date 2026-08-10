@@ -437,7 +437,11 @@ async def get_user_holdings(user_id: str):
         raise HTTPException(status_code=400, detail=f"Failed to retrieve holdings: {e.body}")
     
 @router.post("/api/broker/trade")
-async def execute_trade(req: TradeRequest):
+async def execute_trade(req: TradeRequest, request: Request):
+    role = request.session.get("user_role")
+    if role != "premium_user":
+        raise HTTPException(status_code=403, detail="Trading is restricted to Premium accounts.")
+    
     # 1. Fetch the user secret from Supabase
     try:
         user_res = supabase.table("user_profiles").select("snaptrade_secret").eq("id", req.user_id).execute()
