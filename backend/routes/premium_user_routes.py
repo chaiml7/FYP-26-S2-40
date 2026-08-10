@@ -5,7 +5,8 @@ import uuid
 from fastapi import APIRouter, Request, Form, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
-from datetime import date
+from datetime import date, timedelta
+import httpx
 
 from pydantic import BaseModel
 try:
@@ -600,3 +601,49 @@ async def get_specific_position(user_id: str, symbol: str, request: Request):
     except Exception as e:
         print(f"Error fetching position: {e}")
         return {"has_position": False}
+
+@router.get("/premium/earnings_calendar")
+async def premium_earnings_calendar(request: Request):
+    # 1. Premium Check
+    session = get_session_context(request)
+    if not session or session["user_role"] != "premium_user":
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    # 2. Fetch API Key
+    api_key = os.environ.get("FMP_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="FMP API Key is missing from .env")
+
+    # 3. Fetch Earnings Data asynchronously for the next 30 days
+    today = date.today()
+    end_date = today + timedelta(days=30)
+
+    url = f"https://financialmodelingprep.com/stable/earnings-calendar?from={today}&to={end_date}&apikey={api_key}"
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(url)
+            
+            if response.status_code != 200:
+                print(f"--- FMP API FAILED ---")
+                print(f"Status Code: {response.status_code}")
+                print(f"Error Details: {response.text}")
+                print(f"Attempted URL: {url.replace(api_key, 'HIDDEN_KEY')}")
+                earnings_data = []
+            else:
+                earnings_data = response.json()[:50] 
+        except Exception as e:
+            print(f"--- FMP REQUEST CRASHED ---")
+            print(f"Error: {e}")
+            earnings_data = []
+
+    # 4. Render the template
+    return templates.TemplateResponse(
+        request=request,
+        name="premium_users/earnings_calendar.html",
+        context={
+            **session,
+            "request": request,
+            "earnings": earnings_data
+        }
+    )
