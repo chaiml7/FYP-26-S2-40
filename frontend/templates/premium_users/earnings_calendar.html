@@ -1,0 +1,59 @@
+{% extends "premium_users/base.html" %}
+
+{% block title %}Earnings Calendar - StockLens Premium{% endblock %}
+
+{% block content %}
+<div class="section-title-row" style="margin-bottom: 1.5rem;">
+    <div>
+        <p class="workspace-eyebrow">Premium Feature</p>
+        <h2>Upcoming Earnings Calendar</h2>
+    </div>
+</div>
+
+<section class="card price-history-panel">
+    {% if earnings %}
+    <div class="history-table-scroll">
+        <table class="history-table" style="width: 100%; text-align: left;">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Symbol</th>
+                    <th>Est. EPS</th>
+                    <th>Est. Revenue</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in earnings %}
+                <tr>
+                    <td>{{ item.date }}</td>
+                    <td>
+                        <strong>
+                            <a href="/stocks/{{ item.symbol }}/view">
+                                {{ item.symbol }}
+                            </a>
+                        </strong>
+                    </td>
+                    <td>
+                        {% if item.epsEstimated %}
+                            ${{ "%.2f" | format(item.epsEstimated) }}
+                        {% else %}
+                            <span style="color: #64748b;">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.revenueEstimated %}
+                            ${{ "{:,}".format(item.revenueEstimated) }}
+                        {% else %}
+                            <span style="color: #64748b;">N/A</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <p class="data-unavailable" style="padding: 2rem;">No upcoming earnings data available at this time.</p>
+    {% endif %}
+</section>
+{% endblock %}

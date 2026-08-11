@@ -70,3 +70,7 @@ class UserRoleUpdate(BaseModel):
 
 class UserStatusUpdate(BaseModel):
     is_active: bool
+
+
+class NotificationPreferenceUpdate(BaseModel):
+    analysis_ready_email: bool

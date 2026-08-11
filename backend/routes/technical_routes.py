@@ -1,6 +1,11 @@
 """Manual technical data, model, and prediction endpoints."""
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
+
+from backend.services.notification_service import (
+    auto_dispatch_enabled,
+    dispatch_analysis_ready_emails,
+)
 
 from backend.services.technical.indicator_service import (
     get_technical_indicators_from_supabase,
@@ -147,10 +152,14 @@ def activate_model(
 
 @router.post("/predictions")
 def create_all_predictions(
+    background_tasks: BackgroundTasks,
     model_version: str = None,
 ):
     try:
-        return generate_all_technical_predictions(model_version)
+        result = generate_all_technical_predictions(model_version)
+        if auto_dispatch_enabled():
+            background_tasks.add_task(dispatch_analysis_ready_emails)
+        return result
     except Exception as exc:
         _raise_technical_error(exc)
 
@@ -158,10 +167,14 @@ def create_all_predictions(
 @router.post("/predictions/{symbol}")
 def create_prediction(
     symbol: str,
+    background_tasks: BackgroundTasks,
     model_version: str = None,
 ):
     try:
-        return generate_technical_prediction(symbol, model_version)
+        result = generate_technical_prediction(symbol, model_version)
+        if auto_dispatch_enabled():
+            background_tasks.add_task(dispatch_analysis_ready_emails)
+        return result
     except Exception as exc:
         _raise_technical_error(exc)
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Form, Header, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 
@@ -6,6 +6,7 @@ from backend.schemas import (
     AccountCreate,
     EmailUpdate,
     LoginRequest,
+    NotificationPreferenceUpdate,
     PasswordUpdate,
     ProfileUpdate,
     UserRoleUpdate,
@@ -24,6 +25,10 @@ from backend.services.auth_service import (
     update_password,
 )
 from backend.services.sentiment.sentiment_aggregator import get_recent_news
+from backend.services.notification_service import (
+    get_notification_preference,
+    set_notification_preference,
+)
 from backend.services.session_context import get_session_context
 from backend.services.stock_list_service import get_active_stocks, get_stock_by_symbol, search_active_stocks
 from backend.services.user_profile_service import (
@@ -207,6 +212,26 @@ def view_current_user_watchlist(authorization: str = Header(default=None)):
     return get_user_watchlist(user["id"])
 
 
+@router.get("/users/me/notification-preferences")
+def view_current_user_notification_preferences(
+    authorization: str = Header(default=None),
+):
+    user, _ = _current_user(authorization)
+    return get_notification_preference(user["id"])
+
+
+@router.patch("/users/me/notification-preferences")
+def edit_current_user_notification_preferences(
+    preference_data: NotificationPreferenceUpdate,
+    authorization: str = Header(default=None),
+):
+    user, _ = _current_user(authorization)
+    return set_notification_preference(
+        user["id"],
+        preference_data.analysis_ready_email,
+    )
+
+
 @router.get("/users/me/watchlist/symbols")
 def view_current_user_watchlist_symbols(authorization: str = Header(default=None)):
     user, _ = _current_user(authorization)
@@ -341,11 +366,16 @@ async def watchlist(request: Request):
     is_premium = session["user_role"] == "premium_user"
 
     watchlist_rows = []
+    notification_preference = {"analysis_ready_email": False}
     if is_premium:
         try:
             watchlist_rows = get_user_watchlist_summary(session["user_id"])
         except Exception:
             watchlist_rows = []
+        try:
+            notification_preference = get_notification_preference(session["user_id"])
+        except Exception:
+            notification_preference = {"analysis_ready_email": False, "unavailable": True}
 
     return templates.TemplateResponse(
         request=request,
@@ -355,8 +385,27 @@ async def watchlist(request: Request):
             "request": request,
             "is_premium": is_premium,
             "watchlist_rows": watchlist_rows,
+            "notification_preference": notification_preference,
+            "notification_status": request.query_params.get("notifications"),
         }
     )
+
+
+@router.post("/user/notifications/email")
+async def update_watchlist_email_preference(
+    request: Request,
+    analysis_ready_email: bool = Form(default=False),
+):
+    session = get_session_context(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=303)
+    if session["user_role"] != "premium_user":
+        raise HTTPException(status_code=403, detail="Watchlist email alerts require Premium.")
+    try:
+        set_notification_preference(session["user_id"], analysis_ready_email)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return RedirectResponse(url="/user/watchlist?notifications=updated", status_code=303)
 
 @router.get("/user/market_overview")
 async def market_overview(request: Request):

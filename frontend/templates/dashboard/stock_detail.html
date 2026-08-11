@@ -59,6 +59,7 @@
     </div>
 </section>
 
+<!-- 1. CANDLESTICK CHART PANEL -->
 <section class="card candlestick-panel">
     <div class="section-title-row">
         <div>
@@ -87,6 +88,81 @@
     {% endif %}
 </section>
 
+{% if user_role == "premium_user" %}
+<!-- 2. BROKER INTEGRATION & TRADING PANEL (PREMIUM USERS ONLY) -->
+<section class="card trade-panel" style="margin-top: 1.5rem; margin-bottom: 1.5rem; padding: 1.5rem; background: #1e293b; border-radius: 12px; border: 1px solid #334155;">
+    <div class="section-title-row" style="margin-bottom: 1rem;">
+        <div>
+            <p class="workspace-eyebrow" style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase;">Broker Integration</p>
+            <h2 style="margin: 0; color: white;">Trade {{ stock.symbol }}</h2>
+        </div>
+    </div>
+
+    <!-- State 0: Loading -->
+    <div id="brokerLoading" style="color: #94a3b8; padding: 1rem 0;">
+        <span>Checking broker connection status...</span>
+    </div>
+
+    <!-- State 1: Disconnected -->
+    <div id="brokerDisconnected" style="display: none; padding: 1rem 0; text-align: center;">
+        <p style="color: #cbd5e1; margin-bottom: 1rem;">Log in to your brokerage account to place live Buy and Sell orders directly from StockLens.</p>
+        <button id="connectBrokerPageBtn" class="btn btn-primary" type="button" style="padding: 0.75rem 1.5rem; font-weight: 600;">
+            🔗 Connect / Log in to Broker
+        </button>
+    </div>
+
+    <!-- State 2: Connected -->
+    <div id="brokerConnected" style="display: none;">
+        <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-end;">
+            
+            <div style="flex: 1; min-width: 220px;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.4rem;">Select Account</label>
+                <select id="tradingAccountSelect" style="width: 100%; padding: 0.65rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white;"></select>
+            </div>
+
+            <div style="flex: 1; min-width: 120px;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.4rem;">Shares</label>
+                <input type="number" id="tradeUnitsInput" min="0.0001" step="any" placeholder="1.0" required style="width: 100%; padding: 0.65rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white;">
+            </div>
+
+            <div style="flex: 1; min-width: 120px;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.4rem;">Limit Price ($)</label>
+                <input type="number" id="tradePriceInput" min="0.01" step="0.01" placeholder="Market (Any)" style="width: 100%; padding: 0.65rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white;">
+            </div>
+
+            <div style="display: flex; gap: 1rem; flex: 1; min-width: 220px;">
+                <button type="button" id="buyStockBtn" style="flex: 1; padding: 0.65rem 1rem; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">
+                    BUY {{ stock.symbol }}
+                </button>
+                <button type="button" id="sellStockBtn" style="flex: 1; padding: 0.65rem 1rem; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">
+                    SELL {{ stock.symbol }}
+                </button>
+            </div>
+        </div>
+
+        <div id="activePositionBox" style="display: none; margin-top: 1rem; width: 100%; padding: 0.75rem 1rem; background: #0f172a; border-radius: 8px; border: 1px solid #334155; font-size: 0.9rem;">
+            <span style="color: #4ade80; font-weight: 600;">Active Position:</span> 
+            <span id="positionDetailsText" style="color: #cbd5e1;"></span>
+        </div>
+
+        <div id="tradeStatusMessage" style="margin-top: 1rem; font-size: 0.9rem; display: none;"></div>
+    </div>
+</section>
+
+{% else %}
+<section class="card trade-panel-locked" style="margin-top: 1.5rem; margin-bottom: 1.5rem; padding: 1.5rem; background: #1e293b; border-radius: 12px; border: 1px solid #334155; text-align: center;">
+    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔒</div>
+    <h3 style="margin: 0 0 0.5rem 0; color: white;">Live Trading is a Premium Feature</h3>
+    <p style="color: #94a3b8; max-width: 500px; margin: 0 auto 1rem auto; font-size: 0.9rem;">
+        Upgrade your account to connect your brokerage, execute trades, and view position entry points directly from your StockLens charts.
+    </p>
+    <a href="/pricing" class="btn btn-primary" style="padding: 0.6rem 1.2rem; font-weight: 600; text-decoration: none; display: inline-block;">
+        Upgrade to Premium
+    </a>
+</section>
+{% endif %}
+
+
 <section class="analysis-section">
     <div class="section-title-row">
         <div>
@@ -98,6 +174,53 @@
             1 bearish · 5 neutral · 10 bullish
         </span>
     </div>
+
+    <article class="overall-score-card score-{{ stock.overall_tone }}{% if user_role in ["premium_user", "frontend_admin"] %} overall-score-adjustable{% endif %}" id="overall-score-card">
+        <div class="overall-score-copy">
+            <p class="workspace-eyebrow">Weighted outlook</p>
+            <h3>Overall score</h3>
+            <p>
+                Based on <span data-weight-summary="technical">{{ stock.model_weights.technical }}</span>% technical,
+                <span data-weight-summary="sentiment">{{ stock.model_weights.sentiment }}</span>% sentiment and
+                <span data-weight-summary="financial">{{ stock.model_weights.financial }}</span>% financial analysis.
+            </p>
+        </div>
+
+        {% if user_role in ["premium_user", "frontend_admin"] %}
+        <div class="overall-weight-controls" aria-label="Temporary model weight simulator">
+            <div class="overall-weight-controls-heading">
+                <strong>Try different weights</strong>
+                <span><b id="overall-weight-total">100</b>% total</span>
+            </div>
+            {% for model, label in [("technical", "Technical"), ("sentiment", "Sentiment"), ("financial", "Financial")] %}
+            <label class="overall-weight-control">
+                <span>{{ label }}</span>
+                <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value="{{ stock.model_weights[model] }}"
+                    data-overall-weight="{{ model }}"
+                    data-model-score="{{ stock.component_scores[model] if stock.component_scores[model] is not none else '' }}"
+                    aria-label="{{ label }} weight"
+                >
+                <output data-weight-output="{{ model }}">{{ stock.model_weights[model] }}%</output>
+            </label>
+            {% endfor %}
+            <small>Preview only. These changes are not saved and reset when the page is refreshed.</small>
+        </div>
+        {% endif %}
+
+        <div class="overall-score-result" id="overall-score-result" {% if stock.overall_score is none %}hidden{% endif %}>
+            <span class="score-status" id="overall-score-tone">{{ stock.overall_tone | title }}</span>
+            <strong><span id="overall-score-value">{{ "%.1f" | format(stock.overall_score) if stock.overall_score is not none else '' }}</span><small>/10</small></strong>
+        </div>
+        <div class="overall-score-unavailable" id="overall-score-unavailable" {% if stock.overall_score is not none %}hidden{% endif %}>
+            <strong>Not available</strong>
+            <span>Each model with a weight above 0% needs a saved score.</span>
+        </div>
+    </article>
 
     <div class="score-grid">
         {% for item in stock.scores %}
@@ -223,6 +346,243 @@
 {% endblock %}
 
 {% block scripts %}
+{% if user_role in ["premium_user", "frontend_admin"] %}
+<script>
+(() => {
+    const card = document.getElementById("overall-score-card");
+    const sliders = Array.from(card.querySelectorAll("[data-overall-weight]"));
+    const totalOutput = document.getElementById("overall-weight-total");
+    const result = document.getElementById("overall-score-result");
+    const unavailable = document.getElementById("overall-score-unavailable");
+    const scoreValue = document.getElementById("overall-score-value");
+    const scoreTone = document.getElementById("overall-score-tone");
+
+    function redistributeWeights(changedSlider) {
+        const changedValue = Number(changedSlider.value);
+        const otherSliders = sliders.filter((slider) => slider !== changedSlider);
+        const remaining = 100 - changedValue;
+        const otherTotal = otherSliders.reduce(
+            (sum, slider) => sum + Number(slider.value),
+            0
+        );
+        const firstValue = otherTotal > 0
+            ? Math.round(remaining * (Number(otherSliders[0].value) / otherTotal))
+            : Math.floor(remaining / 2);
+        otherSliders[0].value = firstValue;
+        otherSliders[1].value = remaining - firstValue;
+    }
+
+    function updateOverallScore() {
+        let weightedTotal = 0;
+        let totalWeight = 0;
+        let missingWeightedScore = false;
+
+        sliders.forEach((slider) => {
+            const model = slider.dataset.overallWeight;
+            const weight = Number(slider.value);
+            const score = Number.parseFloat(slider.dataset.modelScore);
+            totalWeight += weight;
+            if (weight > 0 && Number.isNaN(score)) {
+                missingWeightedScore = true;
+            } else if (weight > 0) {
+                weightedTotal += score * weight;
+            }
+            card.querySelector(`[data-weight-output="${model}"]`).textContent = `${weight}%`;
+            card.querySelector(`[data-weight-summary="${model}"]`).textContent = weight;
+        });
+
+        totalOutput.textContent = totalWeight;
+        if (missingWeightedScore || totalWeight === 0) {
+            result.hidden = true;
+            unavailable.hidden = false;
+            card.classList.remove("score-bullish", "score-neutral", "score-bearish");
+            card.classList.add("score-unavailable");
+            return;
+        }
+
+        const overall = weightedTotal / totalWeight;
+        const tone = overall >= 6 ? "bullish" : (overall < 4 ? "bearish" : "neutral");
+        scoreValue.textContent = overall.toFixed(1);
+        scoreTone.textContent = tone.charAt(0).toUpperCase() + tone.slice(1);
+        result.hidden = false;
+        unavailable.hidden = true;
+        card.classList.remove("score-bullish", "score-neutral", "score-bearish", "score-unavailable");
+        card.classList.add(`score-${tone}`);
+    }
+
+    sliders.forEach((slider) => {
+        slider.addEventListener("input", () => {
+            redistributeWeights(slider);
+            updateOverallScore();
+        });
+    });
+})();
+</script>
+{% endif %}
+<!-- BROKER & TRADING JAVASCRIPT LOGIC -->
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+    const userId = "{{ request.session.get('user_id', '') }}";
+    const symbol = "{{ stock.symbol }}";
+
+    const loadingDiv = document.getElementById("brokerLoading");
+    const disconnectedDiv = document.getElementById("brokerDisconnected");
+    const connectedDiv = document.getElementById("brokerConnected");
+    const connectBtn = document.getElementById("connectBrokerPageBtn");
+    const accountSelect = document.getElementById("tradingAccountSelect");
+    const buyBtn = document.getElementById("buyStockBtn");
+    const sellBtn = document.getElementById("sellStockBtn");
+    const unitsInput = document.getElementById("tradeUnitsInput");
+    const statusMsg = document.getElementById("tradeStatusMessage");
+
+    // 1. Check if user is connected
+    try {
+        const response = await fetch(`/api/broker/accounts/${userId}`);
+        const data = await response.json();
+
+        loadingDiv.style.display = "none";
+
+        if (data.connected && data.accounts.length > 0) {
+            disconnectedDiv.style.display = "none";
+            connectedDiv.style.display = "block";
+
+            // Populate account select dropdown
+            accountSelect.innerHTML = "";
+            data.accounts.forEach(acc => {
+                const opt = document.createElement("option");
+                opt.value = acc.id;
+                opt.textContent = `${acc.institution_name || 'Broker'} - ${acc.name} (${acc.number || '***'})`;
+                accountSelect.appendChild(opt);
+            });
+        } else {
+            disconnectedDiv.style.display = "block";
+            connectedDiv.style.display = "none";
+        }
+    } catch (err) {
+        console.error("Error checking broker status:", err);
+        loadingDiv.textContent = "Unable to load broker connection status.";
+    }
+
+    // 2. Handle Connect / Login Button
+    if (connectBtn) {
+        connectBtn.addEventListener("click", async () => {
+            connectBtn.disabled = true;
+            connectBtn.textContent = "Connecting...";
+
+            try {
+                const res = await fetch('/api/broker/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+
+                const data = await res.json();
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    alert("Could not generate login link. Please try again.");
+                    connectBtn.disabled = false;
+                    connectBtn.textContent = "🔗 Connect / Log in to Broker";
+                }
+            } catch (err) {
+                console.error("Broker login error:", err);
+                connectBtn.disabled = false;
+                connectBtn.textContent = "🔗 Connect / Log in to Broker";
+            }
+        });
+    }
+
+    // 3. Handle Buy & Sell Actions
+    const executeTrade = async (action) => {
+        const units = parseFloat(document.getElementById("tradeUnitsInput").value);
+        const priceVal = document.getElementById("tradePriceInput").value;
+        const price = priceVal ? parseFloat(priceVal) : null; // Send null if empty
+        const accountId = accountSelect.value;
+
+        if (!units || units <= 0) {
+                alert("Please enter a valid number of units.");
+                return;
+            }
+
+        buyBtn.disabled = true;
+        sellBtn.disabled = true;
+        statusMsg.style.display = "block";
+        statusMsg.style.color = "#94a3b8";
+        statusMsg.textContent = `Submitting ${action} order for ${units} share(s) of ${symbol}...`;
+
+        try {
+            const response = await fetch('/api/broker/trade', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: userId,
+                    account_id: accountId,
+                    symbol: symbol,
+                    action: action,
+                    units: units,
+                    price: price
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.status === "success") {
+                statusMsg.style.color = "#4ade80";
+                statusMsg.textContent = `✓ Order executed! Successfully placed ${action} order for ${units} share(s) of ${symbol}.`;
+                unitsInput.value = "";
+            } else {
+                statusMsg.style.color = "#f87171";
+                statusMsg.textContent = `✕ Trade failed: ${result.detail || 'Could not execute trade.'}`;
+            }
+        } catch (err) {
+            console.error("Trade error:", err);
+            statusMsg.style.color = "#f87171";
+            statusMsg.textContent = "✕ An unexpected error occurred while processing the order.";
+        } finally {
+            buyBtn.disabled = false;
+            sellBtn.disabled = false;
+        }
+    };
+
+    if (buyBtn) buyBtn.addEventListener("click", () => executeTrade("BUY"));
+    if (sellBtn) sellBtn.addEventListener("click", () => executeTrade("SELL"));
+});
+
+    async function loadUserPositionAndDrawChartLine(seriesInstance) {
+        const userId = "{{ request.session.get('user_id', '') }}";
+        const symbol = "{{ stock.symbol }}";
+        
+        try {
+            const res = await fetch(`/api/broker/position/${userId}/${symbol}`);
+            const data = await res.json();
+            
+            if (data.has_position) {
+                const posBox = document.getElementById("activePositionBox");
+                const posText = document.getElementById("positionDetailsText");
+                
+                if (posBox && posText) {
+                    posBox.style.display = "block";
+                    posText.textContent = `${data.units} shares held in ${data.account_name} at an average cost of $${Number(data.average_price).toFixed(2)}`;
+                }
+                
+                // Draw average cost price line on the TradingView chart
+                if (seriesInstance && data.average_price) {
+                    seriesInstance.createPriceLine({
+                        price: Number(data.average_price),
+                        color: '#3b82f6',
+                        lineWidth: 2,
+                        lineStyle: 2, // Dashed line style
+                        axisLabelVisible: true,
+                        title: `Avg Entry: $${Number(data.average_price).toFixed(2)}`,
+                    });
+                }
+            }
+        } catch (err) {
+            console.error("Failed to load position data for chart:", err);
+        }
+    }
+</script>
+
 {% if user_role == "premium_user" %}
 <script>
     function toggleWatchlist(button) {
@@ -315,6 +675,10 @@
             close: Number(row.close)
         })));
         chart.timeScale().fitContent();
+
+        if (typeof loadUserPositionAndDrawChartLine === "function") {
+            loadUserPositionAndDrawChartLine(series);
+        }
 
         const resizeChart = () => {
             chart.applyOptions({
