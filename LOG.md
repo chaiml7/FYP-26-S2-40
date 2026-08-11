@@ -693,6 +693,106 @@ Date: 2026-07-18
 
 ---
 
+
+### 2026-08-11 — Bali — Merged changes from main (commit `7940f7c`)
+
+**What changed on main:**
+
+Teammate: cyhaddison (113153995+cyhaddison@users.noreply.github.com)
+Commit: `7940f7ceff7049aea8b8d16fb71cba93c3d3b4b7`
+Date: 2026-08-10
+
+- `7940f7c` — Earning Calendar
+- `564b78e` — Feature locks
+- `d0ed330` — Feature locks
+- `f3a4fcd` — fix frontpage
+- `5d0989b` — added email notifications and fix some bugs
+- `0b4aec5` — Incl trading options and indv stock positions
+- `54b13a7` — chore: clean up merged trading markup
+- `4c54f7d` — add feedback feature for user admin and free users
+- `5692240` — Adding trading function via SnapTrade API
+- `35e9b34` — feat: added admin report page
+- `febd1cb` — feat(sentiment): skip Finnhub call for SGX symbols in daily pipeline
+- `7a430b1` — feat(sentiment): scope GNews query to Singapore for SGX symbols
+
+
+**Files changed (447ece2..7940f7c):**
+```
+ .gitignore                                         |   1 -
+ LOG.md                                             | 536 ------------
+ SUPABASE_AUTH_BUG.md                               | 125 ---
+ backend/.env.example                               |  11 +
+ backend/email_notifications.md                     |  41 +
+ backend/main.py                                    |  27 +-
+ backend/requirements.txt                           |   1 +
+ backend/routes/admin_routes.py                     |  46 +-
+ backend/routes/dashboard_routes.py                 |   5 +
+ backend/routes/feedback_routes.py                  | 212 +++++
+ backend/routes/notification_routes.py              |  43 +
+ backend/routes/premium_user_routes.py              | 390 ++++++++-
+ backend/routes/stock_routes.py                     |  13 +-
+ backend/routes/technical_routes.py                 |  19 +-
+ backend/routes/user_routes.py                      |  53 +-
+ backend/schemas.py                                 |   4 +
+ backend/services/admin_report_service.py           | 794 ++++++++++++++++++
+ backend/services/dashboard_service.py              | 139 +++-
+ backend/services/feedback_service.py               | 105 +++
+ backend/services/financials_service.py             | 124 ---
+ backend/services/notification_service.py           | 453 ++++++++++
+ backend/services/sentiment/sentiment_aggregator.py |  30 +-
+ .../tests/sentiment/test_sentiment_aggregator.py   |  23 +-
+ backend/tests/test_admin_report_routes.py          | 130 +++
+ backend/tests/test_admin_report_service.py         | 143 ++++
+ backend/tests/test_dashboard_routes.py             |  93 +++
+ backend/tests/test_dashboard_service.py            |  90 +-
+ backend/tests/test_feedback_service.py             | 105 +++
+ backend/tests/test_notification_preferences.py     |  71 ++
+ backend/tests/test_notification_routes.py          |  42 +
+ backend/tests/test_notification_service.py         | 232 ++++++
+ .../sgx/C6L_SIA_1HFY2526_Interim.pdf               | Bin 0 -> 479035 bytes
+ .../sgx/C6L_SIA_FY2526_Results.pdf                 | Bin 0 -> 332735 bytes
+ .../sgx/C6L_SIA_Q1FY2627_Update.pdf                | Bin 0 -> 207061 bytes
+ .../sgx/D05_DBS_2Q26_Supplement.xls                | Bin 0 -> 495104 bytes
+ .../sgx/D05_DBS_2Q26_Supplement.xlsx               | Bin 0 -> 208537 bytes
+ .../sgx/D05_DBS_4Q25_Supplement.xls                | Bin 0 -> 518144 bytes
+ .../sgx/D05_DBS_4Q25_Supplement.xlsx               | Bin 0 -> 221209 bytes
+ .../sgx/Z74_Singtel_1HFY26_SGX.pdf                 | Bin 0 -> 320764 bytes
+ .../sgx/Z74_Singtel_FY26_SGX.pdf                   | Bin 0 -> 437716 bytes
+ .../sgx/Z74_Singtel_H2FY26_HistSummary.xlsx        | Bin 0 -> 115403 bytes
+ .../sgx/normalized_financial_statements.json       | 447 ++++++++++
+ frontend/main.py                                   |   4 +-
+ frontend/static/css/styles.css                     | 912 ++++++++++++++++++++-
+ frontend/templates/dashboard/index.html            |  74 +-
+ frontend/templates/dashboard/stock_detail.html     | 364 ++++++++
+ frontend/templates/feedback.html                   | 115 +++
+ frontend/templates/free_users/base.html            |   5 +-
+ frontend/templates/free_users/watchlist.html       |  30 +
+ frontend/templates/index.html                      |  11 +-
+ frontend/templates/premium_users/base.html         |   8 +-
+ .../templates/premium_users/earnings_calendar.html |  59 ++
+ .../premium_users/user_model_weightage.html        |  10 +-
+ .../templates/user_admin/admin_weightages.html     |   4 +-
+ frontend/templates/user_admin/base.html            |   3 +-
+ frontend/templates/user_admin/feedback_detail.html |  42 +
+ frontend/templates/user_admin/feedback_list.html   |  84 ++
+ .../templates/user_admin/performance_reports.html  | 329 ++++++++
+ package-lock.json                                  | 355 ++++++++
+ package.json                                       |   5 +
+ ...4741_add_analysis_ready_email_notifications.sql |  67 ++
+ ...20260807070313_add_sentiment_model_registry.sql |  80 ++
+ 62 files changed, 6229 insertions(+), 880 deletions(-)
+```
+
+**Integration impact:**
+- `sentiment_aggregator.py::save_scores` now dedupes rows by `(stock_id, headline, published_at)` within a batch and `upsert`s on that same key instead of a plain `insert` — prevents duplicate rows when the same headline is re-fetched across pipeline runs. This assumes a matching unique constraint/index exists on `sentiment_scores(stock_id, headline, published_at)`; not present in the two new migrations in this merge, so verify it exists already or add it before this upsert path is exercised in prod.
+- New migration `20260807070313_add_sentiment_model_registry.sql` adds a `sentiment_model_versions` table (model_path, dataset, metrics, `is_active` singleton via partial unique index) — service-role only, RLS enabled. Not yet wired to any service/route in this merge; likely scaffolding for tracking the fine-tuned FinBERT versions Bali has been deploying manually via HuggingFace Hub. Worth registering the current `balibpt/finbert-stocklens` version here going forward instead of just noting it in LOG.md.
+- New migration `20260806124741_add_analysis_ready_email_notifications.sql` + `backend/services/notification_service.py` add an email-on-analysis-ready feature — independent of sentiment pipeline, no action needed.
+- Admin report service, feedback system, earnings calendar, trading/SnapTrade routes are all outside sentiment/frontend scope — no conflicts with Bali's work.
+- `frontend/static/css/styles.css` grew significantly (912 lines) — if Bali's news/search UI work touches shared styles, diff against this before next frontend session to avoid clobbering teammate CSS.
+
+---
+
+
 ## Issues / Bugs Tracker
 
 | Date | Issue | Status | Resolution |
