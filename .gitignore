@@ -43,3 +43,8 @@ LOG.md
 docs/
 .claude/
 .superpowers/
+
+# AI tool local artifacts — never pushed to GitHub
+.codex/
+.playwright-mcp/
+AGENTS.md
