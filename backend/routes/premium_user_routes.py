@@ -24,8 +24,15 @@ from typing import Optional
 import asyncio
 
 from backend.services.stock_list_service import get_active_stocks
-from backend.services.prediction_service import get_latest_prediction_by_symbol, get_technical_score, get_financial_score
-from backend.services.sentiment.sentiment_aggregator import get_weighted_sentiment_score, get_sentiment_summary
+from backend.services.prediction_service import (
+    get_effective_weights,
+    build_composite_scorecard,
+    get_latest_technical_signals,
+    get_latest_direction_outlook,
+    risk_tier_from_volatility,
+)
+from backend.services.sentiment.sentiment_aggregator import get_sentiment_summary
+from backend.services.stock_history_service import get_stock_history
 from backend.services.user_watchlist_service import (
     add_watchlist_by_symbol,
     get_user_watchlist_symbols,
@@ -77,43 +84,191 @@ class TradeRequest(BaseModel):
     price: Optional[float] = None
 
 @router.get("/premium/recommendations")
-async def premium_recommendations(request: Request):
+async def premium_recommendations(request: Request, risk: str = None):
     # Session
     session = get_session_context(request)
     if not session or session["user_role"] != "premium_user":
         return RedirectResponse(url="/login", status_code=303)
 
+    user_id = session["user_id"]
+    weights = get_effective_weights(user_id)
     active_stocks = get_active_stocks()
+    risk_filter = risk.lower() if risk else None
 
-    # 2. Build the Data Transformation Layer
+    # Build each recommendation from the same real technical/sentiment/
+    # financial scoring pipeline that Prediction Breakdown uses, rather than
+    # the old `predictions` table (which nothing in the ML pipeline writes to).
     display_recommendations = []
     for stock in active_stocks:
         symbol = stock.get("symbol", "").upper()
 
-        # Grab the latest AI prediction for this specific stock
-        raw_pred = get_latest_prediction_by_symbol(symbol)
+        scorecard = build_composite_scorecard(symbol, weights)
+        signals = get_latest_technical_signals(symbol)
+        risk_slug, risk_label = risk_tier_from_volatility(
+            signals.get("rolling_volatility_20") if signals else None
+        )
 
-        # If a prediction exists in the DB, format it for the HTML
-        if raw_pred and len(raw_pred) > 0:
-            pred = raw_pred[0]
-            display_recommendations.append({
-                "ticker": symbol,
-                "company_name": stock.get("company_name", "Unknown Company"),
-                "action": pred.get("action", "HOLD").upper(),
-                "target_price": f"{float(pred.get('target_price', 0)):.2f}",
-                "confidence": pred.get("confidence_score", 0),
-                "rationale": pred.get("rationale", "Standard market conditions apply.")
-            })
+        if risk_filter and risk_slug != risk_filter:
+            continue
+
+        display_recommendations.append({
+            "ticker": symbol,
+            "company_name": stock.get("company_name", "Unknown Company"),
+            "action": scorecard["action"],
+            "composite": scorecard["composite"],
+            "rationale": (
+                f"Technical {scorecard['technical_score']}/10 · "
+                f"Sentiment {scorecard['sentiment_score']}/10 · "
+                f"Financial {scorecard['financial_score']}/10 "
+                f"(weighted {scorecard['tech_weight']}/{scorecard['sent_weight']}/{scorecard['fin_weight']})"
+            ),
+            "risk_slug": risk_slug,
+            "risk_label": risk_label,
+        })
+
+    display_recommendations.sort(key=lambda rec: rec["composite"], reverse=True)
 
     return templates.TemplateResponse(
-        request=request, 
+        request=request,
         name="premium_users/stock_recommendations.html",
         context={
             **session,
             "request": request,
-            "recommendations": display_recommendations
+            "recommendations": display_recommendations,
+            "active_risk": risk_filter,
         }
     )
+
+def _build_signal_breakdown(signals_row: dict, sentiment_score: float, outlook: dict) -> dict:
+    """Format raw indicator/outlook rows into the display strings the
+    Signal Breakdown panel needs. Every field here traces back to a real
+    stored value; rows with no backing data source were dropped rather than
+    filled in with placeholders."""
+
+    def _fmt_pct(value, decimals=0):
+        return f"{value:+.{decimals}f}%"
+
+    rsi = signals_row.get("rsi_14") if signals_row else None
+    relative_volume = signals_row.get("relative_volume") if signals_row else None
+    macd = signals_row.get("macd") if signals_row else None
+    macd_signal = signals_row.get("macd_signal") if signals_row else None
+    return_5d = signals_row.get("return_5d") if signals_row else None
+
+    if rsi is not None:
+        rsi_display = f"{float(rsi):.1f}"
+    else:
+        rsi_display = "No data"
+
+    if relative_volume is not None:
+        volume_pct = (float(relative_volume) - 1) * 100
+        volume_display = f"{_fmt_pct(volume_pct)} vs 20D avg"
+        volume_positive = volume_pct > 0
+    else:
+        volume_display = "No data"
+        volume_positive = None
+
+    if macd is not None and macd_signal is not None:
+        macd_diff = float(macd) - float(macd_signal)
+        if macd_diff > 0:
+            macd_display = "Bullish crossover"
+        elif macd_diff < 0:
+            macd_display = "Bearish crossover"
+        else:
+            macd_display = "Flat"
+        macd_positive = macd_diff > 0
+    else:
+        macd_display = "No data"
+        macd_positive = None
+
+    if return_5d is not None:
+        momentum_pct = float(return_5d) * 100
+        momentum_display = f"{_fmt_pct(momentum_pct, 1)} (5D)"
+        momentum_positive = momentum_pct > 0
+    else:
+        momentum_display = "No data"
+        momentum_positive = None
+
+    if sentiment_score is not None:
+        if sentiment_score >= 6:
+            sentiment_display = f"Bullish ({sentiment_score}/10)"
+            sentiment_positive = True
+        elif sentiment_score < 4:
+            sentiment_display = f"Bearish ({sentiment_score}/10)"
+            sentiment_positive = False
+        else:
+            sentiment_display = f"Neutral ({sentiment_score}/10)"
+            sentiment_positive = None
+    else:
+        sentiment_display = "No data"
+        sentiment_positive = None
+
+    if outlook and outlook.get("prediction"):
+        prediction_label = outlook["prediction"]
+        probabilities = outlook.get("probabilities") or {}
+        # The model is a binary up/down classifier — "neutral" just means
+        # neither side cleared the confidence threshold, so probabilities["neutral"]
+        # is always 0 by construction. Show the bullish probability instead,
+        # since that's the number that actually explains the neutral call.
+        if prediction_label == "neutral":
+            bullish_probability = probabilities.get("bullish")
+            if bullish_probability is not None:
+                outlook_display = f"Neutral · {bullish_probability * 100:.0f}% bullish probability"
+            else:
+                outlook_display = "Neutral"
+        else:
+            confidence = probabilities.get(prediction_label)
+            if confidence is not None:
+                outlook_display = f"{prediction_label.title()} · {confidence * 100:.0f}% confidence"
+            else:
+                outlook_display = prediction_label.title()
+        if prediction_label == "bullish":
+            outlook_positive = True
+        elif prediction_label == "bearish":
+            outlook_positive = False
+        else:
+            outlook_positive = None
+    else:
+        outlook_display = "No data"
+        outlook_positive = None
+
+    return {
+        "rsi": rsi_display,
+        "volume": volume_display,
+        "volume_positive": volume_positive,
+        "macd": macd_display,
+        "macd_positive": macd_positive,
+        "momentum": momentum_display,
+        "momentum_positive": momentum_positive,
+        "sentiment": sentiment_display,
+        "sentiment_positive": sentiment_positive,
+        "outlook": outlook_display,
+        "outlook_positive": outlook_positive,
+    }
+
+
+def _build_price_path(actual_prices: list) -> str:
+    """SVG polyline `d` string plotting real close prices on a 1000x100 viewBox.
+
+    Returns None when there isn't enough history to draw a meaningful line
+    (the old version drew the exact same fake curve regardless of data).
+    """
+    if not actual_prices or len(actual_prices) < 2:
+        return None
+
+    closes = [point["close"] for point in actual_prices]
+    low, high = min(closes), max(closes)
+    span = (high - low) or 1
+
+    count = len(closes)
+    points = []
+    for index, close in enumerate(closes):
+        x = (index / (count - 1)) * 1000
+        # SVG y grows downward, so flip the normalized value.
+        y = 90 - ((close - low) / span) * 80
+        points.append(f"{x:.1f} {y:.1f}")
+
+    return "M " + " L ".join(points)
+
 
 @router.get("/premium/prediction_breakdown")
 async def premium_prediction_breakdown(request: Request, symbol: str = "NVDA"):
@@ -123,75 +278,35 @@ async def premium_prediction_breakdown(request: Request, symbol: str = "NVDA"):
     user_id = session["user_id"]
 
     target_symbol = symbol.upper()
+    weights = get_effective_weights(user_id)
+    scorecard = build_composite_scorecard(target_symbol, weights)
 
-    try:
-        user_w_res = supabase.table("weightages").select("technical, sentiment, financial").eq("user_id", user_id).execute()
-        if user_w_res.data:
-            weights = user_w_res.data[0]
-        else:
-            admin_w_res = supabase.table("weightages").select("technical, sentiment, financial").eq("id", "1").execute()
-            weights = admin_w_res.data[0] if admin_w_res.data else {"technical": 40, "sentiment": 30, "financial": 30}
-    except Exception as e:
-        print(f"Error matching weight records: {e}")
-        weights = {"technical": 40, "sentiment": 30, "financial": 30}
+    signals_row = get_latest_technical_signals(target_symbol)
+    outlook = get_latest_direction_outlook(target_symbol)
+    signals = _build_signal_breakdown(signals_row, scorecard["sentiment_score"], outlook)
 
-    tech_w = weights.get("technical")
-    sent_w = weights.get("sentiment")
-    fin_w = weights.get("financial")
-
-    # Fetch Sentiment
-    sentiment_date = date(2026, 6, 10)
-    sentiment_data = get_weighted_sentiment_score(target_symbol, sentiment_date)
-    if sentiment_data and "bullish_score" in sentiment_data:
-        raw_sent = int((sentiment_data.get("bullish_score") or 0))
-    else:
-        raw_sent = 0
-
-    try:
-        tech_data = get_technical_score(target_symbol)
-        raw_tech = tech_data if isinstance(tech_data, (int, float)) else tech_data.get('score', 0)
-    except Exception:
-        raw_tech = 0
-
-    try:
-        fin_data = get_financial_score(target_symbol)
-        raw_fin = fin_data if isinstance(fin_data, (int, float)) else fin_data.get('score', 0)
-    except Exception:
-        raw_fin = 0
-
-    composite_score = round(
-        (raw_tech * (tech_w / 100.0)) +
-        (raw_sent * (sent_w / 100.0)) +
-        (raw_fin * (fin_w / 100.0)),
-        2,
-    )
-
-    if composite_score >= 6.5:
-        action_label = "BUY"
-    elif composite_score <= 3.5:
-        action_label = "SELL"
-    else:
-        action_label = "HOLD"
+    price_history = get_stock_history(target_symbol) or []
+    actual_prices = [
+        {"date": row["trade_date"], "close": float(row["close"])}
+        for row in price_history[-30:]
+        if row.get("close") is not None
+    ]
 
     display_data = {
-        "symbol": target_symbol,
-        "action": action_label,
-        "composite": composite_score,
-        "technical_score": round(float(raw_tech), 2),
-        "sentiment_score": round(float(raw_sent), 2),
-        "financial_score": round(float(raw_fin), 2),
-        "tech_weight": tech_w,
-        "sent_weight": sent_w,
-        "fin_weight": fin_w
+        **scorecard,
+        "signals": signals,
+        "actual_prices": actual_prices,
+        "actual_path": _build_price_path(actual_prices),
     }
 
     return templates.TemplateResponse(
-        request=request, 
+        request=request,
         name="premium_users/prediction_breakdown.html",
         context={
             **session,
             "request": request,
-            "data": display_data
+            "data": display_data,
+            "stocks": get_active_stocks(),
         }
     )
 
@@ -620,10 +735,12 @@ async def premium_earnings_calendar(request: Request):
 
     url = f"https://financialmodelingprep.com/stable/earnings-calendar?from={today}&to={end_date}&apikey={api_key}"
     
+    tracked_symbols = {stock.get("symbol", "").upper() for stock in get_active_stocks()}
+
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(url)
-            
+
             if response.status_code != 200:
                 print(f"--- FMP API FAILED ---")
                 print(f"Status Code: {response.status_code}")
@@ -631,7 +748,15 @@ async def premium_earnings_calendar(request: Request):
                 print(f"Attempted URL: {url.replace(api_key, 'HIDDEN_KEY')}")
                 earnings_data = []
             else:
-                earnings_data = response.json()[:50] 
+                # FMP's earnings-calendar endpoint returns the entire market.
+                # Scope it to StockLens' tracked stocks instead of showing 50
+                # random unrelated tickers, and filter BEFORE truncating so
+                # the cap doesn't get exhausted by untracked symbols.
+                all_earnings = response.json()
+                earnings_data = [
+                    item for item in all_earnings
+                    if item.get("symbol", "").upper() in tracked_symbols
+                ][:50]
         except Exception as e:
             print(f"--- FMP REQUEST CRASHED ---")
             print(f"Error: {e}")

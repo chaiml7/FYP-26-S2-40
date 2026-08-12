@@ -792,6 +792,37 @@ Date: 2026-08-10
 
 ---
 
+### 2026-08-12 — Bali — Premium tab audit + fixes (Recommendations, Risk Profile, Prediction Breakdown, Signal Breakdown, Earnings Calendar, dead Financials link)
+
+**What prompted this:** User (me, wearing the "product" hat) walked the premium dashboard end-to-end and flagged that most tabs beyond the main Dashboard were either empty, hardcoded, or pointed at dead routes. Did a systematic-debugging pass (root cause before any fix) across `backend/routes/premium_user_routes.py` and the `premium_users/*.html` templates before touching anything.
+
+**Root causes found:**
+- **Recommendations tab (empty):** read from the `predictions` table, which nothing in the ML pipeline writes to — only a manual `POST /stocks/{symbol}/predictions` endpoint does. Orphaned table.
+- **Risk profile pills:** static `<button>`s with no `onclick`/JS/backend wiring — purely decorative, "Moderate" hardcoded active.
+- **Signal Breakdown (both Recommendations and Prediction Breakdown pages):** 100% hardcoded markup (RSI 62.4, "+34% above avg", "Bullish crossover", "18 Buy / 3 Hold") copy-pasted verbatim on both pages — no backend data at all.
+- **Prediction Breakdown defaulting to NVDA:** route signature `symbol: str = "NVDA"` with no UI control to change it — nav link never passed `?symbol=`.
+- **Actual vs Predicted chart:** the "Actual" and "Predicted" `<path>` elements used the exact same hardcoded `d` attribute string — literally the same fake curve drawn twice.
+- **Financials nav link (`/user/financials`):** 404 — no route registered anywhere in `frontend.main` (the browsable app), no template exists. Present in both `premium_users/base.html` and `free_users/base.html`.
+- **Earnings Calendar:** pulled FMP's entire market earnings calendar, sliced to the first 50 *before* any filtering — showed random unrelated tickers instead of StockLens' tracked stocks.
+- Also found while refactoring: `premium_prediction_breakdown()` had `sentiment_date = date(2026, 6, 10)` hardcoded — always scored sentiment against a fixed past date instead of "today or latest available."
+
+**What I did:**
+- Removed the dead Financials nav item from both `premium_users/base.html` and `free_users/base.html`.
+- Added real scoring/signal helpers to `backend/services/prediction_service.py`: `get_effective_weights()`, `score_action_label()`, `get_latest_technical_signals()` (reads `technical_indicators`: rsi_14, macd, macd_signal, relative_volume, return_5d, rolling_volatility_20), `get_latest_direction_outlook()` (reads `direction_predictions`), `risk_tier_from_volatility()`, and `build_composite_scorecard()` — the last one is now the single source of truth for the weighted technical/sentiment/financial score, used by both Recommendations and Prediction Breakdown so they can't drift apart again.
+- Added `get_latest_weighted_sentiment_score()` to `sentiment_aggregator.py` — falls back to the most recent stored `score_date` instead of requiring an exact date match (fixes the hardcoded-date bug above without just swapping in `date.today()`, which would've zeroed out every score on days the sentiment cron hasn't run yet).
+- Rewrote `/premium/recommendations`: builds each card from `build_composite_scorecard()` across all active stocks, sorted by composite score descending. Dropped the fabricated `$` target price — replaced with the composite score (consistent with Prediction Breakdown) plus a "View breakdown" link. Risk pills are now real `?risk=conservative|moderate|aggressive` filter links with correct active state; per-card risk badge is now derived from `rolling_volatility_20` instead of hardcoded "Medium." Removed the standalone hardcoded Signal Breakdown panel (didn't make sense on a multi-stock list anyway).
+- Rewrote `/premium/prediction_breakdown`: added a `<select>` symbol picker (GET form) populated from active stocks so it's no longer stuck on NVDA; replaced the fake Signal Breakdown with real RSI/MACD/volume/5D-momentum/model-outlook via `_build_signal_breakdown()`; replaced the duplicated fake SVG path with a real 30-day close-price line built server-side (`_build_price_path()`, normalizes `daily_ohlcv` closes into a 1000x100 viewBox polyline). Deliberately dropped the "Predicted" price line rather than fabricate one — the technical model (`binary_xgboost_model.py`) is a directional classifier (bullish/bearish/neutral + probability), it has no continuous price-forecast output anywhere in the codebase, and inventing one felt like the wrong call for a project with an MAS-disclaimer requirement in scope.
+- Fixed a related display bug caught during manual verification: the model's "neutral" prediction always carries `probabilities.neutral == 0.0` by construction (binary up/down classifier — neutral just means neither side cleared the confidence threshold), so the outlook badge was showing "Neutral · 0% confidence." Now shows the actual bullish probability instead ("Neutral · 46% bullish probability").
+- Scoped `/premium/earnings_calendar` to StockLens' tracked stocks (`get_active_stocks()` symbol set) and fixed the filter-after-truncate ordering bug.
+
+**Verification:** app + all 4 touched templates import/parse clean; ran `build_composite_scorecard`, `get_latest_technical_signals`, `get_latest_direction_outlook`, `_build_signal_breakdown`, and `_build_price_path` directly against the real Supabase project (14 active stocks) to confirm real data flows through end-to-end, not just mocked; rendered both rewritten templates with real production context to catch Jinja errors. Restarted both dev servers (`--reload` was already on — server logs showed WatchFiles auto-picking up the edits and real browser hits to `/premium/recommendations` and `/premium/prediction_breakdown` returning 200 before I even manually restarted).
+
+**Deferred / flagged, not fixed:** two old Signal Breakdown rows ("Insider activity", "Analyst consensus") had no backing data source anywhere in the codebase — replaced with real metrics (5D momentum, Model outlook) rather than leaving fake ones in. If insider/analyst data becomes available later, revisit. General polish (loading states, mobile layout on the new symbol selector, etc.) also deferred — user said "there's a lot of room for improvement still, we'll do it later."
+
+**Next steps:** open PR to `main` (code only). User wants to deploy on Render next.
+
+---
+
 
 ## Issues / Bugs Tracker
 
