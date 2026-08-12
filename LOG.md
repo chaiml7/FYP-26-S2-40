@@ -823,6 +823,23 @@ Date: 2026-08-10
 
 ---
 
+### 2026-08-12 — Bali — PR #21 opened + Render deploy config
+
+**PR:** https://github.com/chaiml7/FYP-26-S2-40/pull/21 — the premium-tab fix work above, cut as `feature/bali-premium-tab-fixes` off `main` (code only, same pattern as always: cherry-pick the fix commit, drop LOG.md/`.env.example` conflicts, re-add `.env.example` cleanly since it's not actually personal).
+
+**Render deploy discussion + `render.yaml`:**
+- I initially told the user only one Render service was needed (`frontend.main:app`) since it already bundles the user-facing routers directly and `backend.main:app` looked like a pure ops process. User correctly pushed back: model training / sentiment pipeline / email dispatch all live only in `backend.main:app`'s routers, and there's currently **zero UI wiring** to any of that (grepped `frontend/templates/**` — no `fetch()` anywhere hits port 8000), so if the admin ever wants to trigger those, that API has to actually be live somewhere. Corrected course — deploying both.
+- While scoping this, found `backend/requirements.txt` is missing `xgboost`, `scikit-learn`, `torch`, `transformers` — they're all lazy-imported (inside function bodies, not module top-level) so `backend.main:app` still boots fine without them, but any real call to training or the sentiment pipeline would 500 with `ModuleNotFoundError` on a fresh Render build. Also found `backend/requirements-ml.txt` already exists with exactly those four (`finbert_service.py`'s own error message even points at it: `"pip install -r requirements-ml.txt"`) — just never referenced by any build command anywhere.
+- Discussed with user: training isn't reachable from any admin page yet, and torch+transformers alone (~2GB, FinBERT needs well over Render free tier's 512MB RAM once actually loaded) isn't viable on the free plan anyway. Decided: **don't install `requirements-ml.txt` for now**, deploy `backend.main:app` on the free plan as-is (training/pipeline endpoints will 500 if called — acceptable since nothing calls them), keep both cron schedulers (`ENABLE_SENTIMENT_SCHEDULER`, `ENABLE_EMAIL_NOTIFICATION_SCHEDULER`) off until deliberately turned on.
+- User's fine-tuned FinBERT (`balibpt/finbert-stocklens`) is hosted on HuggingFace Hub and auto-downloads on first use — that solves the *weights* problem, but not the dependency-footprint or free-tier-RAM problem above; still needs `requirements-ml.txt` installed and enough RAM to hold it once loaded, neither of which we're doing right now.
+- `render.yaml` (Blueprint, repo root — both services build/run from repo root since the app uses absolute `backend.`/`frontend.` imports, matches local dev): two `type: web` services, `stocklens-app` (`frontend.main:app`) and `stocklens-api` (`backend.main:app`), both `plan: free`, `buildCommand: pip install -r backend/requirements.txt`, Python pinned to 3.12.7. Shared secrets (Supabase, Finnhub/NewsAPI/FMP/SnapTrade keys, SendGrid, Stripe) live in an `envVarGroups` block (`sync: false`, filled in via the Render dashboard, not committed) so they're not duplicated across both services.
+- `backend/.env.example` (both branches) was missing several env vars the code already reads: `FMP_API_KEY`, `SNAPTRADE_CLIENT_ID`/`SNAPTRADE_CONSUMER_KEY`, `ENABLE_SENTIMENT_SCHEDULER`. Added on both `bali` and the PR branch.
+- **Known drift, not fixed:** `bali`'s `notification_service.py` still uses `GMAIL_SMTP_*` env vars; `main`'s (rewritten by a teammate after bali's last merge) uses `SENDGRID_*`. `render.yaml` targets `main`'s SendGrid version since that's what actually deploys — this file will need `GMAIL_SMTP_*` var names instead if `bali` is ever deployed directly rather than through a PR to `main`.
+
+**Next steps:** get PR #21 reviewed/merged, then connect the Render Blueprint to the repo and fill in the `sync: false` secrets in the dashboard.
+
+---
+
 
 ## Issues / Bugs Tracker
 

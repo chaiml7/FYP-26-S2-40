@@ -1,0 +1,89 @@
+envVarGroups:
+  - name: stocklens-shared
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: FINNHUB_API_KEY
+        sync: false
+      - key: NEWSAPI_KEY
+        sync: false
+      - key: FMP_API_KEY
+        sync: false
+      - key: SNAPTRADE_CLIENT_ID
+        sync: false
+      - key: SNAPTRADE_CONSUMER_KEY
+        sync: false
+      - key: NOTIFICATION_TIMEZONE
+        value: Asia/Singapore
+      - key: NOTIFICATION_ADMIN_KEY
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: SENDGRID_FROM_EMAIL
+        sync: false
+      - key: SENDGRID_FROM_NAME
+        value: StockLens
+      - key: SENDGRID_TIMEOUT_SECONDS
+        value: "30"
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PREMIUM_PRICE_ID
+        sync: false
+
+# Two independent FastAPI processes, matching local dev (see CLAUDE.md):
+#   stocklens-app -> frontend.main:app  -- the actual browsable site users hit
+#   stocklens-api -> backend.main:app   -- ops-only: model training endpoints
+#                                          (unwired to any UI right now) plus
+#                                          the sentiment-pipeline/email
+#                                          schedulers, both left OFF below.
+# Neither service installs backend/requirements-ml.txt (xgboost/scikit-learn/
+# torch/transformers) on purpose: training isn't reachable from any admin
+# page yet, and torch+transformers alone (~2GB, FinBERT needs >512MB at
+# inference) won't run on Render's free plan. Revisit if/when that's wired
+# up and worth a paid instance.
+services:
+  - type: web
+    name: stocklens-app
+    runtime: python
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python -m uvicorn frontend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: APP_PUBLIC_URL
+        sync: false
+      - key: SESSION_SECRET_KEY
+        generateValue: true
+      - key: SESSION_HTTPS_ONLY
+        value: "true"
+      - key: AUTO_SEND_ANALYSIS_READY_EMAILS
+        value: "false"
+      - fromGroup: stocklens-shared
+
+  - type: web
+    name: stocklens-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python -m uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: APP_PUBLIC_URL
+        sync: false
+      # Cron/scheduled jobs left off until you're ready to run them against
+      # production data — flip to "true" in the Render dashboard when ready.
+      - key: ENABLE_SENTIMENT_SCHEDULER
+        value: "false"
+      - key: ENABLE_EMAIL_NOTIFICATION_SCHEDULER
+        value: "false"
+      - key: AUTO_SEND_ANALYSIS_READY_EMAILS
+        value: "false"
+      - fromGroup: stocklens-shared
