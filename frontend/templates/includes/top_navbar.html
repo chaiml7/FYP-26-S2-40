@@ -21,7 +21,45 @@
     </div>
     
     <div class="topbar-actions" style="flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 20px; min-width: 0;">
-        <button class="btn-icon">🔔</button>
+        <div
+            class="notification-center"
+            id="notificationCenter"
+            data-user-id="{{ user_id or 'anonymous' }}"
+        >
+            <button
+                type="button"
+                class="btn-icon notification-bell"
+                id="notificationBell"
+                aria-label="Open notifications"
+                aria-haspopup="dialog"
+                aria-expanded="false"
+                aria-controls="notificationDropdown"
+            >
+                <span aria-hidden="true">&#128276;</span>
+                <span class="notification-badge" id="notificationBadge" hidden>0</span>
+            </button>
+
+            <section
+                class="notification-dropdown"
+                id="notificationDropdown"
+                aria-label="Notifications"
+                hidden
+            >
+                <header class="notification-dropdown-header">
+                    <div>
+                        <strong>Notifications</strong>
+                        <span id="notificationSummary">Checking for updates...</span>
+                    </div>
+                    <div class="notification-dropdown-actions">
+                        <button type="button" id="notificationMarkRead">Mark all read</button>
+                        <button type="button" id="notificationClear">Clear</button>
+                    </div>
+                </header>
+                <div class="notification-list" id="notificationList" aria-live="polite">
+                    <p class="notification-empty">Loading notifications...</p>
+                </div>
+            </section>
+        </div>
         
         <div class="user-chip" style="display: flex; align-items: center; gap: 10px;">
             <span class="avatar-sm">{{ user_initial or "U" }}</span>
@@ -140,5 +178,192 @@
         document.addEventListener("click", (event) => {
             if (!form.contains(event.target)) closeDropdown();
         });
+    })();
+</script>
+
+<script>
+    (() => {
+        const center = document.getElementById("notificationCenter");
+        const bell = document.getElementById("notificationBell");
+        const badge = document.getElementById("notificationBadge");
+        const dropdown = document.getElementById("notificationDropdown");
+        const list = document.getElementById("notificationList");
+        const summary = document.getElementById("notificationSummary");
+        const markReadButton = document.getElementById("notificationMarkRead");
+        const clearButton = document.getElementById("notificationClear");
+        if (!center || !bell || !badge || !dropdown || !list || !summary) return;
+
+        const storageKey = `stocklens:notification-state:${center.dataset.userId || "anonymous"}`;
+        const iconByKind = {
+            analysis: "📊",
+            price_up: "↗",
+            price_down: "↘",
+            warning: "!",
+            status: "•",
+            info: "i",
+        };
+        let notifications = [];
+        let state = { read: [], dismissed: [] };
+
+        try {
+            const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+            state.read = Array.isArray(saved.read) ? saved.read.filter((id) => typeof id === "string") : [];
+            state.dismissed = Array.isArray(saved.dismissed) ? saved.dismissed.filter((id) => typeof id === "string") : [];
+        } catch (error) {
+            state = { read: [], dismissed: [] };
+        }
+
+        function saveState() {
+            state.read = [...new Set(state.read)].slice(-200);
+            state.dismissed = [...new Set(state.dismissed)].slice(-200);
+            try {
+                localStorage.setItem(storageKey, JSON.stringify(state));
+            } catch (error) {
+                // Notifications still work for this page when browser storage is unavailable.
+            }
+        }
+
+        function formatDate(value) {
+            if (!value) return "";
+            const date = new Date(value.length === 10 ? `${value}T00:00:00` : value);
+            if (Number.isNaN(date.getTime())) return "";
+            return new Intl.DateTimeFormat(undefined, {
+                month: "short",
+                day: "numeric",
+                hour: value.length === 10 ? undefined : "numeric",
+                minute: value.length === 10 ? undefined : "2-digit",
+            }).format(date);
+        }
+
+        function normalizeNotification(value) {
+            if (!value || typeof value !== "object" || typeof value.id !== "string") return null;
+            return {
+                id: value.id,
+                kind: typeof value.kind === "string" ? value.kind : "info",
+                title: typeof value.title === "string" ? value.title : "StockLens update",
+                message: typeof value.message === "string" ? value.message : "",
+                href: typeof value.href === "string" && value.href.startsWith("/") ? value.href : null,
+                occurred_at: typeof value.occurred_at === "string" ? value.occurred_at : null,
+            };
+        }
+
+        function markOneRead(notificationId) {
+            if (!state.read.includes(notificationId)) state.read.push(notificationId);
+            saveState();
+        }
+
+        function renderNotifications() {
+            const visible = notifications.filter((item) => !state.dismissed.includes(item.id));
+            const unread = visible.filter((item) => !state.read.includes(item.id));
+
+            badge.hidden = unread.length === 0;
+            badge.textContent = unread.length > 9 ? "9+" : String(unread.length);
+            summary.textContent = unread.length
+                ? `${unread.length} unread update${unread.length === 1 ? "" : "s"}`
+                : "You're all caught up";
+            markReadButton.disabled = unread.length === 0;
+            clearButton.disabled = visible.length === 0;
+            list.replaceChildren();
+
+            if (!visible.length) {
+                const empty = document.createElement("p");
+                empty.className = "notification-empty";
+                empty.textContent = "No new notifications";
+                list.appendChild(empty);
+                return;
+            }
+
+            visible.forEach((notification) => {
+                const item = document.createElement(notification.href ? "a" : "div");
+                item.className = "notification-item";
+                item.classList.toggle("notification-unread", !state.read.includes(notification.id));
+                item.dataset.kind = notification.kind;
+                if (notification.href) item.href = notification.href;
+
+                const icon = document.createElement("span");
+                icon.className = "notification-item-icon";
+                icon.setAttribute("aria-hidden", "true");
+                icon.textContent = iconByKind[notification.kind] || iconByKind.info;
+
+                const copy = document.createElement("span");
+                copy.className = "notification-item-copy";
+                const title = document.createElement("strong");
+                title.textContent = notification.title;
+                const message = document.createElement("span");
+                message.textContent = notification.message;
+                copy.append(title, message);
+
+                const dateText = formatDate(notification.occurred_at);
+                if (dateText) {
+                    const time = document.createElement("time");
+                    time.textContent = dateText;
+                    time.dateTime = notification.occurred_at;
+                    copy.appendChild(time);
+                }
+
+                item.append(icon, copy);
+                item.addEventListener("click", () => {
+                    markOneRead(notification.id);
+                    renderNotifications();
+                });
+                list.appendChild(item);
+            });
+        }
+
+        function setOpen(open) {
+            dropdown.hidden = !open;
+            bell.setAttribute("aria-expanded", String(open));
+            bell.setAttribute("aria-label", open ? "Close notifications" : "Open notifications");
+        }
+
+        async function loadNotifications() {
+            try {
+                const response = await fetch("/user/notifications", {
+                    headers: { Accept: "application/json" },
+                    credentials: "same-origin",
+                });
+                if (!response.ok) throw new Error("Notification request failed");
+                const payload = await response.json();
+                notifications = (Array.isArray(payload.notifications) ? payload.notifications : [])
+                    .map(normalizeNotification)
+                    .filter(Boolean);
+                renderNotifications();
+            } catch (error) {
+                notifications = [];
+                badge.hidden = true;
+                summary.textContent = "Notifications unavailable";
+                list.replaceChildren();
+                const unavailable = document.createElement("p");
+                unavailable.className = "notification-empty notification-error";
+                unavailable.textContent = "Could not load notifications. Please try again later.";
+                list.appendChild(unavailable);
+            }
+        }
+
+        bell.addEventListener("click", () => setOpen(dropdown.hidden));
+        markReadButton.addEventListener("click", () => {
+            notifications.forEach((item) => state.read.push(item.id));
+            saveState();
+            renderNotifications();
+        });
+        clearButton.addEventListener("click", () => {
+            notifications.forEach((item) => {
+                state.read.push(item.id);
+                state.dismissed.push(item.id);
+            });
+            saveState();
+            renderNotifications();
+        });
+        document.addEventListener("click", (event) => {
+            if (!center.contains(event.target)) setOpen(false);
+        });
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && !dropdown.hidden) {
+                setOpen(false);
+                bell.focus();
+            }
+        });
+
+        loadNotifications();
     })();
 </script>

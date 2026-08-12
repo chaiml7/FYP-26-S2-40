@@ -26,6 +26,7 @@ from backend.services.auth_service import (
 )
 from backend.services.sentiment.sentiment_aggregator import get_recent_news
 from backend.services.notification_service import (
+    get_in_app_notifications,
     get_notification_preference,
     set_notification_preference,
 )
@@ -356,6 +357,14 @@ def edit_admin_user_status(
 # ==========================================
 # Shared User Routes (Free & Premium)
 # ==========================================
+
+
+@router.get("/user/notifications")
+def view_in_app_notifications(request: Request):
+    session = get_session_context(request)
+    if not session:
+        raise HTTPException(status_code=401, detail="Login required")
+    return get_in_app_notifications(session.get("user_id"), session["user_role"])
 
 @router.get("/user/watchlist")
 async def watchlist(request: Request):

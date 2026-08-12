@@ -38,6 +38,8 @@ def test_watchlist_renders_saved_email_opt_in(mock_preference, _mock_watchlist):
     assert "Email notifications" in response.text
     assert 'name="analysis_ready_email"' in response.text
     assert "checked" in response.text
+    assert 'id="notificationBell"' in response.text
+    assert 'id="notificationDropdown"' in response.text
     mock_preference.assert_called_once_with("user-1")
 
 
@@ -69,3 +71,29 @@ def test_free_user_cannot_enable_watchlist_emails(mock_set):
     client.cookies.clear()
     assert response.status_code == 403
     mock_set.assert_not_called()
+
+
+@patch(
+    f"{MODULE}.get_in_app_notifications",
+    return_value={
+        "generated_at": "2026-08-10T00:00:00+00:00",
+        "notifications": [{"id": "n1", "title": "Ready"}],
+    },
+)
+def test_in_app_notification_endpoint_uses_logged_in_session(mock_notifications):
+    client.cookies.set("session", _session_cookie())
+
+    response = client.get("/user/notifications")
+
+    client.cookies.clear()
+    assert response.status_code == 200
+    assert response.json()["notifications"][0]["id"] == "n1"
+    mock_notifications.assert_called_once_with("user-1", "premium_user")
+
+
+def test_in_app_notification_endpoint_requires_login():
+    client.cookies.clear()
+
+    response = client.get("/user/notifications")
+
+    assert response.status_code == 401
