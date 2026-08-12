@@ -37,6 +37,27 @@ def get_stock_history(symbol: str):
     return response.data
 
 
+def get_recent_stock_history(symbol: str, limit: int = 30):
+    """Most recent `limit` trading days, oldest first.
+
+    Unlike get_stock_history(), this orders desc + limits at the query level,
+    so it isn't subject to PostgREST's default 1000-row cap silently
+    returning the oldest page of a symbol's full history instead of the
+    actual recent window.
+    """
+    response = (
+        supabase
+        .table("daily_ohlcv")
+        .select("*")
+        .eq("symbol", symbol.upper())
+        .order("trade_date", desc=True)
+        .limit(limit)
+        .execute()
+    )
+
+    return list(reversed(response.data or []))
+
+
 def get_latest_stock_price(symbol: str):
     response = (
         supabase
