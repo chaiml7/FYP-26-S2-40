@@ -1,0 +1,55 @@
+{% extends base_layout %}
+
+{% block title %}Premium subscription - StockLens{% endblock %}
+
+{% block content %}
+<section class="billing-result-card" id="billing-result" data-premium="{{ 'true' if is_premium else 'false' }}">
+    <span class="billing-result-icon" aria-hidden="true">&#10003;</span>
+    <p class="workspace-eyebrow">Subscription</p>
+    <h1 id="billing-title">
+        {% if is_premium %}Welcome to StockLens Premium{% else %}Your payment is being confirmed{% endif %}
+    </h1>
+    <p id="billing-message">
+        {% if is_premium %}
+            Premium access is active on your account.
+        {% else %}
+            Stripe has returned you to StockLens. This page will update as soon as the signed payment confirmation is received.
+        {% endif %}
+    </p>
+    <p class="billing-status-line">Subscription status: <strong id="billing-status">{{ subscription_status }}</strong></p>
+    <a href="/dashboard" class="btn btn-primary">Continue to dashboard</a>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% if not is_premium %}
+<script>
+    (() => {
+        let attempts = 0;
+        const maximumAttempts = 15;
+        const statusNode = document.getElementById("billing-status");
+        const titleNode = document.getElementById("billing-title");
+        const messageNode = document.getElementById("billing-message");
+
+        const checkStatus = async () => {
+            attempts += 1;
+            try {
+                const response = await fetch("/billing/status", { headers: { "Accept": "application/json" } });
+                if (!response.ok) throw new Error("Status request failed");
+                const billing = await response.json();
+                statusNode.textContent = billing.status;
+                if (billing.is_premium) {
+                    titleNode.textContent = "Welcome to StockLens Premium";
+                    messageNode.textContent = "Premium access is active on your account.";
+                    return;
+                }
+            } catch (error) {
+                // Keep the page useful and allow Stripe's webhook retry to finish.
+            }
+            if (attempts < maximumAttempts) window.setTimeout(checkStatus, 2000);
+        };
+        window.setTimeout(checkStatus, 1000);
+    })();
+</script>
+{% endif %}
+{% endblock %}

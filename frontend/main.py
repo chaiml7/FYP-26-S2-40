@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -16,6 +17,12 @@ from backend.routes.premium_user_routes import router as premium_user_router
 from backend.routes.admin_routes import router as admin_router
 from backend.routes.dashboard_routes import router as dashboard_router
 from backend.routes.feedback_routes import router as feedback_router
+from backend.routes.billing_ui_routes import router as billing_ui_router
+from backend.services.billing_service import (
+    BillingConfigurationError,
+    BillingError,
+    create_checkout_session,
+)
 from backend.services.auth_service import AuthServiceError, create_account
 from backend.services.user_profile_service import get_profile
 from backend.services.dashboard_service import (
@@ -42,9 +49,44 @@ app.include_router(premium_user_router)
 app.include_router(admin_router)
 app.include_router(dashboard_router)
 app.include_router(feedback_router)
+app.include_router(billing_ui_router)
 
-# Session Middleware
-app.add_middleware(SessionMiddleware, secret_key="my-super-secret-key")
+@app.middleware("http")
+async def refresh_cached_user_role(request: Request, call_next):
+    """Limit stale Premium access after a webhook changes the database role."""
+    user_id = request.session.get("user_id")
+    last_checked = float(request.session.get("role_checked_at") or 0)
+    if (
+        user_id
+        and not request.url.path.startswith("/static/")
+        and time.time() - last_checked >= 60
+    ):
+        try:
+            profiles = get_profile(str(user_id))
+            if (
+                isinstance(profiles, list)
+                and profiles
+                and isinstance(profiles[0], dict)
+            ):
+                request.session["user_role"] = str(
+                    profiles[0].get("role_id") or "basic_user"
+                ).lower()
+                request.session["role_checked_at"] = time.time()
+        except Exception as exc:
+            # A temporary database failure must not log the user out. Premium
+            # routes retain their existing checks and the refresh retries.
+            print(f"Session role refresh failed: {exc}")
+    return await call_next(request)
+
+
+# Add SessionMiddleware after the function middleware so it is the outer
+# layer and request.session is populated before role refresh runs.
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.getenv("SESSION_SECRET_KEY", "my-super-secret-key"),
+    https_only=os.getenv("SESSION_HTTPS_ONLY", "false").lower() == "true",
+    same_site="lax",
+)
 
 # Serve CSS assets from the static folder
 static_path = os.path.join(current_dir, "static")
@@ -127,6 +169,32 @@ async def process_login(
         request.session["user_id"] = str(user_id)
         request.session["user_role"] = user_role
 
+        pending_plan = request.session.pop("pending_plan", None)
+        if pending_plan == "premium" and user_role == "basic_user":
+            base_url = (os.getenv("APP_PUBLIC_URL") or str(request.base_url)).rstrip("/")
+            try:
+                checkout_url = create_checkout_session(
+                    user_id=str(user_id),
+                    email=email,
+                    success_url=f"{base_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
+                    cancel_url=f"{base_url}/billing/cancel",
+                )
+                return RedirectResponse(url=checkout_url, status_code=303)
+            except (BillingConfigurationError, BillingError) as exc:
+                return templates.TemplateResponse(
+                    request=request,
+                    name="billing/error.html",
+                    context={
+                        "base_layout": "free_users/base.html",
+                        "user_role": user_role,
+                        "user_id": str(user_id),
+                        "user_email": email,
+                        "user_initial": email[:1].upper(),
+                        "billing_error": str(exc),
+                    },
+                    status_code=503,
+                )
+
         if user_role == "user_admin":
             return RedirectResponse(url="/admin/user_management", status_code=303)
         elif user_role == "backend_admin":
@@ -159,10 +227,12 @@ async def logout(request: Request):
 # Sign up Route
 # ==========================================
 @app.get("/signup")
-async def signup(request: Request):
+async def signup(request: Request, plan: str = "free"):
+    selected_plan = "premium" if plan.lower() == "premium" else "free"
     return templates.TemplateResponse(
         request=request,
-        name="signup.html"
+        name="signup.html",
+        context={"selected_plan": selected_plan},
     )
 
 @app.post("/signup")
@@ -170,21 +240,25 @@ async def process_signup(
     request: Request,
     firstName: str = Form(...),
     email: str = Form(...),
-    password: str = Form(...)
+    password: str = Form(...),
+    plan: str = Form("free"),
 ):
+    selected_plan = "premium" if plan.lower() == "premium" else "free"
     try:
         auth_response = create_account(email, password, firstName)
     except AuthServiceError as e:
         return templates.TemplateResponse(
             request=request,
             name="signup.html",
-            context={"error": e.detail}
+            context={"error": e.detail, "selected_plan": selected_plan}
         )
 
     # Supabase only issues a session immediately when email confirmation is
     # disabled; otherwise the response has no access_token and the user must
     # confirm their email before they can log in.
     if not auth_response.get("access_token"):
+        if selected_plan == "premium":
+            request.session["pending_plan"] = "premium"
         return templates.TemplateResponse(
             request=request,
             name="login.html",
@@ -196,5 +270,30 @@ async def process_signup(
     request.session["user_email"] = email
     request.session["user_id"] = str(user_id)
     request.session["user_role"] = "basic_user"
+
+    if selected_plan == "premium":
+        base_url = (os.getenv("APP_PUBLIC_URL") or str(request.base_url)).rstrip("/")
+        try:
+            checkout_url = create_checkout_session(
+                user_id=str(user_id),
+                email=email,
+                success_url=f"{base_url}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
+                cancel_url=f"{base_url}/billing/cancel",
+            )
+            return RedirectResponse(url=checkout_url, status_code=303)
+        except (BillingConfigurationError, BillingError) as exc:
+            return templates.TemplateResponse(
+                request=request,
+                name="billing/error.html",
+                context={
+                    "base_layout": "free_users/base.html",
+                    "user_role": "basic_user",
+                    "user_id": str(user_id),
+                    "user_email": email,
+                    "user_initial": email[:1].upper(),
+                    "billing_error": str(exc),
+                },
+                status_code=503,
+            )
 
     return RedirectResponse(url="/dashboard", status_code=303)

@@ -30,6 +30,17 @@
             {% endif %}
 
             <form action="/signup" method="POST" class="auth-form">
+                <fieldset class="signup-plan-picker">
+                    <legend class="form-label">Choose your plan</legend>
+                    <label class="signup-plan-option">
+                        <input type="radio" name="plan" value="free" {% if selected_plan != 'premium' %}checked{% endif %}>
+                        <span><strong>Free</strong><small>$0 forever</small></span>
+                    </label>
+                    <label class="signup-plan-option signup-plan-option-premium">
+                        <input type="radio" name="plan" value="premium" {% if selected_plan == 'premium' %}checked{% endif %}>
+                        <span><strong>Premium</strong><small>$29 per month</small></span>
+                    </label>
+                </fieldset>
                 <div class="form-group">
                     <label for="firstName" class="form-label">Full Name</label>
                     <input type="text" id="firstName" name="firstName" class="form-control" placeholder="Jane Doe" required>
@@ -52,7 +63,7 @@
                     </label>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+                <button type="submit" class="btn btn-primary btn-full">Create Account and Continue</button>
             </form>
 
             <div class="auth-footer">

@@ -1,0 +1,13 @@
+{% extends base_layout %}
+
+{% block title %}Billing unavailable - StockLens{% endblock %}
+
+{% block content %}
+<section class="billing-result-card">
+    <span class="billing-result-icon billing-result-icon-error" aria-hidden="true">!</span>
+    <p class="workspace-eyebrow">Billing</p>
+    <h1>We could not open Stripe billing</h1>
+    <p>{{ billing_error }}</p>
+    <a href="/dashboard" class="btn btn-primary">Return to dashboard</a>
+</section>
+{% endblock %}

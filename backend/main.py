@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 from backend.routes.financial_routes import router as financial_router
 from backend.routes.notification_routes import router as notification_router
+from backend.routes.billing_routes import router as billing_router
 from backend.routes.stock_routes import router as stock_router
 from backend.routes.technical_routes import router as technical_router
 from backend.routes.user_routes import router as user_router
@@ -66,3 +67,4 @@ app.include_router(user_router, prefix="/api")
 app.include_router(financial_router, prefix="/api")
 app.include_router(technical_router, prefix="/api")
 app.include_router(notification_router, prefix="/api")
+app.include_router(billing_router, prefix="/api")
