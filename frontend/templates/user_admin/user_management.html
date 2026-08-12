@@ -65,12 +65,16 @@
                     </span>
                 </td>
                 <td class="action-cell">
-                    <span class="btn-icon" style="opacity: 0.5; cursor: not-allowed;" title="Not yet implemented">✏️</span>
+                    <a href="/admin/users/{{ user.id }}" class="btn-icon" title="View Details">👁️</a>
 
                     {% if user.status == 'Active' %}
-                        <span class="btn-icon text-danger" style="opacity: 0.5; cursor: not-allowed;" title="Not yet implemented">⚠️</span>
+                        <form action="/admin/users/{{ user.id }}/suspend" method="POST" class="m-0" style="display:inline;" onsubmit="return confirm('Suspend this user?');">
+                            <button type="submit" class="btn-icon text-danger" title="Suspend">⚠️</button>
+                        </form>
                     {% else %}
-                        <span class="btn-icon text-success" style="opacity: 0.5; cursor: not-allowed;" title="Not yet implemented">✅</span>
+                        <form action="/admin/users/{{ user.id }}/unsuspend" method="POST" class="m-0" style="display:inline;">
+                            <button type="submit" class="btn-icon text-success" title="Reactivate">✅</button>
+                        </form>
                     {% endif %}
                 </td>
             </tr>
