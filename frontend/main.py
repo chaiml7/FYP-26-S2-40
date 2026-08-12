@@ -37,6 +37,12 @@ _supabase_auth = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SE
 
 app = FastAPI()
 app.include_router(stock_router)
+# admin_router must be registered before user_router: both are mounted here
+# with no prefix, and they both define GET /admin/users/{user_id} (this one
+# session-cookie HTML, user_router's a bearer-token JSON endpoint gated on
+# the separate backend_admin role). Route matching is first-registered-wins,
+# so this order makes the HTML page win on this app. user_router's JSON
+# variant is unaffected on backend.main:app, where it's mounted under /api.
 app.include_router(admin_router)
 app.include_router(user_router)
 app.include_router(premium_user_router)

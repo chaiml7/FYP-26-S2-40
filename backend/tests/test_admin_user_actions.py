@@ -48,6 +48,24 @@ def test_admin_unsuspend_user_redirects(mock_update):
     mock_update.assert_called_once_with("target-id", True)
 
 
+@patch("backend.routes.admin_routes.update_user_status", return_value=[])
+def test_admin_suspend_user_404_when_missing(mock_update):
+    client.cookies.set("session", _session_cookie())
+    response = client.post("/admin/users/missing-id/suspend", follow_redirects=False)
+    client.cookies.clear()
+
+    assert response.status_code == 404
+
+
+@patch("backend.routes.admin_routes.update_user_status", return_value=[])
+def test_admin_unsuspend_user_404_when_missing(mock_update):
+    client.cookies.set("session", _session_cookie())
+    response = client.post("/admin/users/missing-id/unsuspend", follow_redirects=False)
+    client.cookies.clear()
+
+    assert response.status_code == 404
+
+
 @patch(
     "backend.routes.admin_routes.get_profile",
     return_value=[{
