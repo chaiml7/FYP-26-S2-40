@@ -293,6 +293,26 @@ def get_weighted_sentiment_score(symbol: str, score_date: date = None) -> dict:
     return rows[0]
 
 
+def get_latest_weighted_sentiment_score(symbol: str) -> dict:
+    """Most recent scored day for a symbol, regardless of whether it's today.
+
+    get_weighted_sentiment_score requires an exact date match, which returns
+    nothing on days the sentiment cron hasn't run yet. This falls back to
+    whatever the newest stored score_date is instead of silently zeroing out.
+    """
+    response = (
+        supabase.table("sentiment_daily_scores")
+        .select("*")
+        .eq("symbol", symbol.upper())
+        .order("score_date", desc=True)
+        .limit(1)
+        .execute()
+    )
+
+    rows = response.data or []
+    return rows[0] if rows else None
+
+
 def has_data_for_today(symbol: str) -> bool:
     today = date.today().isoformat()
     response = (
