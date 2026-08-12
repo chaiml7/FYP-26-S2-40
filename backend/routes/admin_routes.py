@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Form
+from fastapi import APIRouter, Request, Form, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 from backend.database.supabase_client import supabase
@@ -11,6 +11,7 @@ from backend.services.sentiment_source_service import (
     get_all_sentiment_sources,
     set_sentiment_source_active,
 )
+from backend.services.user_profile_service import get_profile, update_user_status
 
 router = APIRouter()
 templates = Jinja2Templates(directory="frontend/templates")
@@ -70,6 +71,59 @@ async def user_management_page(request: Request, filter: str = "all"):
             "current_filter": filter
         }
     )
+
+@router.get("/admin/users/{user_id}")
+async def admin_user_detail(request: Request, user_id: str):
+    role = request.session.get("user_role")
+    if not role or role != "frontend_admin":
+        return RedirectResponse(url="/login", status_code=303)
+    session = get_session_context(request)
+
+    profile = get_profile(user_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    raw = profile[0]
+    is_active_str = str(raw.get("is_active", "true")).lower()
+    detail = {
+        "id": raw.get("id"),
+        "username": raw.get("username") or (raw.get("email") or "").split("@")[0],
+        "full_name": raw.get("full_name") or "Unknown User",
+        "email": raw.get("email") or "No Email",
+        "role_id": str(raw.get("role_id", "basic_user")).lower(),
+        "status": "Active" if is_active_str == "true" else "Suspended",
+        "created_at": str(raw.get("created_at", "")),
+    }
+
+    return templates.TemplateResponse(
+        request=request,
+        name="user_admin/user_detail.html",
+        context={**session, "request": request, "user": detail}
+    )
+
+
+@router.post("/admin/users/{user_id}/suspend")
+async def admin_suspend_user(request: Request, user_id: str):
+    role = request.session.get("user_role")
+    if not role or role != "frontend_admin":
+        return RedirectResponse(url="/login", status_code=303)
+
+    if user_id == request.session.get("user_id"):
+        return RedirectResponse(url="/admin/user_management", status_code=303)
+
+    update_user_status(user_id, False)
+    return RedirectResponse(url="/admin/user_management", status_code=303)
+
+
+@router.post("/admin/users/{user_id}/unsuspend")
+async def admin_unsuspend_user(request: Request, user_id: str):
+    role = request.session.get("user_role")
+    if not role or role != "frontend_admin":
+        return RedirectResponse(url="/login", status_code=303)
+
+    update_user_status(user_id, True)
+    return RedirectResponse(url="/admin/user_management", status_code=303)
+
 
 @router.get("/admin/roles_management")
 async def roles_management_page(request: Request, role: str = "user admin"):
