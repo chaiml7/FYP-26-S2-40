@@ -111,7 +111,9 @@ async def admin_suspend_user(request: Request, user_id: str):
     if user_id == request.session.get("user_id"):
         return RedirectResponse(url="/admin/user_management", status_code=303)
 
-    update_user_status(user_id, False)
+    updated = update_user_status(user_id, False)
+    if not updated:
+        raise HTTPException(status_code=404, detail="User not found")
     return RedirectResponse(url="/admin/user_management", status_code=303)
 
 
@@ -121,7 +123,9 @@ async def admin_unsuspend_user(request: Request, user_id: str):
     if not role or role != "frontend_admin":
         return RedirectResponse(url="/login", status_code=303)
 
-    update_user_status(user_id, True)
+    updated = update_user_status(user_id, True)
+    if not updated:
+        raise HTTPException(status_code=404, detail="User not found")
     return RedirectResponse(url="/admin/user_management", status_code=303)
 
 
