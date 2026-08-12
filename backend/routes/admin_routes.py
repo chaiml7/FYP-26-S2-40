@@ -5,6 +5,12 @@ from backend.database.supabase_client import supabase
 from backend.services.admin_report_service import build_admin_report
 from backend.services.session_context import get_session_context
 from backend.services.stock_list_service import get_all_stocks
+from backend.services.sentiment_source_service import (
+    add_sentiment_source,
+    delete_sentiment_source,
+    get_all_sentiment_sources,
+    set_sentiment_source_active,
+)
 
 router = APIRouter()
 templates = Jinja2Templates(directory="frontend/templates")
@@ -244,18 +250,72 @@ async def save_admin_weightages(
 
 @router.get("/admin/sentiment")
 async def admin_sentiment_watchlist(request: Request):
-    # Session
     role = request.session.get("user_role")
     if not role or role != "frontend_admin":
         return RedirectResponse(url="/login", status_code=303)
     session = get_session_context(request)
 
+    raw_sources = get_all_sentiment_sources()
+    sources = [
+        {
+            "id": source.get("id"),
+            "type": source.get("source_type"),
+            "account": source.get("account"),
+            "relevance": source.get("relevance") or "—",
+            "status": "Active" if source.get("is_active") else "Suspended",
+        }
+        for source in raw_sources
+    ]
+
     return templates.TemplateResponse(
         request=request,
         name="user_admin/admin_sentiment_watchlist.html",
-        context={**session, "request": request}
-        # sources omitted: no sentiment-watchlist data source exists yet
+        context={**session, "request": request, "sources": sources}
     )
+
+@router.post("/admin/sentiment/add")
+async def admin_add_sentiment_source(
+    request: Request,
+    source_type: str = Form(...),
+    account: str = Form(...),
+    relevance: str = Form(default=""),
+):
+    role = request.session.get("user_role")
+    if not role or role != "frontend_admin":
+        return RedirectResponse(url="/login", status_code=303)
+
+    add_sentiment_source(source_type.strip(), account.strip(), relevance.strip() or None)
+    return RedirectResponse(url="/admin/sentiment", status_code=303)
+
+
+@router.post("/admin/sentiment/{source_id}/suspend")
+async def admin_suspend_sentiment_source(request: Request, source_id: str):
+    role = request.session.get("user_role")
+    if not role or role != "frontend_admin":
+        return RedirectResponse(url="/login", status_code=303)
+
+    set_sentiment_source_active(source_id, False)
+    return RedirectResponse(url="/admin/sentiment", status_code=303)
+
+
+@router.post("/admin/sentiment/{source_id}/reactivate")
+async def admin_reactivate_sentiment_source(request: Request, source_id: str):
+    role = request.session.get("user_role")
+    if not role or role != "frontend_admin":
+        return RedirectResponse(url="/login", status_code=303)
+
+    set_sentiment_source_active(source_id, True)
+    return RedirectResponse(url="/admin/sentiment", status_code=303)
+
+
+@router.post("/admin/sentiment/{source_id}/delete")
+async def admin_delete_sentiment_source(request: Request, source_id: str):
+    role = request.session.get("user_role")
+    if not role or role != "frontend_admin":
+        return RedirectResponse(url="/login", status_code=303)
+
+    delete_sentiment_source(source_id)
+    return RedirectResponse(url="/admin/sentiment", status_code=303)
 
 @router.get("/admin/reports")
 async def admin_reports_page(request: Request):
