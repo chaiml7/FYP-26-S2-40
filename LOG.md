@@ -857,6 +857,23 @@ Date: 2026-08-10
 
 ---
 
+### 2026-08-12 — Bali — Live-site bug pass: BUY/HOLD/SELL badges, recommendations loading spinner, dark-mode dropdown, chart tooltips, earnings calendar investigation
+
+**What prompted this:** user reported four issues from the live `stocklens-app.onrender.com` deploy: no BUY/HOLD/SELL indicator on the stock detail page or Prediction Breakdown (even though the logic exists on Recommendations), `/premium/recommendations` taking a long time to load with no feedback, the Prediction Breakdown symbol dropdown unreadable in dark mode, the "predicted vs actual" line chart only showing actual, and Earnings Calendar only ever showing NVDA.
+
+**What I did:**
+- Added a real BUY/HOLD/SELL badge (reusing `score_action_label()` from `prediction_service.py`, the same source Recommendations uses) to `/stocks/{symbol}/view` (`dashboard_service.get_stock_dashboard()` now computes `action` from the weighted overall score) and to `/premium/prediction_breakdown` (replaced the BULLISH/BEARISH/NEUTRAL pill, which branched on `"STRONG BUY"/"STRONG SELL"` values `score_action_label()` never actually returns — dead code left over from before the scoring rewrite).
+- Fixed the Prediction Breakdown symbol `<select>` rendering white-on-white in dark mode: it was styled with `var(--panel-bg, transparent)`, and `--panel-bg` is never defined anywhere in `styles.css`, so it always fell back to transparent and the browser used its OS-default (white) popup background against the theme's near-white text. Swapped to `var(--bg-card)`, which is defined per theme.
+- Split `/premium/recommendations` into an instant page shell plus a new `/premium/recommendations/data` JSON endpoint (same scoring loop as before — 4 sequential Supabase round-trips per active stock is the actual bottleneck, not yfinance). Page now renders immediately with a spinner and fetches/renders cards client-side.
+- Investigated the "predicted vs actual" chart with the user before touching it: confirmed the model is a binary direction classifier only (no continuous price output anywhere in the pipeline), and the predicted line removed in the previous session's commit (`b4b026a`) was fake/hardcoded, not real data going stale. User chose to keep it actual-close-only rather than fabricate a line, but wanted the "why" note removed and hover detail added instead — added per-point `<circle>` markers with native SVG `<title>` tooltips showing date + close price.
+- Investigated Earnings Calendar only showing NVDA: not a pipeline/DB bug. Hit FMP's live `/stable/earnings-calendar` endpoint directly with `curl` for the next-30-days window — it only returns ~11 companies total on the current API plan regardless of date range (confirmed pagination doesn't help; `page=1` returns `[]`), and NVDA just happened to be the one overlapping StockLens' tracked symbols. Added a "Showing X of Y tracked stocks…" note to the template so this isn't mistaken for a bug again instead of "fixing" something that isn't broken.
+
+**Verification:** `pip install --user -r backend/requirements.txt` (the machine's system-level `C:\Python311\Scripts` isn't writable without admin, so console-script installs need `--user`), started both `backend.main:app` (8000) and `frontend.main:app` (8001) locally, forged a local-only signed session cookie (`SessionMiddleware` secret is a hardcoded dev value in `frontend/main.py`) to test as `premium_user` without needing real credentials, then `curl`'d all four routes — all 200, no server errors in either log, `/premium/recommendations/data` returned real live-scored stocks (14 active), Earnings Calendar showed "1 of 14 tracked stocks."
+
+**Next steps:** open PR to `main` (code only, same cherry-pick pattern as PR #21).
+
+---
+
 
 ## Issues / Bugs Tracker
 
