@@ -44,6 +44,50 @@ def test_admin_sentiment_lists_sources(mock_get_sources):
 
 
 @patch("backend.routes.admin_routes.add_sentiment_source")
+def test_admin_add_sentiment_source_requires_login(mock_add):
+    client.cookies.clear()
+    response = client.post(
+        "/admin/sentiment/add",
+        data={"source_type": "RSS", "account": "MarketWatch", "relevance": "Market-wide"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"
+    mock_add.assert_not_called()
+
+
+@patch("backend.routes.admin_routes.set_sentiment_source_active")
+def test_admin_suspend_sentiment_source_requires_login(mock_set_active):
+    client.cookies.clear()
+    response = client.post("/admin/sentiment/1/suspend", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"
+    mock_set_active.assert_not_called()
+
+
+@patch("backend.routes.admin_routes.set_sentiment_source_active")
+def test_admin_reactivate_sentiment_source_requires_login(mock_set_active):
+    client.cookies.clear()
+    response = client.post("/admin/sentiment/1/reactivate", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"
+    mock_set_active.assert_not_called()
+
+
+@patch("backend.routes.admin_routes.delete_sentiment_source")
+def test_admin_delete_sentiment_source_requires_login(mock_delete):
+    client.cookies.clear()
+    response = client.post("/admin/sentiment/1/delete", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"
+    mock_delete.assert_not_called()
+
+
+@patch("backend.routes.admin_routes.add_sentiment_source")
 def test_admin_add_sentiment_source_redirects(mock_add):
     client.cookies.set("session", _session_cookie())
     response = client.post(
