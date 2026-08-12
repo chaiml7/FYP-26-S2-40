@@ -22,7 +22,8 @@ async def user_management_page(request: Request, filter: str = "all"):
     session_role = request.session.get("user_role")
     if not session_role or session_role != "frontend_admin":
         return RedirectResponse(url="/login", status_code=303)
-    
+    session = get_session_context(request)
+
     response = supabase.table("user_profiles").select("*").execute()
     all_users = response.data
 
@@ -56,9 +57,10 @@ async def user_management_page(request: Request, filter: str = "all"):
         request=request,
         name="user_admin/user_management.html",
         context={
-            "request": request, 
-            "users": display_users,  
-            "stats": stats,          
+            **session,
+            "request": request,
+            "users": display_users,
+            "stats": stats,
             "current_filter": filter
         }
     )
@@ -68,7 +70,8 @@ async def roles_management_page(request: Request, role: str = "user admin"):
     session_role = request.session.get("user_role")
     if not session_role or session_role != "frontend_admin":
         return RedirectResponse(url="/login", status_code=303)
-        
+    session = get_session_context(request)
+
     target_role = role.lower()
 
     roles_response = supabase.table("roles").select("*").execute()
@@ -126,17 +129,18 @@ async def roles_management_page(request: Request, role: str = "user admin"):
         })  
 
     assigned_users = [u for u in display_users if u["role"] == selected_role["id"].lower()]
-    unassigned_users = [u for u in display_users if u["role"] == ""]
+    unassigned_users = [u for u in display_users if u["role"] != selected_role["id"].lower()]
 
     return templates.TemplateResponse(
         request=request,
         name="user_admin/user_roles_management.html",
         context={
+            **session,
             "request": request,
             "roles": roles_data,
             "selected_role": selected_role,
             "permissions": permissions_data,
-            "assigned_users": assigned_users, 
+            "assigned_users": assigned_users,
             "unassigned_users": unassigned_users
         }
     )
@@ -146,7 +150,8 @@ async def admin_stock_database(request: Request):
     role = request.session.get("user_role")
     if not role or role != "frontend_admin":
         return RedirectResponse(url="/login", status_code=303)
-    
+    session = get_session_context(request)
+
     # 1. Fetch all stocks using your groupmate's existing logic
     raw_stocks = get_all_stocks()
 
@@ -175,6 +180,7 @@ async def admin_stock_database(request: Request):
         request=request,
         name="user_admin/stock_database.html",
         context={
+            **session,
             "request": request,
             "stocks": display_stocks
         }
@@ -186,7 +192,8 @@ async def admin_weightages_page(request: Request):
     role = request.session.get("user_role")
     if not role or role != "frontend_admin":
         return RedirectResponse(url="/login", status_code=303)
-    
+    session = get_session_context(request)
+
     try:
         db_response = supabase.table("weightages").select(
             "technical, sentiment, financial"
@@ -201,7 +208,8 @@ async def admin_weightages_page(request: Request):
         request=request, 
         name="user_admin/admin_weightages.html",
         context={
-            "request": request, 
+            **session,
+            "request": request,
             "defaults": global_defaults
         }
     )
@@ -240,11 +248,13 @@ async def admin_sentiment_watchlist(request: Request):
     role = request.session.get("user_role")
     if not role or role != "frontend_admin":
         return RedirectResponse(url="/login", status_code=303)
+    session = get_session_context(request)
 
     return templates.TemplateResponse(
-        request=request, 
-        name="user_admin/admin_sentiment_watchlist.html"
-        # context={"sources": sources_list}
+        request=request,
+        name="user_admin/admin_sentiment_watchlist.html",
+        context={**session, "request": request}
+        # sources omitted: no sentiment-watchlist data source exists yet
     )
 
 @router.get("/admin/reports")
@@ -287,9 +297,10 @@ async def add_stock_page(request: Request):
     role = request.session.get("user_role")
     if not role or role != "frontend_admin":
         return RedirectResponse(url="/login", status_code=303)
-    
+    session = get_session_context(request)
+
     return templates.TemplateResponse(
         request=request,
         name="user_admin/add_stock.html",
-        context={"request": request}
+        context={**session, "request": request}
     )

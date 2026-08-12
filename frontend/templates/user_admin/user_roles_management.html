@@ -1,6 +1,6 @@
 {% extends "user_admin/base.html" %}
 
-{% block title %}Stock Database - StockLens{% endblock %}
+{% block title %}Role Management - StockLens{% endblock %}
 
 {% block nav_rolemanagement %}active{% endblock %}
 
@@ -26,7 +26,7 @@
                 <span class="role-tag badge-purple">{{ selected_role.name | upper }}</span>
                 <h2 class="text-2xl font-bold text-main">{{ selected_role.name }}</h2>
             </div>
-            <div class="info-box">
+            <div class="info-box" title="Role description">
                 <span class="text-muted">ℹ️ {{ selected_role.desc }}</span>
             </div>
         
@@ -49,11 +49,6 @@
         </div>
 
         <div class="card assign-card mt-6">
-            <div class="    -6">
-                <span class="search-icon">🔍</span>
-                <input type="text" placeholder="Search users by name or email..." class="form-control search-input">
-            </div>
-
             <div class="assigned-section mb-6">
                 <div class="section-header flex items-center gap-2 mb-2">
                     <h5 class="text-sm font-bold text-muted uppercase">Users with this role</h5>
@@ -70,11 +65,7 @@
                                 <div class="text-sm text-muted">{{ user.email }}</div>
                             </div>
                         </div>
-                        <form action="/admin/roles/remove" method="POST" class="m-0">
-                            <input type="hidden" name="user_id" value="{{ user.id }}">
-                            <input type="hidden" name="role_id" value="{{ selected_role.id }}">
-                            <button type="submit" class="btn-icon text-danger border-danger p-1 rounded hover-bg-danger">✕</button>
-                        </form>
+                        <button type="button" class="btn-icon text-danger border-danger p-1 rounded" style="opacity: 0.5; cursor: not-allowed;" disabled title="Not yet implemented">✕</button>
                     </div>
                     {% else %}
                     <div class="text-muted text-sm p-3">No users currently assigned to this role.</div>
@@ -93,7 +84,7 @@
                                 <span class="count-badge">{{ unassigned_users | length }}</span>
                             </div>
                             
-                            <button type="submit" id="dynamicAssignBtn" class="btn btn-primary btn-sm" style="display: none;">
+                            <button type="submit" id="dynamicAssignBtn" class="btn btn-primary btn-sm" style="display: none;" disabled title="Not yet implemented">
                                 ✓ Assign {{ selected_role.name | upper }} to 0 users
                             </button>
                         </div>
