@@ -6,10 +6,34 @@
 
 {% block content %}
 
-        <header class="table-controls" style="margin-top: 2rem;">
+        <header class="table-controls">
             <h1 class="text-2xl font-bold text-main m-0">Sentiment Watchlist</h1>
-            <button class="btn btn-primary">+ Add Source</button>
         </header>
+
+        <details class="card" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+            <summary class="font-bold text-main" style="cursor: pointer;">+ Add Source</summary>
+            <form action="/admin/sentiment/add" method="POST" class="grid-2" style="margin-top: 1rem; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Type</label>
+                    <select name="source_type" class="form-control" required>
+                        <option value="RSS">RSS</option>
+                        <option value="API">API</option>
+                        <option value="Social">Social</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Account / Source</label>
+                    <input type="text" name="account" class="form-control" placeholder="e.g. Reuters Business" required>
+                </div>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label class="form-label">Relevance</label>
+                    <input type="text" name="relevance" class="form-control" placeholder="e.g. Market-wide, or a ticker">
+                </div>
+                <div style="grid-column: 1 / -1;">
+                    <button type="submit" class="btn btn-primary">Save Source</button>
+                </div>
+            </form>
+        </details>
 
         <div class="table-card" style="border: 1px solid var(--border-color); border-radius: 8px;">
             <table class="admin-table">
@@ -40,13 +64,21 @@
                             {% endif %}
                         </td>
                         <td style="text-align: right;">
-                            <div class="action-cell" style="justify-content: flex-end;">
-                                <button class="btn-icon" title="Toggle Status" style="color: var(--text-muted);">
-                                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>
-                                </button>
-                                <button class="btn-icon hover-danger" title="Delete Source" style="color: var(--text-muted);">
-                                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                </button>
+                            <div class="action-cell" style="justify-content: flex-end; gap: 0.5rem;">
+                                {% if source.status == 'Active' %}
+                                <form action="/admin/sentiment/{{ source.id }}/suspend" method="POST" class="m-0" onsubmit="return confirm('Suspend this source?');">
+                                    <button type="submit" class="btn btn-outline btn-sm text-danger">Suspend</button>
+                                </form>
+                                {% else %}
+                                <form action="/admin/sentiment/{{ source.id }}/reactivate" method="POST" class="m-0">
+                                    <button type="submit" class="btn btn-outline btn-sm">Reactivate</button>
+                                </form>
+                                {% endif %}
+                                <form action="/admin/sentiment/{{ source.id }}/delete" method="POST" class="m-0" onsubmit="return confirm('Delete this source? This cannot be undone.');">
+                                    <button type="submit" class="btn-icon hover-danger" title="Delete Source" style="color: var(--text-muted);">
+                                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>

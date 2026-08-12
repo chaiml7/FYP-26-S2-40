@@ -1,6 +1,6 @@
 {% extends "user_admin/base.html" %}
 
-{% block title %}Stock Database - StockLens{% endblock %}
+{% block title %}User Management - StockLens{% endblock %}
 
 {% block nav_usermanagement %}active{% endblock %}
 
@@ -25,9 +25,9 @@
 </div>
 
 <div class="table-controls">
-    <form action="/admin/search" method="GET" class="search-bar">
+    <form action="/admin/search" method="GET" class="search-bar" title="Not yet implemented">
         <span class="search-icon">🔍</span>
-        <input type="text" name="q" placeholder="Search by name, email, or ID..." class="form-control search-input">
+        <input type="text" name="q" placeholder="Search by name, email, or ID... (coming soon)" class="form-control search-input" disabled>
     </form>
     <div class="filter-pills">
         <a href="/admin/user_management?filter=all" class="pill {% if current_filter == 'all' %}active{% endif %}">All</a>
@@ -65,12 +65,16 @@
                     </span>
                 </td>
                 <td class="action-cell">
-                    <a href="/admin/users/update/{{ user.id }}" class="btn-icon">✏️</a>
-                    
+                    <a href="/admin/users/{{ user.id }}" class="btn-icon" title="View Details">👁️</a>
+
                     {% if user.status == 'Active' %}
-                        <a href="/admin/users/suspend/{{ user.id }}" class="btn-icon text-danger">⚠️</a>
+                        <form action="/admin/users/{{ user.id }}/suspend" method="POST" class="m-0" style="display:inline;" onsubmit="return confirm('Suspend this user?');">
+                            <button type="submit" class="btn-icon text-danger" title="Suspend">⚠️</button>
+                        </form>
                     {% else %}
-                        <a href="/admin/users/unsuspend/{{ user.id }}" class="btn-icon text-success">✅</a>
+                        <form action="/admin/users/{{ user.id }}/unsuspend" method="POST" class="m-0" style="display:inline;">
+                            <button type="submit" class="btn-icon text-success" title="Reactivate">✅</button>
+                        </form>
                     {% endif %}
                 </td>
             </tr>

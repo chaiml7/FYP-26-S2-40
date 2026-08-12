@@ -1,10 +1,17 @@
-from fastapi import APIRouter, Request, Form
+from fastapi import APIRouter, Request, Form, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 from backend.database.supabase_client import supabase
 from backend.services.admin_report_service import build_admin_report
 from backend.services.session_context import get_session_context
 from backend.services.stock_list_service import get_all_stocks
+from backend.services.sentiment_source_service import (
+    add_sentiment_source,
+    delete_sentiment_source,
+    get_all_sentiment_sources,
+    set_sentiment_source_active,
+)
+from backend.services.user_profile_service import get_profile, update_user_status
 
 router = APIRouter()
 templates = Jinja2Templates(directory="frontend/templates")
@@ -22,7 +29,8 @@ async def user_management_page(request: Request, filter: str = "all"):
     session_role = request.session.get("user_role")
     if not session_role or session_role != "frontend_admin":
         return RedirectResponse(url="/login", status_code=303)
-    
+    session = get_session_context(request)
+
     response = supabase.table("user_profiles").select("*").execute()
     all_users = response.data
 
@@ -56,19 +64,78 @@ async def user_management_page(request: Request, filter: str = "all"):
         request=request,
         name="user_admin/user_management.html",
         context={
-            "request": request, 
-            "users": display_users,  
-            "stats": stats,          
+            **session,
+            "request": request,
+            "users": display_users,
+            "stats": stats,
             "current_filter": filter
         }
     )
+
+@router.get("/admin/users/{user_id}")
+async def admin_user_detail(request: Request, user_id: str):
+    role = request.session.get("user_role")
+    if not role or role != "frontend_admin":
+        return RedirectResponse(url="/login", status_code=303)
+    session = get_session_context(request)
+
+    profile = get_profile(user_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    raw = profile[0]
+    is_active_str = str(raw.get("is_active", "true")).lower()
+    detail = {
+        "id": raw.get("id"),
+        "username": raw.get("username") or (raw.get("email") or "").split("@")[0],
+        "full_name": raw.get("full_name") or "Unknown User",
+        "email": raw.get("email") or "No Email",
+        "role_id": str(raw.get("role_id", "basic_user")).lower(),
+        "status": "Active" if is_active_str == "true" else "Suspended",
+        "created_at": str(raw.get("created_at", "")),
+    }
+
+    return templates.TemplateResponse(
+        request=request,
+        name="user_admin/user_detail.html",
+        context={**session, "request": request, "user": detail}
+    )
+
+
+@router.post("/admin/users/{user_id}/suspend")
+async def admin_suspend_user(request: Request, user_id: str):
+    role = request.session.get("user_role")
+    if not role or role != "frontend_admin":
+        return RedirectResponse(url="/login", status_code=303)
+
+    if user_id == request.session.get("user_id"):
+        return RedirectResponse(url="/admin/user_management", status_code=303)
+
+    updated = update_user_status(user_id, False)
+    if not updated:
+        raise HTTPException(status_code=404, detail="User not found")
+    return RedirectResponse(url="/admin/user_management", status_code=303)
+
+
+@router.post("/admin/users/{user_id}/unsuspend")
+async def admin_unsuspend_user(request: Request, user_id: str):
+    role = request.session.get("user_role")
+    if not role or role != "frontend_admin":
+        return RedirectResponse(url="/login", status_code=303)
+
+    updated = update_user_status(user_id, True)
+    if not updated:
+        raise HTTPException(status_code=404, detail="User not found")
+    return RedirectResponse(url="/admin/user_management", status_code=303)
+
 
 @router.get("/admin/roles_management")
 async def roles_management_page(request: Request, role: str = "user admin"):
     session_role = request.session.get("user_role")
     if not session_role or session_role != "frontend_admin":
         return RedirectResponse(url="/login", status_code=303)
-        
+    session = get_session_context(request)
+
     target_role = role.lower()
 
     roles_response = supabase.table("roles").select("*").execute()
@@ -126,17 +193,18 @@ async def roles_management_page(request: Request, role: str = "user admin"):
         })  
 
     assigned_users = [u for u in display_users if u["role"] == selected_role["id"].lower()]
-    unassigned_users = [u for u in display_users if u["role"] == ""]
+    unassigned_users = [u for u in display_users if u["role"] != selected_role["id"].lower()]
 
     return templates.TemplateResponse(
         request=request,
         name="user_admin/user_roles_management.html",
         context={
+            **session,
             "request": request,
             "roles": roles_data,
             "selected_role": selected_role,
             "permissions": permissions_data,
-            "assigned_users": assigned_users, 
+            "assigned_users": assigned_users,
             "unassigned_users": unassigned_users
         }
     )
@@ -146,7 +214,8 @@ async def admin_stock_database(request: Request):
     role = request.session.get("user_role")
     if not role or role != "frontend_admin":
         return RedirectResponse(url="/login", status_code=303)
-    
+    session = get_session_context(request)
+
     # 1. Fetch all stocks using your groupmate's existing logic
     raw_stocks = get_all_stocks()
 
@@ -175,6 +244,7 @@ async def admin_stock_database(request: Request):
         request=request,
         name="user_admin/stock_database.html",
         context={
+            **session,
             "request": request,
             "stocks": display_stocks
         }
@@ -186,7 +256,8 @@ async def admin_weightages_page(request: Request):
     role = request.session.get("user_role")
     if not role or role != "frontend_admin":
         return RedirectResponse(url="/login", status_code=303)
-    
+    session = get_session_context(request)
+
     try:
         db_response = supabase.table("weightages").select(
             "technical, sentiment, financial"
@@ -201,7 +272,8 @@ async def admin_weightages_page(request: Request):
         request=request, 
         name="user_admin/admin_weightages.html",
         context={
-            "request": request, 
+            **session,
+            "request": request,
             "defaults": global_defaults
         }
     )
@@ -236,16 +308,72 @@ async def save_admin_weightages(
 
 @router.get("/admin/sentiment")
 async def admin_sentiment_watchlist(request: Request):
-    # Session
+    role = request.session.get("user_role")
+    if not role or role != "frontend_admin":
+        return RedirectResponse(url="/login", status_code=303)
+    session = get_session_context(request)
+
+    raw_sources = get_all_sentiment_sources()
+    sources = [
+        {
+            "id": source.get("id"),
+            "type": source.get("source_type"),
+            "account": source.get("account"),
+            "relevance": source.get("relevance") or "—",
+            "status": "Active" if source.get("is_active") else "Suspended",
+        }
+        for source in raw_sources
+    ]
+
+    return templates.TemplateResponse(
+        request=request,
+        name="user_admin/admin_sentiment_watchlist.html",
+        context={**session, "request": request, "sources": sources}
+    )
+
+@router.post("/admin/sentiment/add")
+async def admin_add_sentiment_source(
+    request: Request,
+    source_type: str = Form(...),
+    account: str = Form(...),
+    relevance: str = Form(default=""),
+):
     role = request.session.get("user_role")
     if not role or role != "frontend_admin":
         return RedirectResponse(url="/login", status_code=303)
 
-    return templates.TemplateResponse(
-        request=request, 
-        name="user_admin/admin_sentiment_watchlist.html"
-        # context={"sources": sources_list}
-    )
+    add_sentiment_source(source_type.strip(), account.strip(), relevance.strip() or None)
+    return RedirectResponse(url="/admin/sentiment", status_code=303)
+
+
+@router.post("/admin/sentiment/{source_id}/suspend")
+async def admin_suspend_sentiment_source(request: Request, source_id: str):
+    role = request.session.get("user_role")
+    if not role or role != "frontend_admin":
+        return RedirectResponse(url="/login", status_code=303)
+
+    set_sentiment_source_active(source_id, False)
+    return RedirectResponse(url="/admin/sentiment", status_code=303)
+
+
+@router.post("/admin/sentiment/{source_id}/reactivate")
+async def admin_reactivate_sentiment_source(request: Request, source_id: str):
+    role = request.session.get("user_role")
+    if not role or role != "frontend_admin":
+        return RedirectResponse(url="/login", status_code=303)
+
+    set_sentiment_source_active(source_id, True)
+    return RedirectResponse(url="/admin/sentiment", status_code=303)
+
+
+@router.post("/admin/sentiment/{source_id}/delete")
+async def admin_delete_sentiment_source(request: Request, source_id: str):
+    role = request.session.get("user_role")
+    if not role or role != "frontend_admin":
+        return RedirectResponse(url="/login", status_code=303)
+
+    delete_sentiment_source(source_id)
+    return RedirectResponse(url="/admin/sentiment", status_code=303)
 
 @router.get("/admin/reports")
 async def admin_reports_page(request: Request):
@@ -287,9 +415,10 @@ async def add_stock_page(request: Request):
     role = request.session.get("user_role")
     if not role or role != "frontend_admin":
         return RedirectResponse(url="/login", status_code=303)
-    
+    session = get_session_context(request)
+
     return templates.TemplateResponse(
         request=request,
         name="user_admin/add_stock.html",
-        context={"request": request}
+        context={**session, "request": request}
     )
