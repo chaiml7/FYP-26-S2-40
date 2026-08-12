@@ -915,6 +915,36 @@ Date: 2026-08-10
 
 ---
 
+### 2026-08-13 — Bali — Demo recording audit (all 5 segments)
+
+**Context:** Team is recording a ~30 min demo video split into 5 segments (Unregistered/Onboarding — Maithri, Stock Discovery — Ming Liang, Research & Sentiment — Iann, Premium — Addison, Admin — Bali), one presenter per segment. Asked Claude to live-test every assigned user story against the deployed app (`https://stocklens-app.onrender.com/`, current PR #21+ Render deploy — see 2026-08-12 entries above) before anyone records, using the test accounts in `backend/.env` (`admin@admin.com`, `freeuser1@user.com`, `premiumuser1@user.com`, password `Admin1234`/`Demo1234`).
+
+**Method:** not a code read-through — actually drove the live HTTP endpoints each page calls (login, form POSTs, PATCH/DELETE actions) with real session cookies, reverting every state change afterward (stock add/deactivate, weightage save, sentiment source add, user suspend — all cleaned up; see artifact for exact before/after values).
+
+**Full findings + suggested recording order per person:** https://claude.ai/code/artifact/f266b087-a7d5-4838-9b3e-22ef9f200630 (private Claude artifact — if continuing from a different machine/session, the source markdown was written to that session's scratchpad as `admin_demo_audit.md`; republish the same artifact URL by passing it as `url` to the Artifact tool rather than creating a new one)
+
+**Confirmed working (Admin, all individually live-tested under `admin@admin.com`):** all 12 Admin user stories end-to-end — login/logout, dashboard (lands on Stock Database), view user detail, suspend/unsuspend a user, add/deactivate/reactivate a stock, save+revert default weightages, add/suspend/reactivate/delete a sentiment source (also serves as "view watchlist" — same page), generate a performance report.
+
+**Confirmed working (Base/Premium):** login, logout, search, view public pages (FAQ/reviews/pricing), signup page loads, news & social feed, premium prediction weightages (save+persist), premium risk-based recommendations (use `risk=conservative|moderate|aggressive` query values, not low/med/high — that's what the page's own filter pills send), premium prediction breakdown.
+
+**Bugs/gaps found today (new rows added to the Issues/Bugs Tracker below):**
+1. `backendadmin@admin.com` still 404s on login (`frontend/main.py:207` redirects to `/backend_admin/stocks`, never registered) — this is the same stale two-role leftover flagged in the 2026-08-12 entry above (line ~904), but that pass only fixed the Add Stock / weightages dead *links*, not the login redirect itself or the role-gate on every `/admin/*` route (`role != "frontend_admin"` locks `backend_admin` out everywhere). Not yet fixed.
+2. Base/free users get a 403 + locked "Upgrade to Premium" wall on watchlist add/remove — this is actually **intentional**, per the 2026-07-02 entry above ("Watchlist feature (premium add/remove + like button)"), not a new bug. But it directly conflicts with the recording assignment sheet, which lists watchlist add/delete under the *Base* user's segment (Ming Liang). Needs a team call: demo it as Premium instead, or open it up to base users before recording.
+3. `/user/market_overview` (Top Gainers/Losers) is hardcoded static HTML, byte-identical across requests, not wired to real data — and every row links to `/quote?symbol=...`, which 404s.
+4. No "update password" or "delete account" UI anywhere in the app. `PATCH /users/me/password` exists as a bearer-token JSON API but nothing in the frontend calls it; delete-account has no backend route at all, session or bearer.
+5. No "follow social media accounts" feature exists anywhere in the codebase (Base User Story #9).
+6. `POST /billing/portal` (Premium subscription downgrade) returns a raw HTTP 500 instead of its own graceful `billing/error.html` page — the route's `except BillingConfigurationError`/`except BillingError` handlers look correct on read-through, so something else is throwing past them; needs a Render log check for the actual traceback.
+7. Left a deactivated test stock `ZZZT` ("Audit Test Corp") in the live DB from audit testing — no delete-stock endpoint exists, so it can only be removed via the Supabase dashboard.
+
+**Next steps (pick up here tomorrow):**
+- [ ] Decide as a team how to handle items 2, 4, 5, 6 above before recording — each blocks part of someone else's assigned segment. Per item: skip on camera / narrate without clicking / fix first if time allows.
+- [ ] If fixing item 1 (backend_admin routing): either register `/backend_admin/*` properly, or (simpler, matches the direction the 2026-08-12 admin pass already took) collapse `backend_admin` into `frontend_admin` everywhere it still appears (`frontend/main.py`'s redirect, `backend/schemas.py`'s role literal, `user_routes.py`'s bearer-token admin API) and update `admin/roles_management`'s displayed permission matrix to match reality.
+- [ ] Delete or repurpose the leftover `ZZZT` test stock in Supabase before Person 5's segment records.
+- [ ] Do one real signup dry-run (`/signup` → `POST /auth/signup`) before Maithri records — deliberately not submitted live today to avoid leaving a throwaway auth user in Supabase, so that path is unverified beyond the page loading.
+- [ ] Once team decisions land, reopen the artifact and update its "Summary table" to reflect final go/no-go per story before the actual recording day.
+
+---
+
 
 ## Issues / Bugs Tracker
 
@@ -932,6 +962,13 @@ Date: 2026-08-10
 | 2026-08-12 | "+ Add Stock" and weightages save form linked to `/backend_admin/...`, a URL prefix that doesn't exist — leftover from a collapsed two-role (`user_admin`/`backend_admin` → `frontend_admin`) design | Resolved | Both point at the real `/admin/stocks/new` and `/admin/weightages` routes now |
 | 2026-08-12 | User Management search + row actions, and Role Management assign/remove, posted to routes that never existed in the backend (404) | Resolved (User Management) / Open (Role Management) | Built real suspend/unsuspend/detail routes for User Management. Role Management's assign/remove isn't in the updated `.4 Admin` user stories, so left disabled with a tooltip rather than built out — revisit if a story for it shows up later |
 | 2026-08-12 | Supabase MCP OAuth flow returns `{"message":"Unrecognized client_id"}` on Supabase's authorize endpoint | Open | Not fixable from this session — looks like the MCP integration's OAuth app isn't registered correctly on Supabase's side. Worked around by pasting migration SQL directly in the dashboard SQL editor |
+| 2026-08-13 | `backendadmin@admin.com` login 404s (`/backend_admin/stocks` route never registered); `backend_admin` role locked out of all `/admin/*` routes | Open | Same stale two-role leftover as the 2026-08-12 dead-link fixes, but the login redirect + route guards themselves weren't touched then. Needs a routing fix or full role-split removal — team decision |
+| 2026-08-13 | Base/free users get 403 + Premium paywall on watchlist add/remove, conflicting with the recording assignment sheet's Base-segment story | Open | Intentional per 2026-07-02 scoping decision, not a bug — but needs a team call on how to demo it |
+| 2026-08-13 | `/user/market_overview` Top Gainers/Losers is hardcoded static data; row links 404 (`/quote?symbol=`) | Open | Needs real data wiring + working stock links |
+| 2026-08-13 | No UI for update-password or delete-account (Base #10/#12); delete-account has no backend route at all | Open | Needs a settings page + delete endpoint, or drop from demo scope |
+| 2026-08-13 | "Follow social media accounts" feature (Base #9) doesn't exist anywhere in codebase | Open | Not started — needs a team decision on demo scope |
+| 2026-08-13 | `POST /billing/portal` (subscription downgrade) returns raw 500 instead of graceful billing-error page | Open | Route's exception handlers look correct on read-through; check Render logs for the real traceback |
+| 2026-08-13 | Leftover deactivated test stock `ZZZT` ("Audit Test Corp") in live Supabase DB from audit testing | Open | Delete manually via Supabase dashboard (no delete-stock endpoint exists) |
 
 ---
 
