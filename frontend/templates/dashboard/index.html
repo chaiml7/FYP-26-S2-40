@@ -1,0 +1,244 @@
+{% extends base_layout %}
+
+{% block title %}Stocks - StockLens{% endblock %}
+
+{% block nav_dashboard %}active{% endblock %}
+
+{% block content %}
+<section class="workspace-heading">
+    <div>
+        <p class="workspace-eyebrow">Market workspace</p>
+        <h1>Stocks</h1>
+        <p>
+            {% if selected_date %}
+                Showing market data and predictions for {{ selected_date }}.
+            {% else %}
+                Showing the latest available data for every tracked stock.
+            {% endif %}
+        </p>
+    </div>
+    <div class="market-count">
+        <strong>{{ stocks | length }}</strong>
+        <span>active stocks</span>
+    </div>
+</section>
+
+<section class="stock-toolbar stock-toolbar-dated" aria-label="Stock filters">
+    <label class="stock-search">
+        <span>Search</span>
+        <input
+            id="stock-search"
+            type="search"
+            placeholder="Symbol or company"
+            autocomplete="off"
+        >
+    </label>
+    <label class="sector-filter">
+        <span>Sector</span>
+        <select id="sector-filter">
+            <option value="">All sectors</option>
+            {% for sector in sectors %}
+                <option value="{{ sector | lower }}">{{ sector }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <form method="GET" action="/dashboard" class="dashboard-date-form">
+        <label>
+            <span>Analysis date</span>
+            <input type="date" name="selected_date" value="{{ selected_date }}">
+        </label>
+        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+        {% if selected_date %}
+            <a href="/dashboard" class="btn btn-outline btn-sm">Latest</a>
+        {% endif %}
+    </form>
+</section>
+
+<div class="card table-card stock-table-shell">
+    <table class="stock-browser-table">
+        <thead>
+            <tr>
+                {% if user_role == "premium_user" %}<th><span class="sr-only">Watchlist</span></th>{% endif %}
+                <th class="sortable-column" aria-sort="ascending">
+                    <button type="button" class="table-sort-button" data-sort="company" data-first-direction="asc">
+                        Company <span class="sort-indicator" aria-hidden="true">&#8593;</span>
+                    </button>
+                </th>
+                <th>Sector</th>
+                <th>Latest price</th>
+                <th class="sortable-column" aria-sort="none">
+                    <button type="button" class="table-sort-button" data-sort="daily-move" data-first-direction="desc">
+                        Daily move <span class="sort-indicator" aria-hidden="true">&#8645;</span>
+                    </button>
+                </th>
+                <th><span class="sr-only">Open stock</span></th>
+            </tr>
+        </thead>
+        <tbody id="stock-table-body">
+            {% for stock in stocks %}
+            <tr
+                class="stock-browser-row"
+                data-search="{{ stock.symbol | lower }} {{ stock.company_name | lower }}"
+                data-sector="{{ (stock.sector or '') | lower }}"
+                data-company="{{ (stock.company_name or stock.symbol) | lower }}"
+                data-symbol="{{ stock.symbol | lower }}"
+                data-daily-move="{{ stock.change_percent if stock.change_percent is not none else '' }}"
+                onclick="window.location='/stocks/{{ stock.symbol }}/view{% if selected_date %}?selected_date={{ selected_date }}{% endif %}'"
+            >
+                {% if user_role == "premium_user" %}
+                <td>
+                    <button
+                        class="watchlist-star {% if stock.symbol in watchlisted_symbols %}active{% endif %}"
+                        data-symbol="{{ stock.symbol }}"
+                        aria-pressed="{{ 'true' if stock.symbol in watchlisted_symbols else 'false' }}"
+                        aria-label="Toggle watchlist for {{ stock.symbol }}"
+                        onclick="event.stopPropagation(); toggleWatchlist(this);"
+                    >★</button>
+                </td>
+                {% endif %}
+                <td>
+                    <a class="company-cell" href="/stocks/{{ stock.symbol }}/view{% if selected_date %}?selected_date={{ selected_date }}{% endif %}">
+                        <span>
+                            <strong>{{ stock.symbol }}</strong>
+                            <small>{{ stock.company_name }}</small>
+                        </span>
+                    </a>
+                </td>
+                <td><span class="sector-label">{{ stock.sector or "Unclassified" }}</span></td>
+                <td>
+                    {% if stock.price is not none %}
+                        <strong class="stock-price">${{ "%.2f" | format(stock.price) }}</strong>
+                        <small class="price-date">{{ stock.trade_date }}</small>
+                    {% else %}
+                        <span class="data-unavailable">No price data</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if stock.change_percent is not none %}
+                        <span class="move-value {% if stock.change_percent > 0 %}positive{% elif stock.change_percent < 0 %}negative{% else %}flat{% endif %}">
+                            {% if stock.change_percent > 0 %}+{% endif %}{{ "%.2f" | format(stock.change_percent) }}%
+                        </span>
+                    {% else %}
+                        <span class="data-unavailable">Unavailable</span>
+                    {% endif %}
+                </td>
+                <td><a class="row-action" href="/stocks/{{ stock.symbol }}/view{% if selected_date %}?selected_date={{ selected_date }}{% endif %}" aria-label="View {{ stock.symbol }}">View</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="stock-empty-state" id="stock-empty-state" hidden>
+        No stocks match the current filters.
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const searchInput = document.getElementById("stock-search");
+    const sectorFilter = document.getElementById("sector-filter");
+    const rows = Array.from(document.querySelectorAll(".stock-browser-row"));
+    const tableBody = document.getElementById("stock-table-body");
+    const emptyState = document.getElementById("stock-empty-state");
+    const sortButtons = Array.from(document.querySelectorAll(".table-sort-button"));
+    let sortState = { key: "company", direction: "asc" };
+
+    function sortStocks(key, direction) {
+        const multiplier = direction === "asc" ? 1 : -1;
+        const sortedRows = [...rows].sort((left, right) => {
+            if (key === "daily-move") {
+                const leftValue = Number.parseFloat(left.dataset.dailyMove);
+                const rightValue = Number.parseFloat(right.dataset.dailyMove);
+                const leftMissing = Number.isNaN(leftValue);
+                const rightMissing = Number.isNaN(rightValue);
+                if (leftMissing || rightMissing) {
+                    if (leftMissing && rightMissing) {
+                        return left.dataset.company.localeCompare(right.dataset.company);
+                    }
+                    return leftMissing ? 1 : -1;
+                }
+                if (leftValue !== rightValue) {
+                    return (leftValue - rightValue) * multiplier;
+                }
+            }
+            const companyOrder = left.dataset.company.localeCompare(
+                right.dataset.company,
+                undefined,
+                { sensitivity: "base" }
+            );
+            if (companyOrder !== 0) {
+                return companyOrder * (key === "company" ? multiplier : 1);
+            }
+            return left.dataset.symbol.localeCompare(right.dataset.symbol);
+        });
+
+        sortedRows.forEach((row) => tableBody.appendChild(row));
+        sortState = { key, direction };
+        sortButtons.forEach((button) => {
+            const active = button.dataset.sort === key;
+            const header = button.closest("th");
+            header.setAttribute(
+                "aria-sort",
+                active ? (direction === "asc" ? "ascending" : "descending") : "none"
+            );
+            button.querySelector(".sort-indicator").textContent = active
+                ? (direction === "asc" ? "\u2191" : "\u2193")
+                : "\u21c5";
+        });
+    }
+
+    sortButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            const key = button.dataset.sort;
+            const direction = sortState.key === key
+                ? (sortState.direction === "asc" ? "desc" : "asc")
+                : button.dataset.firstDirection;
+            sortStocks(key, direction);
+        });
+    });
+
+    sortStocks("company", "asc");
+
+    function filterStocks() {
+        const query = searchInput.value.trim().toLowerCase();
+        const sector = sectorFilter.value;
+        let visible = 0;
+
+        rows.forEach((row) => {
+            const matchesQuery = !query || row.dataset.search.includes(query);
+            const matchesSector = !sector || row.dataset.sector === sector;
+            const show = matchesQuery && matchesSector;
+            row.hidden = !show;
+            if (show) visible += 1;
+        });
+
+        emptyState.hidden = visible !== 0;
+    }
+
+    searchInput.addEventListener("input", filterStocks);
+    sectorFilter.addEventListener("change", filterStocks);
+
+    function toggleWatchlist(button) {
+        const symbol = button.dataset.symbol;
+        const isActive = button.classList.contains("active");
+        const method = isActive ? "DELETE" : "POST";
+
+        button.disabled = true;
+        fetch(`/premium/watchlist/${symbol}`, { method })
+            .then((response) => {
+                if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+                return response.json();
+            })
+            .then((data) => {
+                button.classList.toggle("active", data.watchlisted);
+                button.setAttribute("aria-pressed", data.watchlisted ? "true" : "false");
+            })
+            .catch((error) => {
+                console.error("Watchlist toggle failed:", error);
+            })
+            .finally(() => {
+                button.disabled = false;
+            });
+    }
+</script>
+{% endblock %}

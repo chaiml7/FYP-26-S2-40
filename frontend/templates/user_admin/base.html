@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}User Admin - StockLens{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260806-dashboard-weights">
+    <script>
+        try {
+            document.documentElement.dataset.adminTheme =
+                localStorage.getItem("stocklens-admin-theme") || "graphite";
+        } catch (error) {
+            document.documentElement.dataset.adminTheme = "graphite";
+        }
+    </script>
+</head>
+<body class="admin-page theme-admin">
+    {% include "/includes/top_navbar.html"%}
+
+    <div class="admin-layout">
+        <aside class="sidebar theme-toggle-sidebar">
+            <nav class="sidebar-nav">
+                <a href="/admin/stocks" class="nav-item {% block nav_stocks %}{% endblock %}">Stock Database</a>
+                <a href="/admin/weightages" class="nav-item {% block nav_weights %}{% endblock %}">Default Weightages</a>
+                <a href="/admin/sentiment" class="nav-item {% block nav_sentiment %}{% endblock %}">Sentiment Watchlist</a>
+                <a href="/admin/reports" class="nav-item {% block nav_reports %}{% endblock %}">Performance Reports</a>
+                <a href="/admin/feedback" class="nav-item {% block nav_feedback %}{% endblock %}">User Feedback</a>
+                <a href="/admin/user_management" class="nav-item {% block nav_usermanagement %}{% endblock %}">User Management</a>
+                <a href="/admin/roles_management" class="nav-item {% block nav_rolemanagement %}{% endblock %}">Role Management</a>
+            </nav>
+
+            <div class="appearance-theme-control">
+                <button
+                    type="button"
+                    id="admin-theme-toggle"
+                    class="appearance-theme-toggle"
+                    aria-pressed="true"
+                    aria-label="Use StockLens Blue theme"
+                    title="Switch between Blue and Graphite themes"
+                >
+                    <span id="admin-theme-icon" class="theme-icon" aria-hidden="true">&#9728;</span>
+                </button>
+            </div>
+        </aside>
+
+        <main class="admin-main">
+            {% block content %}
+            {% endblock %}
+        </main>
+    </div>
+
+    {% block scripts %}
+    {% endblock %}
+    <script>
+        (() => {
+            const storageKey = "stocklens-admin-theme";
+            const root = document.documentElement;
+            const toggle = document.getElementById("admin-theme-toggle");
+            const icon = document.getElementById("admin-theme-icon");
+
+            const applyTheme = (theme) => {
+                const selectedTheme = theme === "blue" ? "blue" : "graphite";
+                root.dataset.adminTheme = selectedTheme;
+                toggle.setAttribute("aria-pressed", String(selectedTheme === "graphite"));
+                toggle.setAttribute(
+                    "aria-label",
+                    selectedTheme === "graphite"
+                        ? "Use StockLens Blue theme"
+                        : "Use Graphite theme"
+                );
+                toggle.title = selectedTheme === "graphite"
+                    ? "Switch to StockLens Blue"
+                    : "Switch to Graphite";
+                icon.textContent = selectedTheme === "graphite" ? "☀" : "☾";
+                try {
+                    localStorage.setItem(storageKey, selectedTheme);
+                } catch (error) {
+                    // The theme still works for this page when storage is unavailable.
+                }
+            };
+
+            applyTheme(root.dataset.adminTheme);
+            toggle.addEventListener("click", () => {
+                applyTheme(root.dataset.adminTheme === "graphite" ? "blue" : "graphite");
+            });
+        })();
+    </script>
+</body>
+</html>

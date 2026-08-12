@@ -1,0 +1,42 @@
+{% extends "user_admin/base.html" %}
+
+{% block title %}Feedback Details - StockLens{% endblock %}
+{% block nav_feedback %}active{% endblock %}
+
+{% block content %}
+<div class="feedback-detail-page">
+    <a href="/admin/feedback" class="back-to-stocks">&larr; Back to feedback</a>
+
+    <article class="panel-card feedback-detail-card">
+        <header>
+            <div>
+                <p class="workspace-eyebrow">Feedback submission</p>
+                <h1>{{ feedback.topic or "General" }}</h1>
+            </div>
+            <span class="feedback-detail-rating">
+                {{ feedback.rating or 0 }} / 5 &#9733;
+            </span>
+        </header>
+
+        <dl class="feedback-detail-meta">
+            <div>
+                <dt>Submitted by</dt>
+                <dd>{{ feedback.username or "Unknown user" }}</dd>
+            </div>
+            <div>
+                <dt>Date</dt>
+                <dd>{{ feedback.created_at[:19] | replace("T", " ") if feedback.created_at else "--" }}</dd>
+            </div>
+            <div>
+                <dt>Feedback ID</dt>
+                <dd>{{ feedback.id }}</dd>
+            </div>
+        </dl>
+
+        <section class="feedback-message">
+            <h2>Message</h2>
+            <p>{{ feedback.description or "No message was provided." }}</p>
+        </section>
+    </article>
+</div>
+{% endblock %}

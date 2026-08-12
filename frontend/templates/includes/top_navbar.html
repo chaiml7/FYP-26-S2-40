@@ -1,0 +1,144 @@
+<header class="app-topbar" style="display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; position: relative; z-index: 10;">
+
+    <div class="topbar-brand" style="flex: 1; display: flex; align-items: center; gap: 15px; justify-content: flex-start;">
+        <span style="font-weight: bold; font-size: 1.1rem; color: var(--text-main, white);">📈 StockLens</span>
+        
+        {% if user_role == 'premium_user' %}
+            <span class="role-badge role-badge-premium">PREMIUM</span>
+        {% elif user_role == 'frontend_admin' %}
+            <span class="role-badge role-badge-admin">ADMIN</span>
+        {% else %}
+            <span class="role-badge role-badge-free">FREE</span>
+        {% endif %}
+    </div>
+
+    <div class="topbar-center" style="flex: 1; display: flex; justify-content: center;">
+        <form id="tickerSearchForm" action="/search" method="GET" class="topbar-search" style="width: 100%; max-width: 450px;" autocomplete="off">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="tickerSearchInput" name="q" placeholder="Search ticker symbol..." class="form-control search-input bg-darker" style="width: 100%;" autocomplete="off">
+            <div id="tickerSearchDropdown" class="ticker-search-dropdown" style="display: none;"></div>
+        </form>
+    </div>
+    
+    <div class="topbar-actions" style="flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 20px; min-width: 0;">
+        <button class="btn-icon">🔔</button>
+        
+        <div class="user-chip" style="display: flex; align-items: center; gap: 10px;">
+            <span class="avatar-sm">{{ user_initial or "U" }}</span>
+            <span class="text-sm font-medium">{{ user_email or "StockLens user" }}</span>
+        </div>
+        
+        <a href="/logout" class="btn btn-outline btn-sm">Log Out</a>
+    </div>
+
+</header>
+
+<script>
+    (() => {
+        const form = document.getElementById("tickerSearchForm");
+        const input = document.getElementById("tickerSearchInput");
+        const dropdown = document.getElementById("tickerSearchDropdown");
+        if (!form || !input || !dropdown) return;
+
+        let debounceTimer = null;
+        let matches = [];
+        let highlightedIndex = -1;
+
+        function closeDropdown() {
+            dropdown.style.display = "none";
+            dropdown.innerHTML = "";
+            matches = [];
+            highlightedIndex = -1;
+        }
+
+        function updateHighlight() {
+            [...dropdown.children].forEach((child, index) => {
+                child.classList.toggle("highlighted", index === highlightedIndex);
+            });
+        }
+
+        function selectStock(stock) {
+            closeDropdown();
+            window.location = `/stocks/${stock.symbol}/view`;
+        }
+
+        function renderDropdown(results) {
+            matches = results;
+            highlightedIndex = -1;
+            dropdown.innerHTML = "";
+
+            if (!results.length) {
+                const empty = document.createElement("div");
+                empty.className = "ticker-dropdown-empty";
+                empty.textContent = "No matching stocks";
+                dropdown.appendChild(empty);
+                dropdown.style.display = "block";
+                return;
+            }
+
+            results.forEach((stock) => {
+                const item = document.createElement("div");
+                item.className = "ticker-dropdown-item";
+                item.innerHTML = `<span class="ticker-dropdown-symbol"></span> <span class="ticker-dropdown-name"></span>`;
+                item.querySelector(".ticker-dropdown-symbol").textContent = stock.symbol;
+                item.querySelector(".ticker-dropdown-name").textContent = stock.company_name || "";
+                // mousedown (not click) fires before the input's blur/outside-click
+                // handler would otherwise close the dropdown first.
+                item.addEventListener("mousedown", (event) => {
+                    event.preventDefault();
+                    selectStock(stock);
+                });
+                dropdown.appendChild(item);
+            });
+            dropdown.style.display = "block";
+        }
+
+        async function search(query) {
+            try {
+                const response = await fetch(`/api/stocks/search?q=${encodeURIComponent(query)}`);
+                if (!response.ok) throw new Error("Request failed");
+                const data = await response.json();
+                renderDropdown(data);
+            } catch (error) {
+                closeDropdown();
+            }
+        }
+
+        input.addEventListener("input", () => {
+            clearTimeout(debounceTimer);
+            const query = input.value.trim();
+            if (!query) {
+                closeDropdown();
+                return;
+            }
+            debounceTimer = setTimeout(() => search(query), 200);
+        });
+
+        input.addEventListener("keydown", (event) => {
+            if (!matches.length) return;
+            if (event.key === "ArrowDown") {
+                event.preventDefault();
+                highlightedIndex = Math.min(highlightedIndex + 1, matches.length - 1);
+                updateHighlight();
+            } else if (event.key === "ArrowUp") {
+                event.preventDefault();
+                highlightedIndex = Math.max(highlightedIndex - 1, 0);
+                updateHighlight();
+            } else if (event.key === "Enter") {
+                event.preventDefault();
+                if (highlightedIndex >= 0) {
+                    selectStock(matches[highlightedIndex]);
+                }
+                // Enter with nothing highlighted intentionally does nothing.
+            } else if (event.key === "Escape") {
+                closeDropdown();
+            }
+        });
+
+        form.addEventListener("submit", (event) => event.preventDefault());
+
+        document.addEventListener("click", (event) => {
+            if (!form.contains(event.target)) closeDropdown();
+        });
+    })();
+</script>

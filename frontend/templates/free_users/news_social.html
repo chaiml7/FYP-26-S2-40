@@ -1,0 +1,216 @@
+{% extends base_layout %}
+
+{% block title %}News and Social - StockLens{% endblock %}
+
+{% block nav_news %}active{% endblock %}
+
+{% block content %}
+
+<div class="page-content">
+    <h1 class="text-2xl font-bold text-main mb-6">News & Social Feed</h1>
+
+    <div class="table-controls">
+        <form action="/user/news_social" method="GET" class="search-bar">
+            <span class="search-icon">🔍</span>
+            <input
+                type="text"
+                name="q"
+                id="newsSearchInput"
+                value="{{ q }}"
+                placeholder="Search by ticker, company, or headline..."
+                class="form-control search-input"
+            >
+            {% if selected_label and selected_label != 'all' %}
+            <input type="hidden" name="label" value="{{ selected_label }}">
+            {% endif %}
+            {% if selected_symbol %}
+            <input type="hidden" name="symbol" value="{{ selected_symbol }}">
+            {% endif %}
+        </form>
+
+        <form action="/user/news_social" method="GET" style="display: flex; gap: 0.5rem;">
+            {% if q %}
+            <input type="hidden" name="q" value="{{ q }}">
+            {% endif %}
+            <select name="symbol" id="newsSymbolSelect" class="form-control">
+                <option value="">All stocks</option>
+                {% for stock in active_stocks %}
+                <option value="{{ stock.symbol }}" {% if selected_symbol == stock.symbol %}selected{% endif %}>
+                    {{ stock.symbol }} — {{ stock.company_name }}
+                </option>
+                {% endfor %}
+            </select>
+            <select name="label" id="newsLabelSelect" class="form-control">
+                <option value="all" {% if selected_label == 'all' %}selected{% endif %}>All sentiment</option>
+                <option value="positive" {% if selected_label == 'positive' %}selected{% endif %}>Positive</option>
+                <option value="neutral" {% if selected_label == 'neutral' %}selected{% endif %}>Neutral</option>
+                <option value="negative" {% if selected_label == 'negative' %}selected{% endif %}>Negative</option>
+            </select>
+            <noscript><button type="submit" class="btn btn-secondary">Filter</button></noscript>
+        </form>
+    </div>
+
+    <div id="newsErrorBanner" class="data-unavailable" style="display: none; padding: 1rem; text-align: center; margin-bottom: 1rem;">
+        Couldn't load news — try again.
+    </div>
+
+    <div class="news-feed" id="newsFeed">
+        {% if articles %}
+            {% for article in articles %}
+            <a href="{{ article.url }}" target="_blank" rel="noopener" class="news-card">
+                <div class="news-icon-wrapper">
+                    <span class="news-icon">📄</span>
+                </div>
+                <div class="news-content">
+                    <div class="news-meta">
+                        <span class="ticker-badge">{{ article.symbol }}</span>
+                        <span class="news-source">{{ article.source | title }} • {{ article.published_at[:16] | replace('T', ' ') }}</span>
+                    </div>
+                    <h3 class="news-title">{{ article.headline }}</h3>
+                </div>
+                <div class="news-action">
+                    <span class="external-icon">↗</span>
+                </div>
+            </a>
+            {% endfor %}
+        {% else %}
+            <p class="data-unavailable" style="padding: 2rem; text-align: center;">
+                No articles found. Try adjusting your search or filters.
+            </p>
+        {% endif %}
+    </div>
+
+    <div class="pagination-bar" id="newsPagination" style="{% if total_pages <= 1 %}display: none;{% endif %}">
+        <button type="button" id="newsPrevBtn" class="btn btn-outline btn-sm" {% if page <= 1 %}disabled{% endif %}>← Prev</button>
+        <span id="newsPageLabel" class="text-muted text-sm">Page {{ page }} of {{ total_pages }}</span>
+        <button type="button" id="newsNextBtn" class="btn btn-outline btn-sm" {% if page >= total_pages %}disabled{% endif %}>Next →</button>
+    </div>
+
+    <div class="card mt-6">
+        <div class="social-header mb-4">
+            <span class="social-icon">🐦</span>
+            <h3 class="font-bold text-main">Social Media Watchlist</h3>
+        </div>
+        
+        <div class="social-pills-container">
+            <span class="social-pill">@elonmusk</span>
+            <span class="social-pill">@jimcramer</span>
+            <span class="social-pill">@chamath</span>
+            <span class="social-pill">@cathiewood</span>
+            <button class="social-add-btn">+ Add account</button>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (() => {
+        const searchInput = document.getElementById("newsSearchInput");
+        const symbolSelect = document.getElementById("newsSymbolSelect");
+        const labelSelect = document.getElementById("newsLabelSelect");
+        const feed = document.getElementById("newsFeed");
+        const pagination = document.getElementById("newsPagination");
+        const errorBanner = document.getElementById("newsErrorBanner");
+        const prevBtn = document.getElementById("newsPrevBtn");
+        const nextBtn = document.getElementById("newsNextBtn");
+        const pageLabel = document.getElementById("newsPageLabel");
+
+        let currentPage = {{ page | default(1) }};
+        let debounceTimer = null;
+
+        function renderArticleCard(article) {
+            const a = document.createElement("a");
+            a.href = article.url;
+            a.target = "_blank";
+            a.rel = "noopener";
+            a.className = "news-card";
+            a.innerHTML = `
+                <div class="news-icon-wrapper">
+                    <span class="news-icon">📄</span>
+                </div>
+                <div class="news-content">
+                    <div class="news-meta">
+                        <span class="ticker-badge"></span>
+                        <span class="news-source"></span>
+                    </div>
+                    <h3 class="news-title"></h3>
+                </div>
+                <div class="news-action">
+                    <span class="external-icon">↗</span>
+                </div>
+            `;
+            a.querySelector(".ticker-badge").textContent = article.symbol;
+            const sourceLabel = article.source.charAt(0).toUpperCase() + article.source.slice(1);
+            const publishedAt = (article.published_at || "").slice(0, 16).replace("T", " ");
+            a.querySelector(".news-source").textContent = `${sourceLabel} • ${publishedAt}`;
+            a.querySelector(".news-title").textContent = article.headline;
+            return a;
+        }
+
+        function render(data) {
+            feed.innerHTML = "";
+            if (!data.articles.length) {
+                const empty = document.createElement("p");
+                empty.className = "data-unavailable";
+                empty.style.padding = "2rem";
+                empty.style.textAlign = "center";
+                empty.textContent = "No articles found. Try adjusting your search or filters.";
+                feed.appendChild(empty);
+                pagination.style.display = "none";
+                return;
+            }
+            data.articles.forEach((article) => feed.appendChild(renderArticleCard(article)));
+            pagination.style.display = data.total_pages > 1 ? "flex" : "none";
+            pageLabel.textContent = `Page ${data.page} of ${data.total_pages}`;
+            prevBtn.disabled = data.page <= 1;
+            nextBtn.disabled = data.page >= data.total_pages;
+            currentPage = data.page;
+        }
+
+        async function fetchNews(page) {
+            const params = new URLSearchParams();
+            if (searchInput.value.trim()) params.set("q", searchInput.value.trim());
+            if (symbolSelect.value) params.set("symbol", symbolSelect.value);
+            if (labelSelect.value && labelSelect.value !== "all") params.set("label", labelSelect.value);
+            params.set("page", page);
+
+            try {
+                const response = await fetch(`/api/news?${params.toString()}`);
+                if (!response.ok) throw new Error("Request failed");
+                const data = await response.json();
+                errorBanner.style.display = "none";
+                render(data);
+            } catch (error) {
+                errorBanner.style.display = "block";
+            }
+        }
+
+        function onFilterChange() {
+            fetchNews(1);
+        }
+
+        searchInput.addEventListener("input", () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(onFilterChange, 300);
+        });
+        symbolSelect.addEventListener("change", onFilterChange);
+        labelSelect.addEventListener("change", onFilterChange);
+
+        prevBtn.addEventListener("click", () => {
+            if (currentPage > 1) fetchNews(currentPage - 1);
+        });
+        nextBtn.addEventListener("click", () => {
+            fetchNews(currentPage + 1);
+        });
+
+        // With JS active, filtering is live — stop the plain GET forms
+        // (kept for the <noscript> fallback) from reloading the page.
+        document.querySelectorAll(".table-controls form").forEach((form) => {
+            form.addEventListener("submit", (event) => event.preventDefault());
+        });
+    })();
+</script>
+{% endblock %}

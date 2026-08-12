@@ -1,0 +1,794 @@
+"""Build admin report data from the current Supabase records."""
+
+from collections import Counter
+from datetime import date, datetime
+import json
+
+from backend.database.supabase_client import supabase
+
+
+REPORT_ROW_LIMIT = 1000
+STALE_AFTER_DAYS = 7
+
+
+def build_admin_report(generated_by: str = "") -> dict:
+    errors = []
+
+    users = _fetch_rows("user_profiles", errors)
+    stocks = _fetch_rows("stocks", errors)
+    watchlists = _fetch_rows("user_watchlists", errors)
+    weightages = _fetch_rows("weightages", errors)
+    technical_models = _fetch_rows("technical_model_versions", errors)
+    financial_models = _fetch_rows("financial_model_versions", errors)
+    technical_predictions = _fetch_rows(
+        "direction_predictions",
+        errors,
+        order_by="created_at",
+    )
+    financial_predictions = _fetch_rows(
+        "financial_predictions",
+        errors,
+        order_by="created_at",
+    )
+    combined_predictions = _fetch_rows("predictions", errors, order_by="created_at")
+    sentiment_articles = _fetch_rows(
+        "sentiment_scores",
+        errors,
+        order_by="published_at",
+    )
+    sentiment_daily_scores = _fetch_rows(
+        "sentiment_daily_scores",
+        errors,
+        order_by="score_date",
+    )
+    prices = _fetch_rows("daily_ohlcv", errors, order_by="trade_date")
+    technical_indicators = _fetch_rows(
+        "technical_indicators",
+        errors,
+        order_by="date",
+    )
+
+    stock_lookup = {
+        str(stock.get("id")): stock
+        for stock in stocks
+        if stock.get("id") is not None
+    }
+    active_symbols = sorted(
+        {
+            str(stock.get("symbol", "")).upper()
+            for stock in stocks
+            if stock.get("symbol") and _is_active(stock.get("is_active"))
+        }
+    )
+
+    user_summary = _build_user_summary(users)
+    stock_summary = _build_stock_summary(stocks)
+    watchlist_summary = _build_watchlist_summary(watchlists, stock_lookup)
+    model_summary = _build_model_summary(
+        technical_models,
+        financial_models,
+        sentiment_articles,
+    )
+    prediction_summary = _build_prediction_summary(
+        technical_predictions,
+        financial_predictions,
+        combined_predictions,
+    )
+    sentiment_summary = _build_sentiment_summary(
+        sentiment_articles,
+        sentiment_daily_scores,
+    )
+    freshness_summary = _build_data_freshness(
+        active_symbols,
+        prices,
+        technical_indicators,
+        technical_predictions,
+        sentiment_daily_scores,
+        financial_predictions,
+    )
+    weightage_summary = _build_weightage_summary(weightages)
+
+    return {
+        "generated_at": datetime.now().astimezone().strftime("%Y-%m-%d %H:%M %Z"),
+        "generated_by": generated_by or "Admin",
+        "row_limit": REPORT_ROW_LIMIT,
+        "summary_cards": _build_summary_cards(
+            user_summary,
+            stock_summary,
+            watchlist_summary,
+            prediction_summary,
+            sentiment_summary,
+            freshness_summary,
+        ),
+        "user_summary": user_summary,
+        "stock_summary": stock_summary,
+        "watchlist_summary": watchlist_summary,
+        "model_summary": model_summary,
+        "prediction_summary": prediction_summary,
+        "sentiment_summary": sentiment_summary,
+        "freshness_summary": freshness_summary,
+        "weightage_summary": weightage_summary,
+        "errors": errors,
+    }
+
+
+def _fetch_rows(table: str, errors: list, limit: int = REPORT_ROW_LIMIT, order_by: str = None) -> list:
+    try:
+        query = supabase.table(table).select("*")
+        if order_by:
+            query = query.order(order_by, desc=True)
+        if limit:
+            query = query.limit(limit)
+        response = query.execute()
+        return response.data or []
+    except Exception as exc:
+        if order_by:
+            try:
+                query = supabase.table(table).select("*")
+                if limit:
+                    query = query.limit(limit)
+                response = query.execute()
+                return response.data or []
+            except Exception as fallback_exc:
+                exc = fallback_exc
+        errors.append({
+            "table": table,
+            "message": str(exc),
+        })
+        return []
+
+
+def _build_summary_cards(
+    user_summary: dict,
+    stock_summary: dict,
+    watchlist_summary: dict,
+    prediction_summary: dict,
+    sentiment_summary: dict,
+    freshness_summary: dict,
+) -> list:
+    total_predictions = sum(row["total"] for row in prediction_summary["rows"])
+    stale_tables = sum(1 for row in freshness_summary["rows"] if row["stale_count"] > 0)
+
+    return [
+        {
+            "label": "Total Users",
+            "value": _format_int(user_summary["total_users"]),
+            "detail": f'{_format_int(user_summary["premium_users"])} premium users',
+        },
+        {
+            "label": "Active Stocks",
+            "value": _format_int(stock_summary["active_stocks"]),
+            "detail": f'{_format_int(stock_summary["inactive_stocks"])} inactive stocks',
+        },
+        {
+            "label": "Watchlist Entries",
+            "value": _format_int(watchlist_summary["total_entries"]),
+            "detail": f'{_format_int(watchlist_summary["users_with_watchlists"])} users with favourites',
+        },
+        {
+            "label": "Predictions Stored",
+            "value": _format_int(total_predictions),
+            "detail": "Technical, financial, and combined rows",
+        },
+        {
+            "label": "Sentiment Articles",
+            "value": _format_int(sentiment_summary["article_rows"]),
+            "detail": f'Latest: {sentiment_summary["latest_date"]}',
+        },
+        {
+            "label": "Data Health Flags",
+            "value": _format_int(stale_tables),
+            "detail": f'Older than {STALE_AFTER_DAYS} days',
+        },
+    ]
+
+
+def _build_user_summary(users: list) -> dict:
+    role_counts = Counter(_normalize_role(user.get("role_id")) for user in users)
+    active_users = sum(1 for user in users if _is_active(user.get("is_active")))
+    total_users = len(users)
+
+    return {
+        "total_users": total_users,
+        "active_users": active_users,
+        "suspended_users": max(total_users - active_users, 0),
+        "premium_users": role_counts.get("premium_user", 0),
+        "admin_users": sum(
+            count
+            for role, count in role_counts.items()
+            if role == "frontend_admin"
+        ),
+        "role_distribution": _counter_rows(role_counts, total_users, role_labels=True),
+    }
+
+
+def _build_stock_summary(stocks: list) -> dict:
+    active_stocks = [stock for stock in stocks if _is_active(stock.get("is_active"))]
+    inactive_stocks = max(len(stocks) - len(active_stocks), 0)
+
+    recent_stocks = sorted(
+        stocks,
+        key=lambda stock: _parse_date(stock.get("created_at")) or date.min,
+        reverse=True,
+    )[:5]
+
+    return {
+        "total_stocks": len(stocks),
+        "active_stocks": len(active_stocks),
+        "inactive_stocks": inactive_stocks,
+        "sector_rows": _counter_rows(
+            Counter(_display_value(stock.get("sector")) for stock in stocks),
+            len(stocks),
+        ),
+        "exchange_rows": _counter_rows(
+            Counter(_display_value(stock.get("exchange")) for stock in stocks),
+            len(stocks),
+        ),
+        "recent_stocks": [
+            {
+                "symbol": str(stock.get("symbol") or "N/A").upper(),
+                "company_name": stock.get("company_name") or "Unknown company",
+                "status": "Active" if _is_active(stock.get("is_active")) else "Inactive",
+                "created_at": _format_date(stock.get("created_at")),
+            }
+            for stock in recent_stocks
+        ],
+    }
+
+
+def _build_watchlist_summary(watchlists: list, stock_lookup: dict) -> dict:
+    stock_counts = Counter(
+        str(row.get("stock_id"))
+        for row in watchlists
+        if row.get("stock_id") is not None
+    )
+    user_counts = Counter(
+        str(row.get("user_id"))
+        for row in watchlists
+        if row.get("user_id") is not None
+    )
+
+    top_stocks = []
+    for stock_id, count in stock_counts.most_common(10):
+        stock = stock_lookup.get(stock_id, {})
+        top_stocks.append({
+            "symbol": str(stock.get("symbol") or f"Stock #{stock_id}").upper(),
+            "company_name": stock.get("company_name") or "Unknown company",
+            "count": count,
+            "percent": _format_percent(count, len(watchlists)),
+        })
+
+    return {
+        "total_entries": len(watchlists),
+        "users_with_watchlists": len(user_counts),
+        "average_per_user": _format_decimal(
+            len(watchlists) / len(user_counts)
+            if user_counts
+            else 0
+        ),
+        "top_stocks": top_stocks,
+        "top_users": [
+            {"user_id": user_id, "count": count}
+            for user_id, count in user_counts.most_common(5)
+        ],
+    }
+
+
+def _build_model_summary(
+    technical_models: list,
+    financial_models: list,
+    sentiment_articles: list,
+) -> dict:
+    technical = _model_row(
+        "Technical",
+        _active_or_latest_model(technical_models, ["trained_at", "created_at"]),
+        ["test_metrics", "metrics"],
+    )
+    financial = _model_row(
+        "Financial",
+        _active_or_latest_model(financial_models, ["trained_at", "created_at"]),
+        ["metrics", "test_metrics"],
+    )
+    sentiment = _sentiment_model_row(sentiment_articles)
+
+    return {
+        "technical": technical,
+        "financial": financial,
+        "sentiment": sentiment,
+        "rows": [technical, sentiment, financial],
+    }
+
+
+def _build_prediction_summary(
+    technical_predictions: list,
+    financial_predictions: list,
+    combined_predictions: list,
+) -> dict:
+    rows = [
+        _prediction_row(
+            "Technical",
+            technical_predictions,
+            ["prediction", "predicted_direction", "raw_outlook", "action", "signal"],
+            "technical_score",
+            ["latest_date", "created_at"],
+        ),
+        _prediction_row(
+            "Financial",
+            financial_predictions,
+            ["prediction", "raw_outlook", "action", "signal"],
+            "fundamental_score",
+            ["period", "created_at"],
+        ),
+        _prediction_row(
+            "Combined",
+            combined_predictions,
+            ["action", "signal", "prediction"],
+            "confidence_score",
+            ["created_at"],
+        ),
+    ]
+
+    return {"rows": rows}
+
+
+def _build_sentiment_summary(sentiment_articles: list, daily_scores: list) -> dict:
+    article_labels = Counter(
+        _display_value(row.get("label")).lower()
+        for row in sentiment_articles
+        if row.get("label")
+    )
+    daily_labels = Counter(
+        _display_value(row.get("sentiment_label")).lower()
+        for row in daily_scores
+        if row.get("sentiment_label")
+    )
+    bullish_scores = [
+        score
+        for score in (_to_float(row.get("bullish_score")) for row in daily_scores)
+        if score is not None
+    ]
+
+    ranked_daily = [
+        row
+        for row in daily_scores
+        if _to_float(row.get("bullish_score")) is not None
+    ]
+    top_positive = sorted(
+        ranked_daily,
+        key=lambda row: _to_float(row.get("bullish_score")),
+        reverse=True,
+    )[:5]
+    top_negative = sorted(
+        ranked_daily,
+        key=lambda row: _to_float(row.get("bullish_score")),
+    )[:5]
+
+    return {
+        "article_rows": len(sentiment_articles),
+        "daily_rows": len(daily_scores),
+        "latest_date": _latest_date_text(
+            sentiment_articles + daily_scores,
+            ["published_at", "score_date"],
+        ),
+        "article_label_rows": _counter_rows(article_labels, len(sentiment_articles)),
+        "daily_label_rows": _counter_rows(daily_labels, len(daily_scores)),
+        "average_bullish_score": _format_decimal(_average(bullish_scores)),
+        "total_daily_articles": _format_int(
+            sum(int(row.get("article_count") or 0) for row in daily_scores)
+        ),
+        "top_positive": _sentiment_rank_rows(top_positive),
+        "top_negative": _sentiment_rank_rows(top_negative),
+    }
+
+
+def _build_data_freshness(
+    active_symbols: list,
+    prices: list,
+    technical_indicators: list,
+    technical_predictions: list,
+    sentiment_daily_scores: list,
+    financial_predictions: list,
+) -> dict:
+    today = date.today()
+    rows = [
+        _freshness_row(
+            "Market prices",
+            active_symbols,
+            _latest_dates_by_symbol(prices, "symbol", ["trade_date"]),
+            today,
+        ),
+        _freshness_row(
+            "Technical indicators",
+            active_symbols,
+            _latest_dates_by_symbol(technical_indicators, "symbol", ["date"]),
+            today,
+        ),
+        _freshness_row(
+            "Technical predictions",
+            active_symbols,
+            _latest_dates_by_symbol(
+                technical_predictions,
+                "symbol",
+                ["latest_date", "created_at"],
+            ),
+            today,
+        ),
+        _freshness_row(
+            "Sentiment daily scores",
+            active_symbols,
+            _latest_dates_by_symbol(sentiment_daily_scores, "symbol", ["score_date"]),
+            today,
+        ),
+        _freshness_row(
+            "Financial predictions",
+            active_symbols,
+            _latest_dates_by_symbol(financial_predictions, "ticker", ["period", "created_at"]),
+            today,
+        ),
+    ]
+
+    return {
+        "stale_after_days": STALE_AFTER_DAYS,
+        "rows": rows,
+    }
+
+
+def _build_weightage_summary(weightages: list) -> dict:
+    default_row = next(
+        (row for row in weightages if str(row.get("id")) == "1"),
+        None,
+    )
+    if default_row is None:
+        default_row = next((row for row in weightages if not row.get("user_id")), {})
+
+    custom_rows = [row for row in weightages if row.get("user_id")]
+
+    return {
+        "technical": _format_weight(default_row.get("technical")),
+        "sentiment": _format_weight(default_row.get("sentiment")),
+        "financial": _format_weight(default_row.get("financial")),
+        "custom_user_count": len({row.get("user_id") for row in custom_rows}),
+        "custom_record_count": len(custom_rows),
+    }
+
+
+def _prediction_row(
+    name: str,
+    rows: list,
+    signal_keys: list,
+    score_key: str,
+    date_keys: list,
+) -> dict:
+    signals = Counter()
+    scores = []
+
+    for row in rows:
+        signal = _normalize_signal(_first_present(row, signal_keys))
+        signals[signal] += 1
+
+        score = _to_float(row.get(score_key))
+        if score is not None:
+            scores.append(score)
+
+    return {
+        "name": name,
+        "total": len(rows),
+        "bullish": signals.get("bullish", 0),
+        "neutral": signals.get("neutral", 0),
+        "bearish": signals.get("bearish", 0),
+        "unknown": signals.get("unknown", 0),
+        "average_score": _format_decimal(_average(scores)),
+        "latest_date": _latest_date_text(rows, date_keys),
+    }
+
+
+def _model_row(name: str, row: dict | None, metric_keys: list) -> dict:
+    if not row:
+        return {
+            "name": name,
+            "details": [],
+        }
+
+    metrics = {}
+    for key in metric_keys:
+        metrics = _coerce_metrics(row.get(key))
+        if metrics:
+            break
+
+    details = [
+        _detail("Version", row.get("model_version")),
+        _detail("Trained", _format_date(row.get("trained_at") or row.get("created_at"))),
+        _detail("Evaluation", row.get("evaluation_mode")),
+        _detail("Accuracy", _format_metric_percent(metrics.get("accuracy"))),
+        _detail("Balanced Accuracy", _format_metric_percent(metrics.get("balanced_accuracy"))),
+        _detail("Macro F1", _format_metric_percent(metrics.get("macro_f1"))),
+        _detail("Log Loss", _format_metric_number(metrics.get("log_loss"))),
+    ]
+
+    return {
+        "name": name,
+        "details": [detail for detail in details if detail is not None],
+    }
+
+
+def _sentiment_model_row(sentiment_articles: list) -> dict:
+    latest = _latest_row(sentiment_articles, ["published_at"])
+    details = [
+        _detail("Version", (latest or {}).get("model_version")),
+        _detail("Latest Article", _format_date((latest or {}).get("published_at"))),
+        _detail("Evaluation", "Deployed model; held-out metrics not recorded" if latest else None),
+    ]
+
+    return {
+        "name": "Sentiment",
+        "details": [detail for detail in details if detail is not None],
+    }
+
+
+def _detail(label: str, value) -> dict | None:
+    if value in (None, "", "N/A", "Not recorded", "Not evaluated"):
+        return None
+    return {
+        "label": label,
+        "value": value,
+    }
+
+
+def _active_or_latest_model(rows: list, date_keys: list) -> dict | None:
+    active_rows = [row for row in rows if _truthy(row.get("is_active"))]
+    candidates = active_rows or rows
+    return _latest_row(candidates, date_keys)
+
+
+def _sentiment_rank_rows(rows: list) -> list:
+    return [
+        {
+            "symbol": str(row.get("symbol") or "N/A").upper(),
+            "score": _format_decimal(_to_float(row.get("bullish_score"))),
+            "label": row.get("sentiment_label") or "N/A",
+            "date": _format_date(row.get("score_date")),
+            "articles": _format_int(row.get("article_count") or 0),
+        }
+        for row in rows
+    ]
+
+
+def _freshness_row(name: str, active_symbols: list, latest_by_symbol: dict, today: date) -> dict:
+    active_set = set(active_symbols)
+    available_dates = {
+        symbol: value
+        for symbol, value in latest_by_symbol.items()
+        if symbol in active_set and value is not None
+    }
+    missing = [symbol for symbol in active_symbols if symbol not in available_dates]
+    stale = [
+        symbol
+        for symbol, latest in available_dates.items()
+        if (today - latest).days > STALE_AFTER_DAYS
+    ]
+    latest_date = max(available_dates.values()) if available_dates else None
+
+    return {
+        "name": name,
+        "latest_date": _format_date(latest_date),
+        "covered_count": len(available_dates),
+        "missing_count": len(missing),
+        "stale_count": len(stale),
+        "missing_examples": _symbol_examples(missing),
+        "stale_examples": _symbol_examples(sorted(stale)),
+    }
+
+
+def _latest_dates_by_symbol(rows: list, symbol_key: str, date_keys: list) -> dict:
+    latest_by_symbol = {}
+    for row in rows:
+        symbol = str(row.get(symbol_key) or "").upper()
+        if not symbol:
+            continue
+
+        parsed_dates = [
+            parsed
+            for parsed in (_parse_date(row.get(key)) for key in date_keys)
+            if parsed is not None
+        ]
+        if not parsed_dates:
+            continue
+
+        latest = max(parsed_dates)
+        if symbol not in latest_by_symbol or latest > latest_by_symbol[symbol]:
+            latest_by_symbol[symbol] = latest
+
+    return latest_by_symbol
+
+
+def _counter_rows(counter: Counter, total: int, role_labels: bool = False) -> list:
+    rows = []
+    for key, count in counter.most_common():
+        label = _role_label(key) if role_labels else key
+        rows.append({
+            "label": label,
+            "count": count,
+            "percent": _format_percent(count, total),
+        })
+    return rows
+
+
+def _latest_row(rows: list, date_keys: list) -> dict | None:
+    if not rows:
+        return None
+    return max(
+        rows,
+        key=lambda row: max(
+            [_parse_date(row.get(key)) or date.min for key in date_keys]
+        ),
+    )
+
+
+def _latest_date_text(rows: list, date_keys: list) -> str:
+    row = _latest_row(rows, date_keys)
+    if not row:
+        return "N/A"
+
+    dates = [
+        parsed
+        for parsed in (_parse_date(row.get(key)) for key in date_keys)
+        if parsed is not None
+    ]
+    return _format_date(max(dates) if dates else None)
+
+
+def _first_present(row: dict, keys: list):
+    for key in keys:
+        value = row.get(key)
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _normalize_role(role) -> str:
+    return str(role or "basic_user").strip().lower()
+
+
+def _role_label(role: str) -> str:
+    return {
+        "basic_user": "Basic user",
+        "premium_user": "Premium user",
+        "frontend_admin": "Frontend admin",
+    }.get(role, role.replace("_", " ").title())
+
+
+def _normalize_signal(value) -> str:
+    text = str(value or "").strip().lower()
+    if text in {"bullish", "buy", "up", "positive"}:
+        return "bullish"
+    if text in {"bearish", "sell", "down", "negative"}:
+        return "bearish"
+    if text in {"neutral", "hold"}:
+        return "neutral"
+    return "unknown"
+
+
+def _is_active(value) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() not in {
+        "false",
+        "0",
+        "inactive",
+        "suspended",
+        "disabled",
+        "delisted",
+    }
+
+
+def _truthy(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"true", "1", "yes", "active"}
+
+
+def _display_value(value) -> str:
+    text = str(value or "").strip()
+    return text if text else "Unknown"
+
+
+def _parse_date(value) -> date | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00")).date()
+    except ValueError:
+        try:
+            return date.fromisoformat(text[:10])
+        except ValueError:
+            return None
+
+
+def _format_date(value) -> str:
+    parsed = _parse_date(value)
+    return parsed.isoformat() if parsed else "N/A"
+
+
+def _to_float(value) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _average(values: list) -> float | None:
+    return sum(values) / len(values) if values else None
+
+
+def _format_int(value) -> str:
+    try:
+        return f"{int(value):,}"
+    except (TypeError, ValueError):
+        return "0"
+
+
+def _format_decimal(value, digits: int = 2) -> str:
+    number = _to_float(value)
+    if number is None:
+        return "N/A"
+    return f"{number:.{digits}f}"
+
+
+def _format_percent(count: int, total: int) -> str:
+    if not total:
+        return "0.0%"
+    return f"{(count / total) * 100:.1f}%"
+
+
+def _format_weight(value) -> str:
+    number = _to_float(value)
+    if number is None:
+        return "N/A"
+    return f"{number:.0f}%"
+
+
+def _format_metric_percent(value) -> str:
+    number = _to_float(value)
+    if number is None:
+        return "N/A"
+    if number <= 1:
+        number *= 100
+    return f"{number:.1f}%"
+
+
+def _format_metric_number(value) -> str:
+    number = _to_float(value)
+    if number is None:
+        return "N/A"
+    return f"{number:.4f}"
+
+
+def _coerce_metrics(value) -> dict:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+    return {}
+
+
+def _symbol_examples(symbols: list, limit: int = 5) -> str:
+    if not symbols:
+        return "-"
+    suffix = "" if len(symbols) <= limit else f" +{len(symbols) - limit} more"
+    return ", ".join(symbols[:limit]) + suffix

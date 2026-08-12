@@ -23,12 +23,28 @@ Thumbs.db
 # ML model weights (large files — download at runtime)
 *.h5
 *.pkl
+*.joblib
 *.pt
 *.pth
-models/weights/
+*.safetensors
+models/
+backend/artifacts/
+technical_analysis/*.json
+technical_analysis/*.html
+technical_analysis/*.csv
+experiment_*_model/
+
+# Scripts (personal development tools)
+scripts/
 
 # Personal / private files — local only, never pushed to GitHub
 CLAUDE.md
 LOG.md
 docs/
 .claude/
+.superpowers/
+
+# AI tool local artifacts — never pushed to GitHub
+.codex/
+.playwright-mcp/
+AGENTS.md

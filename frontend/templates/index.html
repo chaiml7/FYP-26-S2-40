@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockLens - Predict Markets</title>
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260703g">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="brand">
+                <span class="logo-icon">📈</span>
+                <span class="brand-name">StockLens</span>
+            </div>
+            <div class="nav-actions">
+                <a href="/login" class="btn btn-outline">Log In</a>
+                <a href="/signup" class="btn btn-primary">Sign Up</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <section class="hero">
+            <div class="hero-badge">
+                <span class="dot"></span> LIVE MARKET DATA • AI-POWERED PREDICTIONS
+            </div>
+            
+            <h1 class="hero-title">
+                Predict Markets. <br>
+                <span class="text-accent">Trade with Confidence.</span>
+            </h1>
+            
+            <p class="hero-subtitle">
+                StockLens combines machine learning, sentiment analysis, and fundamental data to give you a clear edge — whether you're a casual investor or a professional trader.
+            </p>
+            
+            <div class="hero-buttons">
+                <a href="/signup" class="btn btn-primary btn-large">Start for Free &rarr;</a>
+                <!-- <a href="/dashboard-demo" class="btn btn-outline btn-large">View Demo Dashboard</a> -->
+            </div>
+        </section>
+
+        <section class="section market-leaders-section" aria-labelledby="market-leaders-title">
+            <div class="market-leaders-heading">
+                <div>
+                    <span class="section-kicker">Market snapshot</span>
+                    <h2 id="market-leaders-title">Most active stocks, analyzed</h2>
+                    <p>Top five tracked stocks by volume with the latest available StockLens model scores.</p>
+                </div>
+                {% if market_leaders %}
+                <div class="market-date">
+                    <span>Market data</span>
+                    <strong>{{ market_leaders[0].market_date }}</strong>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="market-table-shell">
+                {% if market_leaders %}
+                <div class="market-table-scroll">
+                    <table class="market-leaders-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Rank</th>
+                                <th scope="col">Company</th>
+                                <th scope="col">Volume</th>
+                                <th scope="col" class="overall-column">Overall</th>
+                                <th scope="col">Technical</th>
+                                <th scope="col">Sentiment</th>
+                                <th scope="col">Financial</th>
+                                <th scope="col">Analysis</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stock in market_leaders %}
+                            <tr>
+                                <td class="rank-cell">{{ stock.rank }}</td>
+                                <td>
+                                    <div class="company-cell">
+                                        <div>
+                                            <strong>{{ stock.symbol }}</strong>
+                                            <span>{{ stock.company_name }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="volume-cell">{{ stock.volume_display }}</td>
+                                <td class="overall-column">
+                                    {% if stock.overall_score is not none %}
+                                    <span class="score-ring score-{{ stock.analysis }}">{{ stock.overall_score }}</span>
+                                    {% else %}
+                                    <span class="score-unavailable">--</span>
+                                    {% endif %}
+                                </td>
+                                {% for score in [stock.technical_score, stock.sentiment_score, stock.financial_score] %}
+                                <td>
+                                    {% if score is not none %}
+                                    <span class="component-score">{{ score }}</span>
+                                    {% else %}
+                                    <span class="score-unavailable">--</span>
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                                <td>
+                                    {% if stock.overall_score is not none %}
+                                    <span class="analysis-label analysis-{{ stock.analysis }}">{{ stock.analysis|capitalize }}</span>
+                                    {% else %}
+                                    <span class="analysis-label analysis-unavailable">Pending</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="market-table-footer">
+                    <span>Overall score: 50% technical, 30% sentiment, 20% financial</span>
+                    <a href="/signup">Explore all stocks <span aria-hidden="true">&rarr;</span></a>
+                </div>
+                {% else %}
+                <div class="market-empty-state">
+                    <strong>Market snapshot unavailable</strong>
+                    <span>Volume and analysis data will appear after the next market import.</span>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="section product-features" aria-labelledby="product-features-title">
+            <div class="section-header feature-section-header">
+                <span class="section-kicker">Inside StockLens</span>
+                <h2 id="product-features-title">A clearer way to evaluate the market</h2>
+                <p>Move from market activity to an explainable outlook without switching between disconnected tools.</p>
+            </div>
+
+            <div class="feature-showcase-list">
+                <article class="feature-showcase">
+                    <div class="feature-copy">
+                        <span class="feature-number">01</span>
+                        <h3>Model-Powered Predictions</h3>
+                        <p>Compare technical, sentiment, and financial signals in one consistent 1-to-10 scoring system.</p>
+                        <ul class="feature-points">
+                            <li>Separate model scores with a combined outlook</li>
+                            <li>Bullish, neutral, and bearish classifications</li>
+                            <li>Prediction confidence and model context</li>
+                        </ul>
+                    </div>
+                    <div class="feature-media-placeholder placeholder-prediction" role="img" aria-label="StockLens prediction breakdown screenshot placeholder">
+                        <div class="placeholder-toolbar"><span></span><span></span><span></span></div>
+                        <div class="placeholder-preview">
+                            <div class="placeholder-score">7.4</div>
+                            <div class="placeholder-bars"><i></i><i></i><i></i></div>
+                        </div>
+                        <small>Prediction breakdown preview</small>
+                    </div>
+                </article>
+
+                <article class="feature-showcase">
+                    <div class="feature-copy">
+                        <span class="feature-number">02</span>
+                        <h3>Market Data in Context</h3>
+                        <p>Review price, volume, and historical candlesticks beside the latest model analysis.</p>
+                        <ul class="feature-points">
+                            <li>Daily price and volume history</li>
+                            <li>Interactive candlestick charts</li>
+                            <li>Date-based historical views</li>
+                        </ul>
+                    </div>
+                    <div class="feature-media-placeholder placeholder-market" role="img" aria-label="StockLens market chart screenshot placeholder">
+                        <div class="placeholder-toolbar"><span></span><span></span><span></span></div>
+                        <div class="placeholder-chart"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                        <small>Market data preview</small>
+                    </div>
+                </article>
+
+                <article class="feature-showcase">
+                    <div class="feature-copy">
+                        <span class="feature-number">03</span>
+                        <h3>Top Gainers and Losers</h3>
+                        <p>Surface the stocks making the largest moves and inspect the signals behind each change.</p>
+                        <ul class="feature-points">
+                            <li>Fast comparison across tracked stocks</li>
+                            <li>Volume and price movement at a glance</li>
+                            <li>Direct access to detailed stock analysis</li>
+                        </ul>
+                    </div>
+                    <div class="feature-media-placeholder placeholder-movers" role="img" aria-label="StockLens market movers screenshot placeholder">
+                        <div class="placeholder-toolbar"><span></span><span></span><span></span></div>
+                        <div class="placeholder-rows"><i></i><i></i><i></i><i></i></div>
+                        <small>Market movers preview</small>
+                    </div>
+                </article>
+
+                <article class="feature-showcase">
+                    <div class="feature-copy">
+                        <span class="feature-number">04</span>
+                        <h3>Personalized Recommendations</h3>
+                        <p>Adjust how technical, sentiment, and financial analysis contribute to your combined score.</p>
+                        <ul class="feature-points">
+                            <li>Custom model weightages for premium users</li>
+                            <li>Watchlist-focused stock monitoring</li>
+                            <li>Transparent inputs behind every score</li>
+                        </ul>
+                    </div>
+                    <div class="feature-media-placeholder placeholder-recommendations" role="img" aria-label="StockLens recommendations screenshot placeholder">
+                        <div class="placeholder-toolbar"><span></span><span></span><span></span></div>
+                        <div class="placeholder-sliders"><i></i><i></i><i></i></div>
+                        <small>Recommendations preview</small>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="section how-it-works" aria-labelledby="how-title">
+            <div class="section-header">
+                <span class="section-kicker">How it works</span>
+                <h2 id="how-title">From ticker to outlook in three steps</h2>
+            </div>
+            <ol class="workflow-steps">
+                <li><span>1</span><strong>Select a stock</strong><p>Search the tracked market or begin with the most active stocks.</p></li>
+                <li><span>2</span><strong>Review each signal</strong><p>Compare technical, sentiment, and financial scores independently.</p></li>
+                <li><span>3</span><strong>Understand the outlook</strong><p>Use the combined score and breakdown to support further research.</p></li>
+            </ol>
+        </section>
+
+        <section class="section methodology-section" aria-labelledby="methodology-title">
+            <div class="methodology-copy">
+                <span class="section-kicker">Score methodology</span>
+                <h2 id="methodology-title">Three perspectives, one readable score</h2>
+                <p>Every component uses the same 1-to-10 scale. Scores below 4 are bearish, scores from 4 to below 6 are neutral, and scores of 6 or higher are bullish.</p>
+                <p class="methodology-note">Premium users can adjust these weights to match their research priorities.</p>
+            </div>
+            <div class="weight-breakdown" aria-label="Default model weightages">
+                <div><span>Technical</span><strong>50%</strong><i style="--weight: 50%"></i></div>
+                <div><span>Sentiment</span><strong>30%</strong><i style="--weight: 30%"></i></div>
+                <div><span>Financial</span><strong>20%</strong><i style="--weight: 20%"></i></div>
+            </div>
+        </section>
+
+        <section class="section example-analysis" aria-labelledby="example-title">
+            <div class="section-header">
+                <span class="section-kicker">Example breakdown</span>
+                <h2 id="example-title">See what contributes to an outlook</h2>
+                <p>The combined result stays connected to its underlying model scores.</p>
+            </div>
+            {% if featured_analysis %}
+            <div class="example-analysis-layout">
+                <div class="example-overall">
+                    <span>{{ featured_analysis.symbol }}</span>
+                    <strong>{{ featured_analysis.overall_score }}</strong>
+                    <small>{{ featured_analysis.analysis|capitalize }} outlook</small>
+                </div>
+                <div class="example-components">
+                    <div><span>Technical</span><strong>{{ featured_analysis.technical_score }}</strong><small>Market price and indicator patterns</small></div>
+                    <div><span>Sentiment</span><strong>{{ featured_analysis.sentiment_score }}</strong><small>Recent company news analysis</small></div>
+                    <div><span>Financial</span><strong>{{ featured_analysis.financial_score }}</strong><small>Quarterly fundamental outlook</small></div>
+                </div>
+            </div>
+            {% else %}
+            <div class="section-empty">A complete example will appear when all three model scores are available.</div>
+            {% endif %}
+        </section>
+
+        <section class="section performance-section" aria-labelledby="performance-title">
+            <div class="performance-heading">
+                <div>
+                    <span class="section-kicker">Measured performance</span>
+                    <h2 id="performance-title">Evaluation beyond headline accuracy</h2>
+                </div>
+                <p>StockLens reports class-balanced and probability-based metrics so model versions can be compared more responsibly.</p>
+            </div>
+            {% if model_metrics %}
+            <div class="performance-table-scroll">
+                <table class="performance-table">
+                    <thead>
+                        <tr><th>Model</th><th>Accuracy</th><th>Balanced accuracy</th><th>F1</th><th>Evaluation</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for model in model_metrics %}
+                        <tr>
+                            <td><strong>{{ model.name }}</strong><small>{{ model.model_version }}</small></td>
+                            <td>{% if model.accuracy is not none %}{{ model.accuracy }}%{% else %}<span class="metric-pending">Not recorded</span>{% endif %}</td>
+                            <td>{% if model.balanced_accuracy is not none %}{{ model.balanced_accuracy }}%{% else %}<span class="metric-pending">Not recorded</span>{% endif %}</td>
+                            <td>{% if model.f1 is not none %}{{ model.f1 }}%{% else %}<span class="metric-pending">Not recorded</span>{% endif %}</td>
+                            <td><span class="evaluation-status{% if model.evaluation_status == 'Not recorded' %} status-pending{% endif %}">{{ model.evaluation_status }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="section-empty">Active model metrics will be published after evaluation.</div>
+            {% endif %}
+        </section>
+
+        <section class="section audience-section" aria-labelledby="audience-title">
+            <div class="section-header">
+                <span class="section-kicker">Built for research</span>
+                <h2 id="audience-title">Useful at different levels of market experience</h2>
+            </div>
+            <div class="audience-grid">
+                <article><span>01</span><h3>New investors</h3><p>Use a consistent score framework to organize initial company research.</p></article>
+                <article><span>02</span><h3>Market watchers</h3><p>Scan volume, price movement, and changing model signals efficiently.</p></article>
+                <article><span>03</span><h3>Research-focused users</h3><p>Inspect model components instead of relying on one unexplained rating.</p></article>
+                <article><span>04</span><h3>Watchlist builders</h3><p>Keep selected stocks and their latest analysis in one workspace.</p></article>
+            </div>
+        </section>
+
+        <section class="section plans-section" aria-labelledby="plans-title">
+            <div class="section-header">
+                <span class="section-kicker">Plans</span>
+                <h2 id="plans-title">Start with the market. Upgrade for control.</h2>
+                <p>Choose the research depth that fits your workflow.</p>
+            </div>
+            <div class="plan-table-shell">
+                <table class="plan-table">
+                    <colgroup><col class="feature-column"><col><col></colgroup>
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th><span class="plan-name">Free</span><span class="plan-price">$0 <small>/ forever</small></span></th>
+                            <th><span class="plan-name">Premium</span><span class="plan-price">$29 <small>/ month</small></span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Stock dashboard and search</td><td>Included</td><td>Included</td></tr>
+                        <tr><td>Watchlist</td><td>Included</td><td>Included</td></tr>
+                        <tr><td>Market data and charts</td><td>Included</td><td>Included</td></tr>
+                        <tr><td>Full prediction breakdown</td><td>Limited</td><td>Included</td></tr>
+                        <tr><td>Custom model weightages</td><td>Not included</td><td>Included</td></tr>
+                        <tr><td>Personalized recommendations</td><td>Not included</td><td>Included</td></tr>
+                    </tbody>
+                </table>
+                <div class="plan-actions">
+                    <span aria-hidden="true"></span>
+                    <a href="/signup" class="btn btn-outline">Create free account</a>
+                    <a href="/signup" class="btn btn-primary">Choose Premium</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="section final-cta" aria-labelledby="cta-title">
+            <div>
+                <span class="section-kicker">Start your research</span>
+                <h2 id="cta-title">Build your watchlist and analyze your first stock</h2>
+                <p>Bring market activity, model signals, and company fundamentals into one view.</p>
+            </div>
+            <a href="/signup" class="btn btn-primary btn-large">Create free account</a>
+        </section>
+
+        <aside class="risk-disclosure" aria-labelledby="risk-title">
+            <strong id="risk-title">Educational use and risk disclosure</strong>
+            <p>StockLens provides probabilistic research outputs for educational purposes. It does not provide financial advice, execute trades, or guarantee future performance. Model scores can be incomplete, delayed, or incorrect. Always perform independent research before making an investment decision.</p>
+        </aside>
+
+        <section class="section">
+            <div class="section-header">
+                <h2>Frequently asked questions</h2>
+                <p>Everything you need to know before signing up.</p>
+            </div>
+
+            <div class="faq-container">
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>How accurate are the stock predictions?</span>
+                        <span class="faq-icon">↓</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Performance depends on the model, evaluation period, and class distribution. StockLens reports balanced accuracy, macro F1, log loss, and confusion matrices where available.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Can I customize the prediction model?</span>
+                        <span class="faq-icon">↓</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Yes. Premium users can adjust the weightage of technical indicators, news sentiment, and social media signals to match their personal trading strategies.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>What exchanges do you cover?</span>
+                        <span class="faq-icon">↓</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>We currently provide real-time data and predictions for all equities listed on the NYSE and NASDAQ.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Is my data secure?</span>
+                        <span class="faq-icon">↓</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Account authentication and data access are handled through Supabase with role-based application controls. Sensitive backend credentials are not exposed to the browser.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Find all FAQ question elements
+        const faqQuestions = document.querySelectorAll('.faq-question');
+
+        // Loop through each one and listen for a click
+        faqQuestions.forEach(question => {
+            question.addEventListener('click', () => {
+                // Find the parent .faq-item of the clicked question
+                const parentItem = question.parentElement;
+                
+                // Toggle the 'active' class on and off
+                parentItem.classList.toggle('active');
+            });
+        });
+    </script>
+</body>
+</html>

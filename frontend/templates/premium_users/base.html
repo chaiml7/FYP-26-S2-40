@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Premium Dashboard - StockLens{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260806-dashboard-weights">
+    <script>
+        try {
+            document.documentElement.dataset.premiumTheme =
+                localStorage.getItem("stocklens-premium-theme") || "midnight";
+        } catch (error) {
+            document.documentElement.dataset.premiumTheme = "midnight";
+        }
+    </script>
+</head>
+<body class="app-page theme-premium">
+    {% include "/includes/top_navbar.html"%}
+    <div class="app-layout">
+        <aside class="sidebar premium-sidebar theme-toggle-sidebar">
+            <nav class="sidebar-nav">
+                <a href="/dashboard" class="nav-item {% block nav_dashboard %}{% endblock %}">
+                    <span class="nav-icon">&#128202;</span> Dashboard
+                </a>
+                <a href="/premium/recommendations" class="nav-item {% block nav_recommendations %}{% endblock %}">
+                    <span style="margin-right: 10px;">🎯</span> Recommendations
+                </a>
+                <a href="/premium/prediction_breakdown" class="nav-item {% block nav_breakdown %}{% endblock %}">
+                    <span style="margin-right: 10px;">🧠</span> Prediction Breakdown
+                </a>
+                <a href="/premium/earnings_calendar" class="nav-item {% block nav_calendar %}{% endblock %}">
+                    <span style="margin-right: 10px;">📅</span> Earnings Calendar
+                </a>
+                <a href="/premium/weightages" class="nav-item {% block nav_weightages %}{% endblock %}">
+                    <span style="margin-right: 10px;">⚖️</span> Model Weightages
+                </a>
+                
+                <div style="height: 1px; background-color: var(--border-color); margin: 1rem 1.5rem;"></div>
+                
+                <a href="/user/watchlist" class="nav-item {% block nav_watchlist %}{% endblock %}">
+                    <span class="nav-icon">⭐</span> Watchlist
+                </a>
+                <a href="/user/market_overview" class="nav-item {% block nav_market %}{% endblock %}">
+                    <span class="nav-icon">📊</span> Market Overview
+                </a>
+                <a href="/user/news_social" class="nav-item {% block nav_news %}{% endblock %}">
+                    <span class="nav-icon">📰</span> News & Social
+                </a>
+                <a href="/user/feedback" class="nav-item {% block nav_feedback %}{% endblock %}">
+                    <span class="nav-icon">&#128172;</span> Feedback
+                </a>
+            </nav>
+
+            <div class="appearance-theme-control">
+                <button
+                    type="button"
+                    id="premium-theme-toggle"
+                    class="appearance-theme-toggle"
+                    aria-pressed="true"
+                    aria-label="Use StockLens Blue theme"
+                    title="Switch between Blue and Midnight themes"
+                >
+                    <span id="premium-theme-icon" class="theme-icon" aria-hidden="true">&#9728;</span>
+                </button>
+            </div>
+        </aside>
+
+        <main class="app-main">
+            <div class="page-content" style="max-width: 1100px; margin: 0 auto; width: 100%;">
+                {% block content %}
+                {% endblock %}
+            </div>
+        </main>
+    </div>
+
+    {% block scripts %}
+    {% endblock %}
+    <script>
+        (() => {
+            const storageKey = "stocklens-premium-theme";
+            const root = document.documentElement;
+            const toggle = document.getElementById("premium-theme-toggle");
+            const icon = document.getElementById("premium-theme-icon");
+
+            const applyTheme = (theme) => {
+                const selectedTheme = theme === "blue" ? "blue" : "midnight";
+                root.dataset.premiumTheme = selectedTheme;
+                toggle.setAttribute("aria-pressed", String(selectedTheme === "midnight"));
+                toggle.setAttribute(
+                    "aria-label",
+                    selectedTheme === "midnight"
+                        ? "Use StockLens Blue theme"
+                        : "Use Midnight theme"
+                );
+                toggle.title = selectedTheme === "midnight"
+                    ? "Switch to StockLens Blue"
+                    : "Switch to Midnight";
+                icon.textContent = selectedTheme === "midnight" ? "☀" : "☾";
+                try {
+                    localStorage.setItem(storageKey, selectedTheme);
+                } catch (error) {
+                    // The theme still works for this page when storage is unavailable.
+                }
+            };
+
+            applyTheme(root.dataset.premiumTheme);
+            toggle.addEventListener("click", () => {
+                applyTheme(root.dataset.premiumTheme === "midnight" ? "blue" : "midnight");
+            });
+        })();
+    </script>
+</body>
+</html>
