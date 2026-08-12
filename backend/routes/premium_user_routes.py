@@ -90,6 +90,28 @@ async def premium_recommendations(request: Request, risk: str = None):
     if not session or session["user_role"] != "premium_user":
         return RedirectResponse(url="/login", status_code=303)
 
+    risk_filter = risk.lower() if risk else None
+
+    # The page shell renders immediately; the recommendation cards are
+    # fetched asynchronously from /premium/recommendations/data because
+    # scoring every active stock takes several seconds (see that route).
+    return templates.TemplateResponse(
+        request=request,
+        name="premium_users/stock_recommendations.html",
+        context={
+            **session,
+            "request": request,
+            "active_risk": risk_filter,
+        }
+    )
+
+
+@router.get("/premium/recommendations/data")
+async def premium_recommendations_data(request: Request, risk: str = None):
+    session = get_session_context(request)
+    if not session or session["user_role"] != "premium_user":
+        raise HTTPException(status_code=403, detail="Premium access required")
+
     user_id = session["user_id"]
     weights = get_effective_weights(user_id)
     active_stocks = get_active_stocks()
@@ -128,16 +150,7 @@ async def premium_recommendations(request: Request, risk: str = None):
 
     display_recommendations.sort(key=lambda rec: rec["composite"], reverse=True)
 
-    return templates.TemplateResponse(
-        request=request,
-        name="premium_users/stock_recommendations.html",
-        context={
-            **session,
-            "request": request,
-            "recommendations": display_recommendations,
-            "active_risk": risk_filter,
-        }
-    )
+    return {"recommendations": display_recommendations}
 
 def _build_signal_breakdown(signals_row: dict, sentiment_score: float, outlook: dict) -> dict:
     """Format raw indicator/outlook rows into the display strings the
@@ -246,28 +259,31 @@ def _build_signal_breakdown(signals_row: dict, sentiment_score: float, outlook: 
     }
 
 
-def _build_price_path(actual_prices: list) -> str:
-    """SVG polyline `d` string plotting real close prices on a 1000x100 viewBox.
+def _build_price_chart(actual_prices: list) -> dict:
+    """SVG polyline `d` string plus per-point coordinates (for hover markers)
+    plotting real close prices on a 1000x100 viewBox.
 
-    Returns None when there isn't enough history to draw a meaningful line
-    (the old version drew the exact same fake curve regardless of data).
+    Returns {"path": None, "points": []} when there isn't enough history to
+    draw a meaningful line (the old version drew the exact same fake curve
+    regardless of data).
     """
     if not actual_prices or len(actual_prices) < 2:
-        return None
+        return {"path": None, "points": []}
 
     closes = [point["close"] for point in actual_prices]
     low, high = min(closes), max(closes)
     span = (high - low) or 1
 
     count = len(closes)
-    points = []
-    for index, close in enumerate(closes):
+    coords = []
+    for index, point in enumerate(actual_prices):
         x = (index / (count - 1)) * 1000
         # SVG y grows downward, so flip the normalized value.
-        y = 90 - ((close - low) / span) * 80
-        points.append(f"{x:.1f} {y:.1f}")
+        y = 90 - ((point["close"] - low) / span) * 80
+        coords.append({"x": round(x, 1), "y": round(y, 1), "date": point["date"], "close": point["close"]})
 
-    return "M " + " L ".join(points)
+    path = "M " + " L ".join(f"{c['x']} {c['y']}" for c in coords)
+    return {"path": path, "points": coords}
 
 
 @router.get("/premium/prediction_breakdown")
@@ -292,11 +308,14 @@ async def premium_prediction_breakdown(request: Request, symbol: str = "NVDA"):
         if row.get("close") is not None
     ]
 
+    price_chart = _build_price_chart(actual_prices)
+
     display_data = {
         **scorecard,
         "signals": signals,
         "actual_prices": actual_prices,
-        "actual_path": _build_price_path(actual_prices),
+        "actual_path": price_chart["path"],
+        "actual_points": price_chart["points"],
     }
 
     return templates.TemplateResponse(
@@ -769,6 +788,7 @@ async def premium_earnings_calendar(request: Request):
         context={
             **session,
             "request": request,
-            "earnings": earnings_data
+            "earnings": earnings_data,
+            "tracked_count": len(tracked_symbols),
         }
     )
