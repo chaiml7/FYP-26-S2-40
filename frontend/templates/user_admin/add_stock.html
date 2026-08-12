@@ -7,7 +7,7 @@
 {% block content %}
 
 <div class="max-w-800" style="margin-top: 2rem; width: 100%;">
-    <a href="/backend_admin/stocks" class="back-link mb-6 text-muted hover-main" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
+    <a href="/admin/stocks" class="back-link mb-6 text-muted hover-main" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
         <span>←</span> Back to Database
     </a>
 
@@ -48,7 +48,7 @@
             </div>
             
             <div class="flex gap-3 justify-end mt-6 pt-6" style="border-top: 1px solid var(--border-color);">
-                <a href="/backend_admin/stocks" class="btn btn-outline">Cancel</a>
+                <a href="/admin/stocks" class="btn btn-outline">Cancel</a>
                 <button type="submit" class="btn btn-primary" id="submitStockBtn">Save Stock</button>
             </div>
         </form>
@@ -84,7 +84,7 @@
 
                 if (response.ok) {
                     // Success! Redirect them back to the main database page
-                    window.location.href = '/backend_admin/stocks';
+                    window.location.href = '/admin/stocks';
                 } else {
                     const errorData = await response.json();
                     alert("Error saving stock: " + (errorData.detail || "Unknown error"));
