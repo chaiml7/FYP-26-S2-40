@@ -3,6 +3,7 @@
 from datetime import date
 
 from backend.database.supabase_client import supabase
+from backend.services.prediction_service import score_action_label
 from backend.services.stock_list_service import get_active_stocks, get_stock_by_symbol
 
 
@@ -687,6 +688,7 @@ def get_stock_dashboard(
         ],
         "overall_score": overall_score,
         "overall_tone": _score_tone(overall_score),
+        "action": score_action_label(overall_score) if overall_score is not None else None,
         "model_weights": model_weights,
         "component_scores": {
             "technical": technical_score,
