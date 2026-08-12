@@ -874,6 +874,20 @@ Date: 2026-08-10
 
 ---
 
+### 2026-08-12 — Bali — PR #23 merged; found and fixed stale-date bug in Prediction Breakdown chart tooltips
+
+**PR #23** (the fixes above) merged to `main`.
+
+**What prompted this:** user spotted the new hover tooltips on the Prediction Breakdown chart showing dates from 2020, even though the panel is labeled "Actual Close Price - 30D" and today is 2026-08-12.
+
+**Root cause:** `get_stock_history()` in `stock_history_service.py` queries `daily_ohlcv` ordered ascending with no `.limit()`. Supabase/PostgREST caps unlimited queries at 1000 rows server-side — so for a symbol with more than 1000 rows of history (AMD has 2,551, going back to 2016-06-13), the query silently returned only the *oldest* 1000 rows (2016-06-13 → 2020-06-02) instead of the full table. `premium_prediction_breakdown()` then took `price_history[-30:]` of that truncated, already-stale slice — 30 real trading days, just from mid-2020 instead of now. Confirmed by querying Supabase directly (`count='exact'` vs. actual rows returned) before touching any code — the real last-30-days data does exist in the DB, this was a pagination bug, not missing data.
+
+**Fix:** added `get_recent_stock_history(symbol, limit=30)` to `stock_history_service.py` — queries `order by trade_date desc` with a `.limit()` at the query level (so it can never silently truncate to the wrong end of the table), then reverses to chronological order. Swapped `premium_prediction_breakdown()` to use it instead of `get_stock_history()[-30:]`. Verified against Supabase directly: now returns 2026-06-24 → 2026-08-05 for AMD, and confirmed via the running dev server that the chart tooltips show those same real recent dates. Left `get_stock_history()` itself unchanged since `stock_routes.py`'s `/api/stocks/{symbol}/history` also calls it and wasn't in scope here — worth flagging that endpoint likely has the same 1000-row cap issue if a caller ever assumes it gets full history for a long-tracked symbol.
+
+**Next steps:** open a follow-up PR to `main` for this fix. Consider auditing `/api/stocks/{symbol}/history` for the same truncation issue later.
+
+---
+
 
 ## Issues / Bugs Tracker
 
@@ -886,6 +900,7 @@ Date: 2026-08-10
 | 2026-06-26 | NewsAPI free-tier URLs frequently 404 | Resolved | Replaced NewsAPI with gnews in pipeline; gnews provides working Google News redirect URLs |
 | 2026-06-26 | `upsert(on_conflict=...)` on `sentiment_scores` fails silently (no unique constraint) | Resolved | Switched to `insert()`; `has_data_for_today()` guard prevents duplicates |
 | 2026-07-30 | Orphaned TCP listener on localhost:8000 (uni machine) — `netstat`/`Get-NetTCPConnection` reported it LISTENING under a PID that `Get-Process`/`Stop-Process`/`taskkill` all say doesn't exist; served stale pre-fix code (500s, missing routes) while a fresh `uvicorn` instance tried to bind alongside it | Worked around | Ruled out WSL (Ubuntu distro was stopped, not the source). Couldn't kill the phantom listener by any means — moved local dev server to port 8005 instead. Likely needs a machine restart to actually clear; revisit if it recurs |
+| 2026-08-12 | `get_stock_history()` has no query `.limit()`; Supabase/PostgREST silently caps unlimited queries at 1000 rows, so symbols with >1000 rows of `daily_ohlcv` history returned only the *oldest* 1000 rows — Prediction Breakdown's "last 30 days" chart showed dates from 2020 instead of today | Resolved | Added `get_recent_stock_history(symbol, limit=30)` (queries `order desc` + `.limit()`, then reverses) and switched Prediction Breakdown to use it. `/api/stocks/{symbol}/history` (`stock_routes.py`) still calls the unlimited `get_stock_history()` and likely has the same latent issue — not fixed, flagged for later |
 
 ---
 

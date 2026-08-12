@@ -32,7 +32,7 @@ from backend.services.prediction_service import (
     risk_tier_from_volatility,
 )
 from backend.services.sentiment.sentiment_aggregator import get_sentiment_summary
-from backend.services.stock_history_service import get_stock_history
+from backend.services.stock_history_service import get_recent_stock_history
 from backend.services.user_watchlist_service import (
     add_watchlist_by_symbol,
     get_user_watchlist_symbols,
@@ -301,10 +301,10 @@ async def premium_prediction_breakdown(request: Request, symbol: str = "NVDA"):
     outlook = get_latest_direction_outlook(target_symbol)
     signals = _build_signal_breakdown(signals_row, scorecard["sentiment_score"], outlook)
 
-    price_history = get_stock_history(target_symbol) or []
+    price_history = get_recent_stock_history(target_symbol, limit=30)
     actual_prices = [
         {"date": row["trade_date"], "close": float(row["close"])}
-        for row in price_history[-30:]
+        for row in price_history
         if row.get("close") is not None
     ]
 
