@@ -1,0 +1,58 @@
+{% extends "user_admin/base.html" %}
+
+{% block title %}User Details - StockLens{% endblock %}
+
+{% block nav_usermanagement %}active{% endblock %}
+
+{% block content %}
+<a href="/admin/user_management" class="back-link mb-6 text-muted hover-main" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; margin-top: 2rem;">
+    <span>←</span> Back to User Management
+</a>
+
+<div class="card" style="padding: 2.5rem; max-width: 600px; margin-top: 1.5rem;">
+    <h2 class="text-2xl font-bold text-main mb-6 m-0">{{ user.full_name }}</h2>
+
+    <dl class="grid-2" style="row-gap: 1.25rem;">
+        <div>
+            <dt class="text-muted text-sm">Username</dt>
+            <dd class="text-main font-medium m-0">{{ user.username }}</dd>
+        </div>
+        <div>
+            <dt class="text-muted text-sm">Email</dt>
+            <dd class="text-main font-medium m-0">{{ user.email }}</dd>
+        </div>
+        <div>
+            <dt class="text-muted text-sm">Role</dt>
+            <dd class="text-main font-medium m-0">{{ user.role_id }}</dd>
+        </div>
+        <div>
+            <dt class="text-muted text-sm">Status</dt>
+            <dd class="m-0">
+                <span class="status-text {% if user.status == 'Active' %}status-active{% else %}status-suspended{% endif %}">
+                    {{ user.status }}
+                </span>
+            </dd>
+        </div>
+        <div>
+            <dt class="text-muted text-sm">Joined</dt>
+            <dd class="text-main font-medium m-0">{{ user.created_at[:10] if user.created_at else "Unknown" }}</dd>
+        </div>
+        <div>
+            <dt class="text-muted text-sm">User ID</dt>
+            <dd class="text-main font-medium m-0">{{ user.id }}</dd>
+        </div>
+    </dl>
+
+    <div class="flex gap-3 mt-6 pt-6" style="border-top: 1px solid var(--border-color);">
+        {% if user.status == 'Active' %}
+            <form action="/admin/users/{{ user.id }}/suspend" method="POST" class="m-0" onsubmit="return confirm('Suspend this user?');">
+                <button type="submit" class="btn btn-outline text-danger">Suspend Account</button>
+            </form>
+        {% else %}
+            <form action="/admin/users/{{ user.id }}/unsuspend" method="POST" class="m-0">
+                <button type="submit" class="btn btn-primary">Reactivate Account</button>
+            </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
