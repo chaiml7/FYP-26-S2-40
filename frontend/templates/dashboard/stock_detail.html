@@ -26,6 +26,13 @@
             <div class="stock-title-line">
                 <h1>{{ stock.symbol }}</h1>
                 <span class="exchange-label">{{ stock.exchange or "Tracked" }}</span>
+                {% if stock.action == "BUY" %}
+                    <span class="rating-buy">BUY</span>
+                {% elif stock.action == "SELL" %}
+                    <span class="badge-danger">SELL</span>
+                {% elif stock.action == "HOLD" %}
+                    <span class="risk-badge">HOLD</span>
+                {% endif %}
                 {% if user_role == "premium_user" %}
                 <button
                     class="watchlist-star watchlist-star-large {% if is_watchlisted %}active{% endif %}"

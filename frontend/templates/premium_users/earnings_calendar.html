@@ -10,6 +10,12 @@
     </div>
 </div>
 
+<p class="text-muted text-sm" style="margin-top: -0.75rem; margin-bottom: 1.25rem;">
+    Showing {{ earnings|length }} of {{ tracked_count }} tracked stocks with earnings reported by our data
+    provider in the next 30 days. Some tracked tickers may not appear if the provider hasn't published
+    their next earnings date yet.
+</p>
+
 <section class="card price-history-panel">
     {% if earnings %}
     <div class="history-table-scroll">

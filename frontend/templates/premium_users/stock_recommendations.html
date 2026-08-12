@@ -21,47 +21,91 @@
         </div>
     </div>
 
-    <div class="recommendations-container">
-
-        {% for rec in recommendations %}
-        <div class="recommendation-card">
-            <div>
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
-                    <span class="text-accent font-bold" style="font-size: 1.1rem;">{{ rec.ticker }}</span>
-
-                    {% if rec.action == 'STRONG BUY' or rec.action == 'BUY' %}
-                        <span class="rating-buy">{{ rec.action }}</span>
-                    {% elif rec.action == 'SELL' or rec.action == 'STRONG SELL' %}
-                        <span class="badge-danger">{{ rec.action }}</span>
-                    {% else %}
-                        <span class="risk-badge">{{ rec.action }}</span>
-                    {% endif %}
-
-                    <span class="risk-badge">Risk: {{ rec.risk_label }}</span>
-                </div>
-                <div class="text-muted text-sm mb-2">{{ rec.company_name }}</div>
-                <div class="text-main font-medium">{{ rec.rationale }}</div>
-            </div>
-            <div style="text-align: right;">
-                <div class="text-muted text-sm" style="letter-spacing: 1px;">COMPOSITE SCORE</div>
-                <div style="color: #10b981; font-size: 1.5rem; font-weight: 800; margin-bottom: 4px;">{{ rec.composite }}/10</div>
-                <div class="confidence-container" style="margin-left: auto;">
-                <div class="confidence-bg">
-                    <div class="confidence-fill" style="width: {{ rec.composite * 10 }}%;"></div>
-                </div>
-                </div>
-                <a href="/premium/prediction_breakdown?symbol={{ rec.ticker }}" style="font-size: 0.78rem; color: var(--text-muted); text-decoration: none;"
-                   onmouseover="this.style.color='#3b82f6'" onmouseout="this.style.color='var(--text-muted)'">
-                    View breakdown →
-                </a>
-            </div>
-        </div>
-        {% else %}
-        <div class="panel-card" style="text-align: center; padding: 3rem;">
-            <p class="text-muted">No stocks match this risk profile yet. Please check back later.</p>
-        </div>
-        {% endfor %}
-
+    <div id="recommendations-loading" class="panel-card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; padding: 4rem 2rem;">
+        <div class="rec-spinner"></div>
+        <p class="text-muted text-sm" style="margin: 0;">Scoring every tracked stock — this can take a few seconds…</p>
     </div>
+
+    <div id="recommendations-container" class="recommendations-container" style="display: none;"></div>
 </div>
+
+<style>
+.rec-spinner {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 3px solid var(--border-color, rgba(148, 163, 184, 0.3));
+    border-top-color: #3b82f6;
+    animation: rec-spin 0.8s linear infinite;
+}
+@keyframes rec-spin {
+    to { transform: rotate(360deg); }
+}
+</style>
+
+<script>
+(function () {
+    function actionClass(action) {
+        if (action === 'BUY') return 'rating-buy';
+        if (action === 'SELL') return 'badge-danger';
+        return 'risk-badge';
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, function (ch) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+        });
+    }
+
+    function renderCard(rec) {
+        return (
+            '<div class="recommendation-card">' +
+                '<div>' +
+                    '<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">' +
+                        '<span class="text-accent font-bold" style="font-size: 1.1rem;">' + escapeHtml(rec.ticker) + '</span>' +
+                        '<span class="' + actionClass(rec.action) + '">' + escapeHtml(rec.action) + '</span>' +
+                        '<span class="risk-badge">Risk: ' + escapeHtml(rec.risk_label) + '</span>' +
+                    '</div>' +
+                    '<div class="text-muted text-sm mb-2">' + escapeHtml(rec.company_name) + '</div>' +
+                    '<div class="text-main font-medium">' + escapeHtml(rec.rationale) + '</div>' +
+                '</div>' +
+                '<div style="text-align: right;">' +
+                    '<div class="text-muted text-sm" style="letter-spacing: 1px;">COMPOSITE SCORE</div>' +
+                    '<div style="color: #10b981; font-size: 1.5rem; font-weight: 800; margin-bottom: 4px;">' + escapeHtml(rec.composite) + '/10</div>' +
+                    '<div class="confidence-container" style="margin-left: auto;">' +
+                        '<div class="confidence-bg"><div class="confidence-fill" style="width: ' + (rec.composite * 10) + '%;"></div></div>' +
+                    '</div>' +
+                    '<a href="/premium/prediction_breakdown?symbol=' + encodeURIComponent(rec.ticker) + '" style="font-size: 0.78rem; color: var(--text-muted); text-decoration: none;"' +
+                       ' onmouseover="this.style.color=\'#3b82f6\'" onmouseout="this.style.color=\'var(--text-muted)\'">' +
+                        'View breakdown →' +
+                    '</a>' +
+                '</div>' +
+            '</div>'
+        );
+    }
+
+    async function loadRecommendations() {
+        const loading = document.getElementById('recommendations-loading');
+        const container = document.getElementById('recommendations-container');
+
+        try {
+            const response = await fetch('/premium/recommendations/data' + window.location.search);
+            if (!response.ok) throw new Error('Request failed: ' + response.status);
+            const data = await response.json();
+            const recommendations = data.recommendations || [];
+
+            container.innerHTML = recommendations.length
+                ? recommendations.map(renderCard).join('')
+                : '<div class="panel-card" style="text-align: center; padding: 3rem;"><p class="text-muted">No stocks match this risk profile yet. Please check back later.</p></div>';
+        } catch (err) {
+            container.innerHTML = '<div class="panel-card" style="text-align: center; padding: 3rem;"><p class="text-muted">Could not load recommendations right now. Please refresh to try again.</p></div>';
+        } finally {
+            loading.style.display = 'none';
+            container.style.display = '';
+        }
+    }
+
+    loadRecommendations();
+})();
+</script>
 {% endblock %}
