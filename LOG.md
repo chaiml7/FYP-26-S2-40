@@ -840,6 +840,23 @@ Date: 2026-08-10
 
 ---
 
+### 2026-08-12 — Bali — PR #21 merge timing gap + first live Render deploy (stocklens-app)
+
+**PR #21 merge gap:** teammate merged PR #21 before I'd pushed the `render.yaml` commit to that branch — so `main` picked up the premium-tab fixes (`efb3aae`) but not the deploy config. Didn't revert the merge (unnecessary, destructive for a clean merge); instead cherry-picked just the missing commit onto a fresh branch off the new `main` and opened **PR #22**: https://github.com/chaiml7/FYP-26-S2-40/pull/22 (`render.yaml` + the `backend/.env.example` additions, no conflicts). Still open, needs merge.
+
+**Repo access for Render:** `FYP-26-S2-40` is public but owned by chaiml7's personal account — Render's "pick from my connected GitHub repos" list only shows repos its GitHub App has been explicitly granted, which chaiml7 hadn't done. Since it's public, the fix is the "Public Git repository" URL option in Render's Blueprint picker instead (`https://github.com/chaiml7/FYP-26-S2-40`) — no owner permission needed for that path, just a heads-up that auto-deploy-on-push may need the GitHub App connected properly later to work reliably.
+
+**First live deploy:** chaiml7 deployed it himself (his own Render account, so he saw the repo immediately as owner) before PR #22 merged. Checked `https://stocklens-app.onrender.com/` externally:
+- Homepage, `/login`, static CSS all 200
+- Session-gated routes correctly 401 without a cookie (auth gating works)
+- Real Supabase data confirmed rendering (AAPL/AMD/NVDA tickers on the homepage) — DB connectivity from Render's network works, not just localhost
+
+**`stocklens-api` status: unconfirmed, left as-is.** Guessed the hostname from `render.yaml`'s service name (`stocklens-api.onrender.com`) — it resolves in DNS and completes a TLS handshake but never responds (90s+, no data, not even Render's usual "spinning up" response). Can't tell from outside whether: (a) chaiml7 only deployed `stocklens-app` off the Blueprint and skipped this one, (b) it's deployed but crash-looping on a missing env var, or (c) it's just a very slow cold start. Would need dashboard/logs access to tell. **Not chasing this now** — nothing on the live site currently depends on it (training endpoints and both schedulers aren't wired to any UI), so it doesn't block using the deployed app. Revisit when actually needed.
+
+**Next steps:** merge PR #22 so `main` has the deploy config; separately confirm with chaiml7 whether `stocklens-api` was deployed and if not, whether it's worth doing now vs. later. Moving on to other features for this session.
+
+---
+
 
 ## Issues / Bugs Tracker
 
