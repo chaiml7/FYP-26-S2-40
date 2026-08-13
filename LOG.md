@@ -987,6 +987,18 @@ Date: 2026-08-10
 
 **Not yet done:** haven't investigated *why* `user_subscriptions` is missing from the schema cache (could be a real missing table, or Supabase just needs `NOTIFY pgrst, 'reload schema'` after a recent DDL change) — that's a question for whoever owns the Supabase dashboard/billing schema, most likely Addison since it's his feature area.
 
+### 2026-08-13 — Bali — PRs merged, Financials nav tab was missing, group notified to start recording
+
+**What happened:** Opened PR #26 (account settings, delete account, real top movers, financial report) — merged. Right after, caught that the sidebar never got a "Financials" link pointing at the new report page: there used to be a `/user/financials` nav item, removed in an earlier commit because it 404'd (no route ever backed it), and I never added a new one back when building the report page. Opened a follow-up PR #27: `/user/financials` is now a stock-picker landing page (dropdown of active stocks) that redirects to `/stocks/{symbol}/financial_report`, with the sidebar link restored in both free and premium layouts. Live-tested as `freeuser1@user.com` before opening — sidebar link present, picker populated, selecting AAPL redirects correctly. Merged.
+
+**Current state of `main`:** all 4 of my original scoped fixes are live — update password, delete account (with the child-table isolation fix), real top gainers/losers, and financial report (now with working nav). Admin stories unchanged from the original audit, still good.
+
+**Sent to the group:** the 3 finalized user-story replacements (from the PTR), confirmation everything's wired in and live-tested, green light to start recording, and a heads-up to Addison specifically that the Premium downgrade 500 is still unfixed (confirmed root cause: missing `user_subscriptions` table in the schema cache) — he should know before recording that segment.
+
+**Still outstanding, not mine to fix:**
+- Premium downgrade 500 (Addison's) — flagged, not fixed.
+- Whether Ming Liang and Ian have actually seen their new talking points before they sit down to record — communication, not code, can't verify from here.
+
 ---
 
 ## Issues / Bugs Tracker
@@ -1014,6 +1026,7 @@ Date: 2026-08-10
 | 2026-08-13 | Leftover deactivated test stock `ZZZT` ("Audit Test Corp") in live Supabase DB from audit testing | Open | Delete manually via Supabase dashboard (no delete-stock endpoint exists) |
 | 2026-08-13 | Dashboard `selected_date` picker requires an exact trade-date match per stock instead of "closest trading day on or before" — silently shows missing data for most non-trading-day selections (`dashboard_service.py`, `_price_summary_from_rows`) | Open | Not fixed — dropped from the demo story replacement instead |
 | 2026-08-13 | `delete_user_account()` 500'd on real deletion: `user_subscriptions` table missing from PostgREST schema cache, no error isolation between child-table deletes | Resolved | `account_deletion_service.py` now isolates each child-table delete in its own try/except; deletion verified end-to-end on a throwaway test account |
+| 2026-08-13 | Sidebar "Financials" nav link was missing — the old `/user/financials` item had been removed for 404ing before this session, and the new financial report page never got a nav entry wired to it | Resolved | Added `/user/financials` (stock-picker landing page, redirects to `/stocks/{symbol}/financial_report`) and restored the sidebar link in both free and premium layouts |
 
 ---
 
