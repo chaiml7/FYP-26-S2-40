@@ -1001,6 +1001,20 @@ Date: 2026-08-10
 
 ---
 
+### 2026-08-13 — Bali — Admin demo script + Role Management two-admin-card fix, PR #28 merged
+
+**What I did:**
+- Wrote `docs/AdminDemoScript.txt` — full 6-7 min click-by-click script for the Admin & Backend demo segment, covering User Management, Role Management, Stock Database, Default Weightages, Sentiment Watchlist, Performance Reports, and User Feedback. Rewrote it once to a "As an admin, I can..." user-story format per request, then confirmed with the user that matching narration style across group members' segments isn't necessary — different presenters can have different delivery styles.
+- While writing the script, noticed Role Management shows two separate admin cards ("Frontend Admin" / "Backend Admin") which doesn't match the PRD's intended single Admin tier. User asked to fix this for the demo but explicitly scoped it to **display-only** — no time before recording to do the full merge (session/route role checks, DB `role_id` values, tests all still use the real `frontend_admin`/`backend_admin` ids everywhere else).
+- Fixed in `backend/routes/admin_routes.py` `roles_management_page`: merges the two admin role rows into a single "Admin" card, union of both roles' permissions, and groups any user with either `role_id` under one "Users with this role" list.
+- Opened PR #28. First attempt branched off `bali` instead of `main`, which pulled in 91 unmerged commits into the diff — caught it, rebuilt the branch from `origin/main` with just the one cherry-picked commit, force-pushed to fix the PR down to 1 commit / 1 file. User merged PR #28 into `main`.
+
+**Known follow-up (not done, by design):** the actual `frontend_admin`/`backend_admin` role split still exists in the DB and in every route guard — this PR only changes what the Role Management tab displays. A real merge (collapsing to one `role_id`, updating all `if role != "frontend_admin"` checks, updating the `roles` Supabase table, tests) is still needed post-demo.
+
+**Learnt:** when branching for a PR, always branch from `origin/main` (or verify divergence first with `git log origin/main..bali --oneline`) — branching off `bali` directly pulls in every unmerged personal commit sitting on that branch, not just the change you're trying to ship.
+
+---
+
 ## Issues / Bugs Tracker
 
 | Date | Issue | Status | Resolution |
