@@ -2156,7 +2156,18 @@ a {
 /* Trend Colors & Badges */
 .text-success { color: #10b981; } /* Emerald Green */
 .text-danger { color: #ef4444; } /* Red */
+.text-muted { color: var(--text-secondary, #6b7280); }
 .hover-danger:hover { color: #ef4444; cursor: pointer; }
+
+.btn-danger {
+    background-color: #ef4444;
+    color: #ffffff;
+    border: none;
+}
+
+.btn-danger:hover {
+    background-color: #dc2626;
+}
 
 .trend-badge {
     padding: 4px 8px;

@@ -266,6 +266,11 @@
                     <div><dt>Outlook</dt><dd>{{ item.detail.prediction | title }}</dd></div>
                     <div><dt>Period</dt><dd>{{ item.detail.period }}</dd></div>
                     <div><dt>Confidence</dt><dd>{{ "%.1f" | format(item.detail.confidence) }}%</dd></div>
+                    <div style="margin-top: 0.75rem;">
+                        <a href="/stocks/{{ stock.symbol }}/financial_report" class="btn btn-outline btn-sm" style="width: 100%; text-align: center; display: block;">
+                            View Full Financial Report →
+                        </a>
+                    </div>
                 {% else %}
                     <div><dt>Status</dt><dd>No prediction has been saved</dd></div>
                 {% endif %}

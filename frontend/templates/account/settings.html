@@ -1,0 +1,61 @@
+{% extends base_layout %}
+
+{% block title %}Account Settings - StockLens{% endblock %}
+
+{% block content %}
+<div class="page-content">
+    <h1 class="text-2xl font-bold text-main mb-6">Account Settings</h1>
+
+    <div class="card" style="max-width: 480px; margin-bottom: 1.5rem;">
+        <h2 class="text-lg font-bold text-main mb-4">Change password</h2>
+
+        {% if password_status == "updated" %}
+        <p class="text-success">Password updated successfully.</p>
+        {% endif %}
+        {% if password_error %}
+        <p class="text-danger">{{ password_error }}</p>
+        {% endif %}
+
+        <form action="/user/account/password" method="POST" class="auth-form">
+            <div class="form-group">
+                <label for="current_password" class="form-label">Current password</label>
+                <input type="password" id="current_password" name="current_password" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="new_password" class="form-label">New password</label>
+                <input type="password" id="new_password" name="new_password" class="form-control" minlength="8" required>
+            </div>
+            <div class="form-group">
+                <label for="confirm_password" class="form-label">Confirm new password</label>
+                <input type="password" id="confirm_password" name="confirm_password" class="form-control" minlength="8" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Update password</button>
+        </form>
+    </div>
+
+    <div class="card border-t-danger" style="max-width: 480px;">
+        <h2 class="text-lg font-bold text-main mb-4">Delete account</h2>
+        <p class="text-muted mb-4">
+            This permanently deletes your StockLens account, watchlist, notification
+            preferences and billing records. This cannot be undone.
+        </p>
+
+        {% if delete_error %}
+        <p class="text-danger">{{ delete_error }}</p>
+        {% endif %}
+
+        <form
+            action="/user/account/delete"
+            method="POST"
+            class="auth-form"
+            onsubmit="return confirm('Delete your StockLens account? This cannot be undone.');"
+        >
+            <div class="form-group">
+                <label for="delete_current_password" class="form-label">Confirm your password</label>
+                <input type="password" id="delete_current_password" name="current_password" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-danger">Delete my account</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

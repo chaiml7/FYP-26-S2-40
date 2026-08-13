@@ -10,7 +10,9 @@ from backend.services.dashboard_service import (
     get_dashboard_stocks,
     get_stock_dashboard,
 )
+from backend.services.financial.financial_service import get_financial_report
 from backend.services.session_context import get_session_context
+from backend.services.stock_list_service import get_stock_by_symbol
 from backend.services.user_watchlist_service import get_user_watchlist_symbols
 
 
@@ -102,4 +104,27 @@ async def stock_detail(
         request=request,
         name="dashboard/stock_detail.html",
         context={**session, "stock": stock, "is_watchlisted": is_watchlisted},
+    )
+
+
+@router.get("/stocks/{symbol}/financial_report")
+async def stock_financial_report(request: Request, symbol: str):
+    session = _session_context(request)
+    if session is None:
+        return RedirectResponse(url="/login", status_code=303)
+
+    if not get_stock_by_symbol(symbol):
+        return templates.TemplateResponse(
+            request=request,
+            name="dashboard/not_found.html",
+            context={**session, "symbol": symbol.upper(), "selected_date": ""},
+            status_code=404,
+        )
+
+    report = get_financial_report(symbol)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard/financial_report.html",
+        context={**session, "symbol": symbol.upper(), "report": report},
     )
