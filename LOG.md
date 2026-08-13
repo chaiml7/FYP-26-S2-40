@@ -1023,6 +1023,19 @@ Date: 2026-08-10
 
 ---
 
+### 2026-08-14 — Bali — Reverted accidental premium assignment for test user Sarah Mitchell (freeuser1@user.com)
+
+**What prompted this:** while working in Role Management, accidentally assigned Sarah Mitchell (`freeuser1@user.com`, id `dd3ce513-4843-4f2f-9a2c-8b01a758d53b`) the `premium_user` role. User asked to put her back to free.
+
+**What I did:**
+- Queried `user_profiles` directly via the service-role Supabase client (`backend/database/supabase_client.py`) to confirm `role_id` was `premium_user`, then updated it back to `basic_user`.
+- Found she also had an **active** row in `user_subscriptions` (`sub_1U3vFiDNMS98dbqTYeqaI42e`, renews 2026-09-13) — flagged this before just walking away, because `billing_service.synchronize_subscription()` re-derives `role_id` from subscription status on every Stripe webhook event (`PREMIUM_SUBSCRIPTION_STATUSES = {"active", "trialing"}`), so leaving that row `active` risked silently re-promoting her back to premium on the next Stripe event.
+- Confirmed with user, then tried to cancel the subscription via the Stripe API directly (`billing_service._stripe_client()`) — failed, `backend/.env`'s `STRIPE_SECRET_KEY` is still the unfilled placeholder locally, so this machine has no way to reach Stripe's API. Fell back to marking the Supabase `user_subscriptions` row `status: canceled`, `cancel_at_period_end: true` — stops the app-side role sync, but does **not** touch Stripe's own copy of the subscription.
+
+**Known follow-up (not done, flagged to user):** if `sub_1U3vFiDNMS98dbqTYeqaI42e` / customer `cus_V43LVyJvsUM7aS` is a real (even test-mode) Stripe subscription and not just seeded DB data, it's still live on Stripe's side and will keep renewing regardless of the Supabase row I edited. Needs checking in the Stripe dashboard, or by Addison (owns billing), to cancel it there too.
+
+---
+
 ## Issues / Bugs Tracker
 
 | Date | Issue | Status | Resolution |
