@@ -140,10 +140,14 @@ async def home(request: Request):
 # ==========================================
 
 @app.get("/login")
-async def show_login(request: Request):
+async def show_login(request: Request, deleted: str = None):
+    context = {}
+    if deleted:
+        context["info"] = "Your account has been deleted."
     return templates.TemplateResponse(
-        request=request, 
-        name="login.html"
+        request=request,
+        name="login.html",
+        context=context,
     )
 
 @app.post("/login")

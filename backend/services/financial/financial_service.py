@@ -347,6 +347,81 @@ def read_financial_model_version(model_version: str) -> dict:
     return get_model_version(model_version)
 
 
+FINANCIAL_FIELD_LABELS = {
+    "total_revenue": "Total revenue",
+    "gross_profit": "Gross profit",
+    "operating_income": "Operating income",
+    "net_income": "Net income",
+    "ebitda": "EBITDA",
+    "research_development": "R&D expense",
+    "interest_expense": "Interest expense",
+    "total_assets": "Total assets",
+    "total_liabilities": "Total liabilities",
+    "total_equity": "Total equity",
+    "cash_and_equivalents": "Cash & equivalents",
+    "total_debt": "Total debt",
+    "current_assets": "Current assets",
+    "current_liabilities": "Current liabilities",
+    "operating_cashflow": "Operating cash flow",
+    "capex": "Capital expenditure",
+    "free_cashflow": "Free cash flow",
+    "investing_cashflow": "Investing cash flow",
+    "financing_cashflow": "Financing cash flow",
+}
+
+INCOME_STATEMENT_ORDER = (
+    "total_revenue", "gross_profit", "operating_income",
+    "net_income", "ebitda", "research_development", "interest_expense",
+)
+BALANCE_SHEET_ORDER = (
+    "total_assets", "total_liabilities", "total_equity",
+    "cash_and_equivalents", "total_debt", "current_assets", "current_liabilities",
+)
+CASH_FLOW_ORDER = (
+    "operating_cashflow", "capex", "free_cashflow",
+    "investing_cashflow", "financing_cashflow",
+)
+
+
+def _statement_line_items(statement: dict, fields: tuple) -> list:
+    return [
+        {"label": FINANCIAL_FIELD_LABELS[field], "value": statement.get(field)}
+        for field in fields
+        if field in statement
+    ]
+
+
+def _margin(numerator, denominator) -> float | None:
+    try:
+        if numerator is None or denominator is None or float(denominator) == 0:
+            return None
+        return round((float(numerator) / float(denominator)) * 100, 1)
+    except (TypeError, ValueError):
+        return None
+
+
+def get_financial_report(symbol: str) -> dict:
+    """Quarterly financial statements for a symbol, most recent period first."""
+    symbol = symbol.upper()
+    statements = load_financial_statements(symbol)
+    if not statements:
+        return {"symbol": symbol, "periods": []}
+
+    ordered = sorted(statements, key=lambda row: row.get("period") or "", reverse=True)
+    periods = []
+    for statement in ordered:
+        periods.append({
+            "period": statement.get("period"),
+            "income_statement": _statement_line_items(statement, INCOME_STATEMENT_ORDER),
+            "balance_sheet": _statement_line_items(statement, BALANCE_SHEET_ORDER),
+            "cash_flow": _statement_line_items(statement, CASH_FLOW_ORDER),
+            "gross_margin": _margin(statement.get("gross_profit"), statement.get("total_revenue")),
+            "net_margin": _margin(statement.get("net_income"), statement.get("total_revenue")),
+        })
+
+    return {"symbol": symbol, "periods": periods}
+
+
 def read_latest_financial_prediction(symbol: str) -> dict:
     active = get_active_model_version()
     if active is None:

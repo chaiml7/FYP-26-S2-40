@@ -164,6 +164,27 @@ Commit message also mentions a new **`logs` table** (import run logs) added in S
 
 ---
 
+## Sprint 3
+
+### 2026-08-13 — Bali — Demo-recording audit fixes (admin dashboard branch)
+
+**Context:** Ran a full live audit against the deployed app (`admin_demo_audit.md` artifact) covering all 5 presenters' user stories ahead of demo recording. Team triaged the findings; my scope was 4 fixes, with 3 explicitly deferred pending group decisions.
+
+**What I built:**
+- **Base #10 (update password):** No UI existed anywhere — only a bearer-token JSON endpoint (`PATCH /users/me/password`) nothing in the app called, since server-rendered pages only carry a session cookie, never the Supabase access token. Added `admin_update_user()`/`admin_delete_user()` to `auth_service.py` (service-role GoTrue admin calls, same pattern as existing `admin_get_user`), then a session-cookie-gated `GET/POST /user/account` flow in `user_routes.py` that re-verifies the current password via the existing `login()` call before applying the change. New `frontend/templates/account/settings.html`, linked from the shared top navbar.
+- **Base #12 (delete account):** Didn't exist at all — no route, no UI. New `backend/services/account_deletion_service.py` deletes across every table that FKs to a user (`user_watchlists`, `user_notification_preferences`, `notification_deliveries`, `weightages`, `user_subscriptions`, `user_profiles` — none of this is defined in-repo, the base schema/FKs only live in the Supabase dashboard) before calling the Auth admin delete. Wired to `POST /user/account/delete` on the same account-settings page, password-confirmed.
+- **Base #6 (top gainers/losers):** Was 100% hardcoded HTML with dead `/quote?symbol=` links. Added `get_top_movers()` to `dashboard_service.py`, reusing the existing `_dashboard_price_summaries()` batch query over `daily_ohlcv` restricted to our active stocks list, ranked by day-over-day % change. Wired into `/user/market_overview` for both Base and Premium (shared page/route). Links now point to the real `/stocks/{symbol}/view` route.
+- **Base #7 (financial report):** Investigated whether real financial-statement data exists — it does. `financial_statements` (populated via `yfinance_financial_fetcher.py`/SEC fetcher) has genuine quarterly revenue/margins/balance-sheet/cash-flow data, separate from the legacy unused `predictions` table. Added `get_financial_report()` to `financial_service.py` and a new `GET /stocks/{symbol}/financial_report` page, linked from the existing Financial score panel on the stock detail page.
+
+**Verified live** (not just code-read) by running `frontend.main:app` locally against the real Supabase project, logging in as `freeuser1@user.com`, and hitting the new GET routes: account settings page renders, market overview now shows 10 real rows (NVDA, AAPL, D05.SI, etc. — including SGX dotted symbols, confirmed `/stocks/{symbol}/view` handles the dot correctly), and the AAPL financial report renders real quarterly figures (~$111B/$143B revenue, correctly scaled). Did **not** exercise the password-change/delete-account POST paths against the real demo accounts to avoid breaking them before recording — worth a dry run on a throwaway account before the actual recording.
+
+**Deferred (team decision pending):**
+- Base #4/#5 watchlist — currently Premium-only (paywalled), contradicts the PRD's Base story. Waiting on group decision before un-gating.
+- Base #9 (follow list of social media accounts) — team already decided to drop this feature.
+- Premium #14 (downgrade subscription, 500s live) — teammate (Addison) owns this, not touching it.
+
+---
+
 ## Issues / Bugs Tracker
 
 | Date | Issue | Status | Resolution |
