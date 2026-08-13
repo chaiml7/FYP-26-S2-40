@@ -1,0 +1,16 @@
+{% extends base_layout %}
+
+{% block title %}Checkout cancelled - StockLens{% endblock %}
+
+{% block content %}
+<section class="billing-result-card">
+    <span class="billing-result-icon billing-result-icon-muted" aria-hidden="true">&times;</span>
+    <p class="workspace-eyebrow">Checkout cancelled</p>
+    <h1>No payment was taken</h1>
+    <p>Your existing StockLens plan has not changed. You can restart checkout whenever you are ready.</p>
+    <form action="/billing/checkout" method="post" class="billing-inline-action">
+        <button type="submit" class="btn btn-primary">Try again</button>
+        <a href="/dashboard" class="btn btn-outline">Return to dashboard</a>
+    </form>
+</section>
+{% endblock %}

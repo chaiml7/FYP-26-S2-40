@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Premium Dashboard - StockLens{% endblock %}</title>
-    <link rel="stylesheet" href="/static/css/styles.css?v=20260806-dashboard-weights">
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260810-notification-center">
     <script>
         try {
             document.documentElement.dataset.premiumTheme =
@@ -49,6 +49,9 @@
                 <a href="/user/feedback" class="nav-item {% block nav_feedback %}{% endblock %}">
                     <span class="nav-icon">&#128172;</span> Feedback
                 </a>
+                <form action="/billing/portal" method="post" class="sidebar-billing-action">
+                    <button type="submit" class="btn btn-outline btn-full">Manage billing</button>
+                </form>
             </nav>
 
             <div class="appearance-theme-control">

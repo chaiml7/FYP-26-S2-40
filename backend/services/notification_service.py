@@ -5,14 +5,13 @@ from __future__ import annotations
 import html
 import logging
 import os
-import smtplib
-import ssl
 from datetime import date, datetime, timedelta
-from email.message import EmailMessage
-from email.utils import formataddr, make_msgid
 from hmac import compare_digest
 from typing import Any
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
+
+import requests
 
 from backend.database.supabase_client import supabase
 
@@ -22,6 +21,7 @@ logger = logging.getLogger(__name__)
 NOTIFICATION_TYPE = "analysis_ready"
 DEFAULT_TIMEZONE = "Asia/Singapore"
 PROCESSING_TIMEOUT = timedelta(minutes=30)
+SENDGRID_MAIL_SEND_URL = "https://api.sendgrid.com/v3/mail/send"
 
 
 def notification_today() -> date:
@@ -327,50 +327,313 @@ def build_analysis_ready_email(
     return subject, body
 
 
-def _gmail_setting(name: str) -> str:
+def _in_app_notification(
+    notification_id: str,
+    kind: str,
+    title: str,
+    message: str,
+    *,
+    href: str | None = None,
+    occurred_at: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "id": notification_id,
+        "kind": kind,
+        "title": title,
+        "message": message,
+        "href": href,
+        "occurred_at": occurred_at,
+    }
+
+
+def _load_in_app_watchlist_data(
+    symbols: list[str], selected_date: date
+) -> dict[str, dict[str, Any]]:
+    cutoff = (selected_date - timedelta(days=14)).isoformat()
+    price_response = (
+        supabase.table("daily_ohlcv")
+        .select("symbol,trade_date,close")
+        .in_("symbol", symbols)
+        .gte("trade_date", cutoff)
+        .order("trade_date", desc=True)
+        .execute()
+    )
+    technical_response = (
+        supabase.table("direction_predictions")
+        .select(
+            "symbol,latest_date,prediction,technical_score,model_version,created_at"
+        )
+        .in_("symbol", symbols)
+        .gte("latest_date", cutoff)
+        .order("latest_date", desc=True)
+        .order("created_at", desc=True)
+        .execute()
+    )
+    sentiment_response = (
+        supabase.table("sentiment_daily_scores")
+        .select("symbol,score_date,sentiment_label,bullish_score,model_version")
+        .in_("symbol", symbols)
+        .eq("score_date", selected_date.isoformat())
+        .execute()
+    )
+
+    data = {
+        symbol: {"prices": [], "technical": None, "sentiment": None}
+        for symbol in symbols
+    }
+    for row in price_response.data or []:
+        symbol = str(row.get("symbol") or "").upper()
+        if symbol in data and len(data[symbol]["prices"]) < 2:
+            data[symbol]["prices"].append(row)
+    for row in technical_response.data or []:
+        symbol = str(row.get("symbol") or "").upper()
+        if symbol in data and data[symbol]["technical"] is None:
+            data[symbol]["technical"] = row
+    for row in sentiment_response.data or []:
+        symbol = str(row.get("symbol") or "").upper()
+        if symbol in data and data[symbol]["sentiment"] is None:
+            data[symbol]["sentiment"] = row
+    return data
+
+
+def _premium_in_app_notifications(user_id: str) -> list[dict[str, Any]]:
+    selected_date = notification_today()
+    watchlist = _active_watchlist(user_id)
+    if not watchlist:
+        return [
+            _in_app_notification(
+                "watchlist:add-first-stock:v1",
+                "info",
+                "Build your watchlist",
+                "Add stocks to receive prediction-ready and price-movement alerts.",
+                href="/user/watchlist",
+            )
+        ]
+
+    symbols = [stock["symbol"] for stock in watchlist]
+    try:
+        watchlist_data = _load_in_app_watchlist_data(symbols, selected_date)
+    except Exception:
+        logger.exception("Could not load premium in-app notification data")
+        return [
+            _in_app_notification(
+                f"watchlist:notifications-unavailable:{selected_date.isoformat()}",
+                "warning",
+                "Watchlist updates are temporarily unavailable",
+                "StockLens could not check the latest analysis. Please try again later.",
+                href="/user/watchlist",
+                occurred_at=selected_date.isoformat(),
+            )
+        ]
+
+    notifications: list[dict[str, Any]] = []
+    pending_symbols = []
+    for stock in watchlist:
+        symbol = stock["symbol"]
+        stock_href = f"/stocks/{quote(symbol, safe='')}/view"
+        stock_data = watchlist_data.get(symbol) or {}
+        prices = stock_data.get("prices") or []
+        latest_price = prices[0] if prices else None
+        technical = stock_data.get("technical") or {}
+        sentiment = stock_data.get("sentiment") or {}
+        analysis_ready = bool(
+            latest_price
+            and technical
+            and sentiment
+            and technical.get("latest_date") == latest_price.get("trade_date")
+        )
+
+        if analysis_ready:
+            technical_label = str(technical.get("prediction") or "Available").replace("_", " ").title()
+            sentiment_label = str(sentiment.get("sentiment_label") or "Neutral").title()
+            latest_date = str(technical.get("latest_date") or "latest")
+            score_date = str(sentiment.get("score_date") or selected_date.isoformat())
+            notifications.append(
+                _in_app_notification(
+                    ":".join(
+                        [
+                            "analysis",
+                            symbol,
+                            latest_date,
+                            score_date,
+                            str(technical.get("model_version") or "model"),
+                            str(sentiment.get("model_version") or "model"),
+                        ]
+                    ),
+                    "analysis",
+                    f"{symbol} analysis is ready",
+                    f"Technical: {technical_label}. Sentiment: {sentiment_label}.",
+                    href=stock_href,
+                    occurred_at=score_date,
+                )
+            )
+        else:
+            pending_symbols.append(symbol)
+
+        if len(prices) >= 2:
+            try:
+                latest_close = float(prices[0]["close"])
+                previous_close = float(prices[1]["close"])
+                change_percent = (
+                    ((latest_close - previous_close) / previous_close) * 100
+                    if previous_close
+                    else 0
+                )
+            except (KeyError, TypeError, ValueError):
+                change_percent = 0
+            if abs(change_percent) >= 3:
+                direction = "rose" if change_percent > 0 else "fell"
+                kind = "price_up" if change_percent > 0 else "price_down"
+                trade_date = str(prices[0].get("trade_date") or "latest")
+                notifications.append(
+                    _in_app_notification(
+                        f"price:{symbol}:{trade_date}:{kind}",
+                        kind,
+                        f"{symbol} moved {abs(change_percent):.1f}%",
+                        f"The latest closing price {direction} to {_format_price(latest_close)}.",
+                        href=stock_href,
+                        occurred_at=trade_date,
+                    )
+                )
+
+    if pending_symbols:
+        notifications.append(
+            _in_app_notification(
+                f"analysis-pending:{selected_date.isoformat()}:{','.join(sorted(pending_symbols))}",
+                "status",
+                "Watchlist analysis is still running",
+                f"Waiting for current technical or sentiment results for {len(pending_symbols)} stock(s).",
+                href="/user/watchlist",
+                occurred_at=selected_date.isoformat(),
+            )
+        )
+    return notifications
+
+
+def _admin_in_app_notifications() -> list[dict[str, Any]]:
+    notifications = []
+    if not os.getenv("SENDGRID_API_KEY", "").strip() or not os.getenv(
+        "SENDGRID_FROM_EMAIL", ""
+    ).strip():
+        notifications.append(
+            _in_app_notification(
+                "admin:sendgrid-configuration-missing:v1",
+                "warning",
+                "Email delivery needs setup",
+                "Configure the SendGrid API key and verified sender before sending alerts.",
+            )
+        )
+    if not auto_dispatch_enabled() and os.getenv(
+        "ENABLE_EMAIL_NOTIFICATION_SCHEDULER", "false"
+    ).lower() != "true":
+        notifications.append(
+            _in_app_notification(
+                "admin:email-automation-disabled:v1",
+                "status",
+                "Automatic email alerts are off",
+                "Enable the scheduler or post-pipeline dispatch when you are ready to send alerts.",
+            )
+        )
+
+    try:
+        response = (
+            supabase.table("notification_deliveries")
+            .select("id,notification_date,error_message,updated_at")
+            .eq("status", "failed")
+            .order("updated_at", desc=True)
+            .limit(5)
+            .execute()
+        )
+        for delivery in response.data or []:
+            delivery_id = str(delivery.get("id") or "unknown")
+            notification_date = str(delivery.get("notification_date") or "unknown date")
+            notifications.append(
+                _in_app_notification(
+                    f"admin:email-failed:{delivery_id}:{delivery.get('updated_at') or ''}",
+                    "warning",
+                    "Watchlist email delivery failed",
+                    f"A notification for {notification_date} could not be sent. Check the backend logs before retrying.",
+                    occurred_at=delivery.get("updated_at"),
+                )
+            )
+    except Exception:
+        logger.exception("Could not load failed email deliveries for the admin notification centre")
+    return notifications
+
+
+def get_in_app_notifications(user_id: str | None, user_role: str) -> dict[str, Any]:
+    if user_role == "premium_user" and user_id:
+        notifications = _premium_in_app_notifications(user_id)
+    elif user_role == "frontend_admin":
+        notifications = _admin_in_app_notifications()
+    else:
+        notifications = [
+            _in_app_notification(
+                "free:premium-watchlist-alerts:v1",
+                "info",
+                "Unlock personalized alerts",
+                "Premium users receive watchlist prediction and price-movement notifications.",
+                href="/user/watchlist",
+            )
+        ]
+    return {
+        "generated_at": datetime.now(ZoneInfo("UTC")).isoformat(),
+        "notifications": notifications,
+    }
+
+
+def _sendgrid_setting(name: str) -> str:
     value = os.getenv(name, "").strip()
     if not value:
         raise RuntimeError(f"{name} is not configured")
     return value
 
 
-def _send_gmail_email(to_email: str, subject: str, html_content: str) -> str:
-    """Send one notification through Gmail SMTP using an App Password."""
-    username = _gmail_setting("GMAIL_SMTP_USER")
-    app_password = _gmail_setting("GMAIL_SMTP_APP_PASSWORD").replace(" ", "")
-    from_name = os.getenv("GMAIL_FROM_NAME", "StockLens").strip() or "StockLens"
-    host = os.getenv("GMAIL_SMTP_HOST", "smtp.gmail.com").strip() or "smtp.gmail.com"
+def _send_sendgrid_email(to_email: str, subject: str, html_content: str) -> str:
+    """Send one notification through SendGrid's v3 Mail Send API."""
+    api_key = _sendgrid_setting("SENDGRID_API_KEY")
+    from_email = _sendgrid_setting("SENDGRID_FROM_EMAIL")
+    from_name = os.getenv("SENDGRID_FROM_NAME", "StockLens").strip() or "StockLens"
     try:
-        port = int(os.getenv("GMAIL_SMTP_PORT", "587"))
-        timeout = float(os.getenv("GMAIL_SMTP_TIMEOUT_SECONDS", "30"))
+        timeout = float(os.getenv("SENDGRID_TIMEOUT_SECONDS", "30"))
     except ValueError as exc:
-        raise RuntimeError("Gmail SMTP port and timeout must be numeric") from exc
+        raise RuntimeError("SENDGRID_TIMEOUT_SECONDS must be numeric") from exc
 
     app_url = os.getenv("APP_PUBLIC_URL", "http://localhost:8001").rstrip("/")
-    message = EmailMessage()
-    message["Subject"] = subject
-    message["From"] = formataddr((from_name, username))
-    message["To"] = to_email
-    message["Message-ID"] = make_msgid(
-        domain=username.split("@", 1)[1] if "@" in username else None
-    )
-    message.set_content(
-        "Your StockLens watchlist analysis is ready. "
-        f"Sign in to view it: {app_url}/dashboard"
-    )
-    message.add_alternative(html_content, subtype="html")
+    payload = {
+        "personalizations": [{"to": [{"email": to_email}]}],
+        "from": {"email": from_email, "name": from_name},
+        "subject": subject,
+        "content": [
+            {
+                "type": "text/plain",
+                "value": (
+                    "Your StockLens watchlist analysis is ready. "
+                    f"Sign in to view it: {app_url}/dashboard"
+                ),
+            },
+            {"type": "text/html", "value": html_content},
+        ],
+    }
+    try:
+        response = requests.post(
+            SENDGRID_MAIL_SEND_URL,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=timeout,
+        )
+    except requests.RequestException as exc:
+        raise RuntimeError("SendGrid request failed") from exc
 
-    context = ssl.create_default_context()
-    with smtplib.SMTP(host, port, timeout=timeout) as smtp:
-        smtp.ehlo()
-        smtp.starttls(context=context)
-        smtp.ehlo()
-        smtp.login(username, app_password)
-        refused = smtp.send_message(message)
-    if refused:
-        refused_addresses = ", ".join(sorted(str(address) for address in refused))
-        raise RuntimeError(f"Gmail refused recipient(s): {refused_addresses}")
-    return str(message["Message-ID"]).strip("<>")
+    if response.status_code != 202:
+        detail = (response.text or "No response body").strip()[:500]
+        raise RuntimeError(
+            f"SendGrid rejected the email with status {response.status_code}: {detail}"
+        )
+    return response.headers.get("X-Message-Id", "")
 
 
 def dispatch_analysis_ready_emails(
@@ -429,7 +692,7 @@ def dispatch_analysis_ready_emails(
             continue
         try:
             subject, email_html = build_analysis_ready_email(user, analyses, selected_date)
-            provider_id = _send_gmail_email(user["email"], subject, email_html)
+            provider_id = _send_sendgrid_email(user["email"], subject, email_html)
             _update_delivery(
                 delivery,
                 status="sent",

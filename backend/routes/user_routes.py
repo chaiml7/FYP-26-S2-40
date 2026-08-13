@@ -13,10 +13,12 @@ from backend.schemas import (
     UserStatusUpdate,
     WatchlistAdd,
 )
+from backend.services.account_deletion_service import delete_user_account
 from backend.services.auth_service import (
     AuthServiceError,
     admin_get_user,
     admin_list_users,
+    admin_update_user,
     create_account,
     get_auth_user,
     login,
@@ -24,8 +26,10 @@ from backend.services.auth_service import (
     update_email,
     update_password,
 )
+from backend.services.dashboard_service import get_top_movers
 from backend.services.sentiment.sentiment_aggregator import get_recent_news
 from backend.services.notification_service import (
+    get_in_app_notifications,
     get_notification_preference,
     set_notification_preference,
 )
@@ -357,6 +361,14 @@ def edit_admin_user_status(
 # Shared User Routes (Free & Premium)
 # ==========================================
 
+
+@router.get("/user/notifications")
+def view_in_app_notifications(request: Request):
+    session = get_session_context(request)
+    if not session:
+        raise HTTPException(status_code=401, detail="Login required")
+    return get_in_app_notifications(session.get("user_id"), session["user_role"])
+
 @router.get("/user/watchlist")
 async def watchlist(request: Request):
     session = get_session_context(request)
@@ -407,16 +419,108 @@ async def update_watchlist_email_preference(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return RedirectResponse(url="/user/watchlist?notifications=updated", status_code=303)
 
-@router.get("/user/market_overview")
-async def market_overview(request: Request):
+@router.get("/user/account")
+async def account_settings(request: Request):
     session = get_session_context(request)
     if not session:
         return RedirectResponse(url="/login", status_code=303)
 
     return templates.TemplateResponse(
         request=request,
+        name="account/settings.html",
+        context={**session, "request": request},
+    )
+
+
+@router.post("/user/account/password")
+async def update_account_password(
+    request: Request,
+    current_password: str = Form(...),
+    new_password: str = Form(...),
+    confirm_password: str = Form(...),
+):
+    session = get_session_context(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=303)
+
+    password_error = None
+    if len(new_password) < 8:
+        password_error = "New password must be at least 8 characters."
+    elif new_password != confirm_password:
+        password_error = "New password and confirmation do not match."
+    else:
+        try:
+            login(session["user_email"], current_password)
+        except AuthServiceError:
+            password_error = "Current password is incorrect."
+
+    password_status = None
+    if password_error is None:
+        try:
+            admin_update_user(session["user_id"], {"password": new_password})
+            password_status = "updated"
+        except AuthServiceError as error:
+            password_error = error.detail
+
+    return templates.TemplateResponse(
+        request=request,
+        name="account/settings.html",
+        context={
+            **session,
+            "request": request,
+            "password_status": password_status,
+            "password_error": password_error,
+        },
+    )
+
+
+@router.post("/user/account/delete")
+async def delete_account(
+    request: Request,
+    current_password: str = Form(...),
+):
+    session = get_session_context(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=303)
+
+    try:
+        login(session["user_email"], current_password)
+    except AuthServiceError:
+        return templates.TemplateResponse(
+            request=request,
+            name="account/settings.html",
+            context={
+                **session,
+                "request": request,
+                "delete_error": "Current password is incorrect.",
+            },
+        )
+
+    delete_user_account(session["user_id"])
+    request.session.clear()
+    return RedirectResponse(url="/login?deleted=1", status_code=303)
+
+
+@router.get("/user/market_overview")
+async def market_overview(request: Request):
+    session = get_session_context(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=303)
+
+    try:
+        movers = get_top_movers()
+    except Exception:
+        movers = {"gainers": [], "losers": []}
+
+    return templates.TemplateResponse(
+        request=request,
         name="free_users/user_market_overview.html",
-        context={**session, "request": request}
+        context={
+            **session,
+            "request": request,
+            "gainers": movers["gainers"],
+            "losers": movers["losers"],
+        }
     )
 
 @router.get("/user/news_social")

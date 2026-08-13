@@ -27,6 +27,9 @@
             {% if error %}
             <p class="text-danger">{{ error }}</p>
             {% endif %}
+            {% if info %}
+            <p class="text-success">{{ info }}</p>
+            {% endif %}
 
             <form action="/login" method="POST" class="auth-form">
                 <div class="form-group">

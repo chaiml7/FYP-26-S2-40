@@ -1,23 +1,21 @@
-# Gmail analysis-ready email setup
+# SendGrid analysis-ready email setup
 
 StockLens sends one daily digest only to users who opt in on their watchlist page. A digest is ready when every active stock in that user's watchlist has a technical prediction for its newest imported market date and a sentiment score for the notification date. The latest financial analysis is included when available, but quarterly financial data does not block a daily notification.
 
-## Gmail configuration
+## SendGrid configuration
 
-Use a dedicated Gmail account for StockLens notifications, enable Google 2-Step Verification, then create an App Password for the account. Put the following values in `backend/.env`:
+Create a restricted SendGrid API key with only Mail Send access, then verify the sender address in SendGrid. Put the following values in `backend/.env`:
 
 ```dotenv
-GMAIL_SMTP_USER=stocklens.notifications@gmail.com
-GMAIL_SMTP_APP_PASSWORD=your_16_character_google_app_password
-GMAIL_FROM_NAME=StockLens
-GMAIL_SMTP_HOST=smtp.gmail.com
-GMAIL_SMTP_PORT=587
-GMAIL_SMTP_TIMEOUT_SECONDS=30
+SENDGRID_API_KEY=SG.your_sendgrid_api_key
+SENDGRID_FROM_EMAIL=your_verified_sender@example.com
+SENDGRID_FROM_NAME=StockLens
+SENDGRID_TIMEOUT_SECONDS=30
 ```
 
-Do not use the Gmail account's normal password and do not commit `backend/.env`. Spaces in an App Password are accepted and removed before authentication.
+`SENDGRID_FROM_EMAIL` must match a verified SendGrid Sender Identity. Do not commit `backend/.env` or expose the API key in frontend code.
 
-Keep these application settings alongside the Gmail settings:
+Keep these application settings alongside the SendGrid settings:
 
 ```dotenv
 APP_PUBLIC_URL=http://localhost:8001
