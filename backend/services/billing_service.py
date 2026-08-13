@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from datetime import datetime, timezone
 from typing import Any
@@ -9,6 +10,7 @@ from typing import Any
 from backend.database.supabase_client import supabase
 
 
+logger = logging.getLogger(__name__)
 PREMIUM_SUBSCRIPTION_STATUSES = {"active", "trialing"}
 MANAGED_USER_ROLES = {"basic_user", "premium_user"}
 
@@ -63,11 +65,14 @@ def _as_dict(value: Any) -> dict[str, Any]:
         return {}
     if isinstance(value, dict):
         return value
-    if hasattr(value, "to_dict_recursive"):
-        return value.to_dict_recursive()
+    for method_name in ("to_dict_recursive", "to_dict"):
+        converter = getattr(value, method_name, None)
+        if callable(converter):
+            converted = converter()
+            return converted if isinstance(converted, dict) else {}
     try:
         return dict(value)
-    except (TypeError, ValueError):
+    except (KeyError, TypeError, ValueError):
         return {}
 
 
@@ -141,6 +146,7 @@ def create_checkout_session(
             customer = stripe.Customer.create(
                 email=email,
                 metadata={"stocklens_user_id": user_id},
+                idempotency_key=f"stocklens-customer-{user_id}",
             )
         except Exception as exc:
             raise BillingError(
@@ -149,7 +155,17 @@ def create_checkout_session(
         customer_id = _identifier(customer)
         if not customer_id:
             raise BillingError("Stripe did not return a customer identifier.")
-        _upsert_customer(user_id, customer_id)
+        try:
+            _upsert_customer(user_id, customer_id)
+        except Exception:
+            # Checkout and its signed webhook both carry the StockLens user ID.
+            # Do not strand a valid Stripe customer when this preliminary cache
+            # write fails; the webhook will perform the authoritative upsert.
+            logger.exception(
+                "Could not cache Stripe customer %s for StockLens user %s before checkout",
+                customer_id,
+                user_id,
+            )
 
     try:
         checkout = stripe.checkout.Session.create(
