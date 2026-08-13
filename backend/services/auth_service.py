@@ -178,3 +178,11 @@ def admin_list_users(page: int = 1, per_page: int = 100):
 
 def admin_get_user(user_id: str):
     return _admin_request("GET", f"/admin/users/{user_id}")
+
+
+def admin_update_user(user_id: str, payload: dict):
+    return _admin_request("PUT", f"/admin/users/{user_id}", payload)
+
+
+def admin_delete_user(user_id: str):
+    return _admin_request("DELETE", f"/admin/users/{user_id}")

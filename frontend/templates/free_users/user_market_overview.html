@@ -16,31 +16,15 @@
                 <span class="icon">↗</span> TOP GAINERS
             </div>
             <div class="movers-list">
-                <a href="/quote?symbol=smci" class="movers-row">
-                    <span class="font-bold text-accent ticker-col">SMCI</span>
-                    <span class="text-main price-col">$48.90</span>
-                    <span class="trend-badge badge-success">▲ 12.4%</span>
+                {% for stock in gainers %}
+                <a href="/stocks/{{ stock.symbol }}/view" class="movers-row">
+                    <span class="font-bold text-accent ticker-col">{{ stock.symbol }}</span>
+                    <span class="text-main price-col">${{ "%.2f" | format(stock.price) }}</span>
+                    <span class="trend-badge badge-success">▲ {{ "%.1f" | format(stock.change_percent) }}%</span>
                 </a>
-                <a href="/quote?symbol=arm" class="movers-row">
-                    <span class="font-bold text-accent ticker-col">ARM</span>
-                    <span class="text-main price-col">$135.50</span>
-                    <span class="trend-badge badge-success">▲ 8.7%</span>
-                </a>
-                <a href="/quote?symbol=pltr" class="movers-row">
-                    <span class="font-bold text-accent ticker-col">PLTR</span>
-                    <span class="text-main price-col">$25.80</span>
-                    <span class="trend-badge badge-success">▲ 7.2%</span>
-                </a>
-                <a href="/quote?symbol=rivn" class="movers-row">
-                    <span class="font-bold text-accent ticker-col">RIVN</span>
-                    <span class="text-main price-col">$14.30</span>
-                    <span class="trend-badge badge-success">▲ 6.5%</span>
-                </a>
-                <a href="/quote?symbol=coin" class="movers-row">
-                    <span class="font-bold text-accent ticker-col">COIN</span>
-                    <span class="text-main price-col">$245.60</span>
-                    <span class="trend-badge badge-success">▲ 5.9%</span>
-                </a>
+                {% else %}
+                <p class="text-muted">No gainers to show for the latest trading day yet.</p>
+                {% endfor %}
             </div>
         </div>
 
@@ -49,31 +33,15 @@
                 <span class="icon">↘</span> TOP LOSERS
             </div>
             <div class="movers-list">
-                <a href="/quote?symbol=intc" class="movers-row">
-                    <span class="font-bold text-accent ticker-col">INTC</span>
-                    <span class="text-main price-col">$31.20</span>
-                    <span class="trend-badge badge-danger">▼ 6.8%</span>
+                {% for stock in losers %}
+                <a href="/stocks/{{ stock.symbol }}/view" class="movers-row">
+                    <span class="font-bold text-accent ticker-col">{{ stock.symbol }}</span>
+                    <span class="text-main price-col">${{ "%.2f" | format(stock.price) }}</span>
+                    <span class="trend-badge badge-danger">▼ {{ "%.1f" | format(stock.change_percent | abs) }}%</span>
                 </a>
-                <a href="/quote?symbol=snap" class="movers-row">
-                    <span class="font-bold text-accent ticker-col">SNAP</span>
-                    <span class="text-main price-col">$11.40</span>
-                    <span class="trend-badge badge-danger">▼ 5.2%</span>
-                </a>
-                <a href="/quote?symbol=lyft" class="movers-row">
-                    <span class="font-bold text-accent ticker-col">LYFT</span>
-                    <span class="text-main price-col">$13.70</span>
-                    <span class="trend-badge badge-danger">▼ 4.1%</span>
-                </a>
-                <a href="/quote?symbol=hood" class="movers-row">
-                    <span class="font-bold text-accent ticker-col">HOOD</span>
-                    <span class="text-main price-col">$18.90</span>
-                    <span class="trend-badge badge-danger">▼ 3.6%</span>
-                </a>
-                <a href="/quote?symbol=amc" class="movers-row">
-                    <span class="font-bold text-accent ticker-col">AMC</span>
-                    <span class="text-main price-col">$4.20</span>
-                    <span class="trend-badge badge-danger">▼ 3.1%</span>
-                </a>
+                {% else %}
+                <p class="text-muted">No losers to show for the latest trading day yet.</p>
+                {% endfor %}
             </div>
         </div>
 

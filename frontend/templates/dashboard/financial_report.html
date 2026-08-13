@@ -1,0 +1,88 @@
+{% extends base_layout %}
+
+{% block title %}{{ symbol }} Financial Report - StockLens{% endblock %}
+
+{% block content %}
+<div class="page-content">
+    <a href="/stocks/{{ symbol }}/view" class="back-link" style="display:inline-block;margin-bottom:1rem;">
+        <span>&larr;</span> Back to {{ symbol }}
+    </a>
+    <h1 class="text-2xl font-bold text-main mb-6">{{ symbol }} — Financial Report</h1>
+
+    {% if not report.periods %}
+    <div class="card">
+        <p class="text-muted">No quarterly financial statements have been imported for {{ symbol }} yet.</p>
+    </div>
+    {% endif %}
+
+    {% for period in report.periods %}
+    <div class="card mb-6">
+        <div class="movers-header">
+            <span>Quarter ending {{ period.period }}</span>
+        </div>
+
+        <div class="grid-2" style="gap: 1.5rem; margin-top: 1rem;">
+            <div>
+                <h3 class="text-main mb-2">Income statement</h3>
+                <table class="data-table">
+                    <tbody>
+                        {% for item in period.income_statement %}
+                        <tr>
+                            <td>{{ item.label }}</td>
+                            <td class="text-main" style="text-align:right;">
+                                {{ "${:,.0f}".format(item.value) if item.value is not none else "--" }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        <tr>
+                            <td>Gross margin</td>
+                            <td class="text-main" style="text-align:right;">
+                                {{ "%.1f" | format(period.gross_margin) ~ "%" if period.gross_margin is not none else "--" }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Net margin</td>
+                            <td class="text-main" style="text-align:right;">
+                                {{ "%.1f" | format(period.net_margin) ~ "%" if period.net_margin is not none else "--" }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div>
+                <h3 class="text-main mb-2">Balance sheet</h3>
+                <table class="data-table">
+                    <tbody>
+                        {% for item in period.balance_sheet %}
+                        <tr>
+                            <td>{{ item.label }}</td>
+                            <td class="text-main" style="text-align:right;">
+                                {{ "${:,.0f}".format(item.value) if item.value is not none else "--" }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div>
+                <h3 class="text-main mb-2">Cash flow</h3>
+                <table class="data-table">
+                    <tbody>
+                        {% for item in period.cash_flow %}
+                        <tr>
+                            <td>{{ item.label }}</td>
+                            <td class="text-main" style="text-align:right;">
+                                {{ "${:,.0f}".format(item.value) if item.value is not none else "--" }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
