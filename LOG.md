@@ -183,6 +183,29 @@ Commit message also mentions a new **`logs` table** (import run logs) added in S
 - Base #9 (follow list of social media accounts) — team already decided to drop this feature.
 - Premium #14 (downgrade subscription, 500s live) — teammate (Addison) owns this, not touching it.
 
+### 2026-08-13 — Bali — Finalized 3 replacement Base user stories for demo recording
+
+**Context:** Confirmed with the group that Base stories #4, #5 (watchlist add/delete) and #9 (social media follow list) can't be demoed as-is (watchlist is Premium-gated pending a group decision; follow-list was already dropped as a feature). Investigated the app for already-working, already-Base-accessible features not currently assigned to any presenter, to swap in instead. Live-tested every claim against the real app (as `freeuser1@user.com`) before finalizing — an earlier draft of story #4 wrongly said the dashboard shows "live technical/sentiment/financial scores" and an earlier draft of #5 proposed the dashboard's historical-date picker; both were wrong/broken on inspection (see bug below), so they were dropped and replaced with verified alternatives.
+
+**Finalized replacements:**
+1. **Replacing #4** — "As a base user, I want to search and filter the list of tracked stocks by sector, with each stock's latest closing price and daily % change, so that I can quickly compare stocks without searching for them one at a time." Maps to the existing `/dashboard` table (verified columns: Company, Sector, Latest price — a closing price from `daily_ohlcv`, not live — and Daily move, with working search box + sector filter).
+2. **Replacing #5** — "As a base user, I want to view a stock's technical, sentiment, and financial prediction scorecard (with an overall composite score), so that I understand the platform's overall outlook on that stock at a glance." Maps to the top of `/stocks/{symbol}/view`. Live-verified as `freeuser1@user.com` on AAPL: real overall score (4.4/10, "Neutral") plus three individual Technical/Sentiment/Financial scores, with the Premium-only weight-simulator correctly hidden for Base. Distinct from Base #7 (financial report), which is just the raw statement numbers.
+3. **Replacing #9** — "As a base user, I want to submit feedback about the platform, so that the team can act on my experience and improve StockLens." Maps to `/user/feedback` (topic/rating/description form), a complete feature that isn't in the PRD's use-case list at all but is fully built, including the admin review side.
+
+**Bug found while testing (not fixed, just documented — see Issues tracker below):** the dashboard's `selected_date` picker is unreliable. `_price_summary_from_rows()` in `dashboard_service.py` requires a stock's most recent trading row to fall on the **exact** selected date, not "the closest trading day on or before it." Any date that isn't precisely a recorded trading day for a given stock — weekends, holidays, dates not yet imported, or SGX vs. US stocks trading on different calendars — silently shows "No price data"/"Unavailable" for that stock even though nearby data exists. Tested 6 dates locally (today, 1 week/1 month/2 months/3 months/1 year ago): today, 1-week-ago and 2-months-ago each showed 14 of 15 stocks missing; 1-month, 3-months and 1-year-ago happened to show all 15 populated. This is why it looked like "only some random dates work" — it's calendar-dependent, not a fixed cadence.
+
+### 2026-08-13 — Bali — Full end-to-end test of update-password/delete-account, found and fixed a real deletion bug
+
+**What I did:** Before greenlighting the demo, ran both new flows end-to-end against a throwaway signup (not the real `freeuser1`/`premiumuser1` demo accounts) on a local server hitting the real Supabase project: signup → wrong-password rejection → mismatched-confirmation rejection → real password change → confirmed old password now fails and new password logs in → wrong-password delete rejection → real delete.
+
+**Bug found:** the real delete call 500'd. Root cause: `account_deletion_service.py` deleted straight through a list of tables with no error isolation, and `supabase.table("user_subscriptions")...execute()` throws `postgrest.exceptions.APIError: PGRST205 Could not find the table 'public.user_subscriptions' in the schema cache` — that table isn't visible to PostgREST in this project right now. Because the original code had no try/except per table, this one failure aborted the whole deletion before it ever reached `user_profiles` or the Auth user delete.
+
+**Fix:** rewrote `delete_user_account()` to loop over the child tables with a try/except per table (log + continue on failure) so one bad table can't block the rest, then always call `admin_delete_user()` last. Re-ran the full test after the fix: delete succeeded (303), and a fresh login attempt with the deleted account's credentials correctly failed with "Invalid email or password" — confirmed the Auth user is genuinely gone.
+
+**Important side-finding:** this is the same root cause as the Premium downgrade 500 logged above — `billing_service.get_user_subscription()` queries the same `user_subscriptions` table, unguarded, with no try/except. This is no longer just a hypothesis (unguarded call *could* throw) — it's now confirmed live that the table lookup does throw. Worth telling Addison specifically: it's a missing/stale-schema-cache table, not a transient/network issue, so retrying won't fix it — the table needs to exist and be visible to PostgREST (may just need a schema cache reload in Supabase, or the table needs to actually be created) before the downgrade flow can work.
+
+**Not yet done:** haven't investigated *why* `user_subscriptions` is missing from the schema cache (could be a real missing table, or Supabase just needs `NOTIFY pgrst, 'reload schema'` after a recent DDL change) — that's a question for whoever owns the Supabase dashboard/billing schema, most likely Addison since it's his feature area.
+
 ---
 
 ## Issues / Bugs Tracker
@@ -191,6 +214,9 @@ Commit message also mentions a new **`logs` table** (import run logs) added in S
 |---|---|---|---|
 | 2026-05-24 | frontend/.env committed with anon key | Open | Add to .gitignore cleanup task |
 | 2026-05-24 | PRD says Flask, codebase uses FastAPI | Resolved | Using FastAPI, noted discrepancy |
+| 2026-08-13 | Dashboard `selected_date` picker requires an exact trade-date match per stock instead of "closest trading day on or before" — silently shows missing data for most non-trading-day selections (`dashboard_service.py`, `_price_summary_from_rows`) | Open | Not fixed — dropped from the demo story replacement instead |
+| 2026-08-13 | `POST /billing/portal` (Premium downgrade) can raw-500: `get_user_subscription()` in `billing_service.py` is an unguarded Supabase call inside `create_customer_portal_session`, not caught by the route's `except BillingConfigurationError`/`except BillingError` clauses | Open | Confirmed live (not just theoretical) — `user_subscriptions` table is missing from the PostgREST schema cache. Not fixed (Addison's feature) — flagged for the group |
+| 2026-08-13 | `delete_user_account()` 500'd on real deletion: `user_subscriptions` table missing from PostgREST schema cache, no error isolation between child-table deletes | Resolved | `account_deletion_service.py` now isolates each child-table delete in its own try/except; deletion verified end-to-end on a throwaway test account |
 
 ---
 
