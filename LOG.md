@@ -1015,6 +1015,14 @@ Date: 2026-08-10
 
 ---
 
+### 2026-08-14 — Bali — Merged `main` (Stripe checkout hardening) into `bali`
+
+**What changed on main:** Addison's follow-up to the Stripe billing feature (`6bb1ac0` "fix stripe checkout", merged via PR #28 alongside the Role Management fix). Two changes to `backend/services/billing_service.py`: (1) `_as_dict()` now also tries a plain `.to_dict()` converter (not just `.to_dict_recursive()`) and catches `KeyError` too, so more Stripe SDK object shapes normalize correctly instead of silently returning `{}`; (2) `create_checkout_session()` now passes an `idempotency_key` to `stripe.Customer.create()` and wraps `_upsert_customer()` in try/except so a transient Supabase write failure no longer strands a valid Stripe customer mid-checkout (the signed webhook does the authoritative upsert later anyway). `backend/routes/billing_ui_routes.py` gained a catch-all `except Exception` around `start_checkout()` that logs and renders the existing billing-error page instead of a raw 500. New/expanded tests in `test_billing_service.py` and `test_billing_ui.py` cover both.
+
+**Integration impact on sentiment pipeline (my scope):** none — this is Stripe checkout code, no overlap with `backend/services/sentiment/*` or `sentiment_scores`. Merge was clean (no conflicts); fast-forwarded `bali` to `origin/bali` first (picked up `9c9873d`, the PR #28 admin Role Management merge), then merged `origin/main` on top.
+
+---
+
 ## Issues / Bugs Tracker
 
 | Date | Issue | Status | Resolution |
