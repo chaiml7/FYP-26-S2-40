@@ -139,7 +139,25 @@ async def roles_management_page(request: Request, role: str = "user admin"):
     target_role = role.lower()
 
     roles_response = supabase.table("roles").select("*").execute()
-    roles_data = roles_response.data
+    raw_roles_data = roles_response.data
+
+    # Display-only merge: frontend_admin and backend_admin are still two
+    # separate roles under the hood (session/route checks elsewhere still
+    # use their real ids), but the Role Management tab shows them as one
+    # combined "Admin" card until the underlying roles are actually merged.
+    ADMIN_ROLE_IDS = {"frontend_admin", "backend_admin"}
+    admin_rows = [r for r in raw_roles_data if r["id"].lower() in ADMIN_ROLE_IDS]
+    roles_data = [r for r in raw_roles_data if r["id"].lower() not in ADMIN_ROLE_IDS]
+    if admin_rows:
+        roles_data.append({
+            "id": "admin",
+            "name": "Admin",
+            "tag": admin_rows[0].get("tag", "badge-purple"),
+            "desc": "Full administrative access across user management, stock database, sentiment sources, weightages, and reports.",
+        })
+
+    if target_role in ADMIN_ROLE_IDS:
+        target_role = "admin"
 
     selected_role = next((r for r in roles_data if r["id"].lower() == target_role), roles_data[0])
 
@@ -178,7 +196,15 @@ async def roles_management_page(request: Request, role: str = "user admin"):
         ]
     }
 
-    permissions_data = role_perms.get(selected_role["id"].lower(), [])
+    if selected_role["id"].lower() == "admin":
+        merged_perms = {}
+        for role_id in ADMIN_ROLE_IDS:
+            for perm in role_perms.get(role_id, []):
+                name = perm["name"]
+                merged_perms[name] = merged_perms.get(name, False) or perm["allowed"]
+        permissions_data = [{"name": name, "allowed": allowed} for name, allowed in merged_perms.items()]
+    else:
+        permissions_data = role_perms.get(selected_role["id"].lower(), [])
 
     users_response = supabase.table("user_profiles").select("id, full_name, email, role_id").execute()
     users_data = users_response.data
@@ -187,13 +213,17 @@ async def roles_management_page(request: Request, role: str = "user admin"):
     for user in users_data:
         display_users.append({
             "id": user.get("id"),
-            "full_name": user.get("full_name") or "Unknown User", 
+            "full_name": user.get("full_name") or "Unknown User",
             "email": user.get("email") or "No Email",
-            "role": str(user.get("role_id", "")).lower() 
-        })  
+            "role": str(user.get("role_id", "")).lower()
+        })
 
-    assigned_users = [u for u in display_users if u["role"] == selected_role["id"].lower()]
-    unassigned_users = [u for u in display_users if u["role"] != selected_role["id"].lower()]
+    if selected_role["id"].lower() == "admin":
+        assigned_users = [u for u in display_users if u["role"] in ADMIN_ROLE_IDS]
+        unassigned_users = [u for u in display_users if u["role"] not in ADMIN_ROLE_IDS]
+    else:
+        assigned_users = [u for u in display_users if u["role"] == selected_role["id"].lower()]
+        unassigned_users = [u for u in display_users if u["role"] != selected_role["id"].lower()]
 
     return templates.TemplateResponse(
         request=request,
