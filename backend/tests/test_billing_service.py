@@ -16,6 +16,19 @@ def _query(response_data):
     return query
 
 
+def test_identifier_supports_stripe_v15_objects():
+    class StripeV15LikeObject:
+        def to_dict(self):
+            return {"id": "cus_test"}
+
+        def __getitem__(self, key):
+            # StripeObject is not a normal Mapping; dict(value) tries index 0
+            # and raises this error in stripe-python 15.x.
+            raise KeyError(key)
+
+    assert billing_service._identifier(StripeV15LikeObject()) == "cus_test"
+
+
 @patch("backend.services.billing_service._upsert_customer")
 @patch("backend.services.billing_service.get_user_subscription", return_value=None)
 @patch("backend.services.billing_service._premium_price_id", return_value="price_test")
@@ -42,12 +55,45 @@ def test_checkout_reuses_stocklens_identity_metadata(
 
     assert result == "https://checkout.stripe.test/session"
     mock_upsert_customer.assert_called_once_with("user-id", "cus_test")
+    customer_args = stripe.Customer.create.call_args.kwargs
+    assert customer_args["idempotency_key"] == "stocklens-customer-user-id"
     stripe.checkout.Session.create.assert_called_once()
     checkout_args = stripe.checkout.Session.create.call_args.kwargs
     assert checkout_args["mode"] == "subscription"
     assert checkout_args["client_reference_id"] == "user-id"
     assert checkout_args["line_items"] == [{"price": "price_test", "quantity": 1}]
     assert checkout_args["subscription_data"]["metadata"]["stocklens_user_id"] == "user-id"
+
+
+@patch(
+    "backend.services.billing_service._upsert_customer",
+    side_effect=RuntimeError("temporary database failure"),
+)
+@patch("backend.services.billing_service.get_user_subscription", return_value=None)
+@patch("backend.services.billing_service._premium_price_id", return_value="price_test")
+@patch("backend.services.billing_service._stripe_client")
+def test_checkout_continues_when_preliminary_customer_cache_write_fails(
+    mock_stripe_client,
+    _mock_price,
+    _mock_subscription,
+    _mock_upsert_customer,
+):
+    stripe = MagicMock()
+    stripe.Customer.create.return_value = {"id": "cus_test"}
+    stripe.checkout.Session.create.return_value = SimpleNamespace(
+        url="https://checkout.stripe.test/session"
+    )
+    mock_stripe_client.return_value = stripe
+
+    result = billing_service.create_checkout_session(
+        user_id="user-id",
+        email="user@example.com",
+        success_url="http://localhost:8001/billing/success",
+        cancel_url="http://localhost:8001/billing/cancel",
+    )
+
+    assert result == "https://checkout.stripe.test/session"
+    stripe.checkout.Session.create.assert_called_once()
 
 
 @patch("backend.services.billing_service._premium_price_id", return_value="price_test")

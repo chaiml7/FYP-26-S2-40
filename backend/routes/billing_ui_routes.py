@@ -1,5 +1,6 @@
 """Authenticated browser billing routes served by the frontend app."""
 
+import logging
 import os
 
 from fastapi import APIRouter, HTTPException, Request
@@ -20,6 +21,7 @@ from backend.services.user_profile_service import get_profile
 
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 templates = Jinja2Templates(directory="frontend/templates")
 CUSTOMER_ROLES = {"basic_user", "premium_user"}
 
@@ -81,6 +83,17 @@ async def start_checkout(request: Request):
         return _billing_error_page(request, context, str(exc), status_code=503)
     except BillingError as exc:
         return _billing_error_page(request, context, str(exc), status_code=400)
+    except Exception:
+        logger.exception(
+            "Unexpected billing checkout failure for user %s",
+            context.get("user_id"),
+        )
+        return _billing_error_page(
+            request,
+            context,
+            "Billing is temporarily unavailable. Please try again shortly.",
+            status_code=500,
+        )
 
     return RedirectResponse(url=checkout_url, status_code=303)
 
