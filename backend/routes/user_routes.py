@@ -523,6 +523,29 @@ async def market_overview(request: Request):
         }
     )
 
+@router.get("/user/financials")
+async def user_financials(request: Request, symbol: str = None):
+    session = get_session_context(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=303)
+
+    if symbol:
+        return RedirectResponse(
+            url=f"/stocks/{symbol.upper()}/financial_report", status_code=303
+        )
+
+    try:
+        active_stocks = get_active_stocks() or []
+    except Exception:
+        active_stocks = []
+
+    return templates.TemplateResponse(
+        request=request,
+        name="free_users/user_financials.html",
+        context={**session, "request": request, "active_stocks": active_stocks},
+    )
+
+
 @router.get("/user/news_social")
 async def news_social(
     request: Request,

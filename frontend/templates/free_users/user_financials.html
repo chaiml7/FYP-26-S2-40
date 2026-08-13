@@ -1,0 +1,27 @@
+{% extends base_layout %}
+
+{% block title %}Financials - StockLens{% endblock %}
+
+{% block nav_financials %}active{% endblock %}
+
+{% block content %}
+<div class="page-content">
+    <h1 class="text-2xl font-bold text-main mb-6">Financials</h1>
+
+    <div class="card" style="max-width: 480px;">
+        <p class="text-muted mb-4">
+            Pick a stock to view its quarterly financial report — revenue, margins,
+            balance sheet, and cash flow.
+        </p>
+        <form action="/user/financials" method="GET" style="display: flex; gap: 0.5rem;">
+            <select name="symbol" class="form-control" required>
+                <option value="" disabled selected>Select a stock</option>
+                {% for stock in active_stocks %}
+                <option value="{{ stock.symbol }}">{{ stock.symbol }} — {{ stock.company_name }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary">View report</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
