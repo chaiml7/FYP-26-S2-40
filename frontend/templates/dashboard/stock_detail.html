@@ -97,73 +97,73 @@
 
 {% if user_role == "premium_user" %}
 <!-- 2. BROKER INTEGRATION & TRADING PANEL (PREMIUM USERS ONLY) -->
-<section class="card trade-panel" style="margin-top: 1.5rem; margin-bottom: 1.5rem; padding: 1.5rem; background: #1e293b; border-radius: 12px; border: 1px solid #334155;">
-    <div class="section-title-row" style="margin-bottom: 1rem;">
+<section class="card trade-panel">
+    <div class="section-title-row broker-panel-heading">
         <div>
-            <p class="workspace-eyebrow" style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase;">Broker Integration</p>
-            <h2 style="margin: 0; color: white;">Trade {{ stock.symbol }}</h2>
+            <p class="workspace-eyebrow">Broker Integration</p>
+            <h2>Trade {{ stock.symbol }}</h2>
         </div>
     </div>
 
     <!-- State 0: Loading -->
-    <div id="brokerLoading" style="color: #94a3b8; padding: 1rem 0;">
+    <div id="brokerLoading" class="broker-loading">
         <span>Checking broker connection status...</span>
     </div>
 
     <!-- State 1: Disconnected -->
-    <div id="brokerDisconnected" style="display: none; padding: 1rem 0; text-align: center;">
-        <p style="color: #cbd5e1; margin-bottom: 1rem;">Log in to your brokerage account to place live Buy and Sell orders directly from StockLens.</p>
-        <button id="connectBrokerPageBtn" class="btn btn-primary" type="button" style="padding: 0.75rem 1.5rem; font-weight: 600;">
+    <div id="brokerDisconnected" class="broker-disconnected" style="display: none;">
+        <p>Log in to your brokerage account to place live Buy and Sell orders directly from StockLens.</p>
+        <button id="connectBrokerPageBtn" class="btn btn-primary broker-connect-button" type="button">
             🔗 Connect / Log in to Broker
         </button>
     </div>
 
     <!-- State 2: Connected -->
     <div id="brokerConnected" style="display: none;">
-        <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-end;">
+        <div class="broker-trade-grid">
             
-            <div style="flex: 1; min-width: 220px;">
-                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.4rem;">Select Account</label>
-                <select id="tradingAccountSelect" style="width: 100%; padding: 0.65rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white;"></select>
+            <div class="broker-field broker-field-wide">
+                <label for="tradingAccountSelect">Select Account</label>
+                <select id="tradingAccountSelect" class="broker-control"></select>
             </div>
 
-            <div style="flex: 1; min-width: 120px;">
-                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.4rem;">Shares</label>
-                <input type="number" id="tradeUnitsInput" min="0.0001" step="any" placeholder="1.0" required style="width: 100%; padding: 0.65rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white;">
+            <div class="broker-field">
+                <label for="tradeUnitsInput">Shares</label>
+                <input type="number" id="tradeUnitsInput" class="broker-control" min="0.0001" step="any" placeholder="1.0" required>
             </div>
 
-            <div style="flex: 1; min-width: 120px;">
-                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.4rem;">Limit Price ($)</label>
-                <input type="number" id="tradePriceInput" min="0.01" step="0.01" placeholder="Market (Any)" style="width: 100%; padding: 0.65rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white;">
+            <div class="broker-field">
+                <label for="tradePriceInput">Limit Price ($)</label>
+                <input type="number" id="tradePriceInput" class="broker-control" min="0.01" step="0.01" placeholder="Market (Any)">
             </div>
 
-            <div style="display: flex; gap: 1rem; flex: 1; min-width: 220px;">
-                <button type="button" id="buyStockBtn" style="flex: 1; padding: 0.65rem 1rem; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">
+            <div class="broker-trade-actions">
+                <button type="button" id="buyStockBtn" class="broker-trade-button broker-buy-button">
                     BUY {{ stock.symbol }}
                 </button>
-                <button type="button" id="sellStockBtn" style="flex: 1; padding: 0.65rem 1rem; background: #ef4444; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer;">
+                <button type="button" id="sellStockBtn" class="broker-trade-button broker-sell-button">
                     SELL {{ stock.symbol }}
                 </button>
             </div>
         </div>
 
-        <div id="activePositionBox" style="display: none; margin-top: 1rem; width: 100%; padding: 0.75rem 1rem; background: #0f172a; border-radius: 8px; border: 1px solid #334155; font-size: 0.9rem;">
-            <span style="color: #4ade80; font-weight: 600;">Active Position:</span> 
-            <span id="positionDetailsText" style="color: #cbd5e1;"></span>
+        <div id="activePositionBox" class="broker-position" style="display: none;">
+            <span class="broker-position-label">Active Position:</span>
+            <span id="positionDetailsText"></span>
         </div>
 
-        <div id="tradeStatusMessage" style="margin-top: 1rem; font-size: 0.9rem; display: none;"></div>
+        <div id="tradeStatusMessage" class="broker-status-message" style="display: none;"></div>
     </div>
 </section>
 
 {% else %}
-<section class="card trade-panel-locked" style="margin-top: 1.5rem; margin-bottom: 1.5rem; padding: 1.5rem; background: #1e293b; border-radius: 12px; border: 1px solid #334155; text-align: center;">
-    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔒</div>
-    <h3 style="margin: 0 0 0.5rem 0; color: white;">Live Trading is a Premium Feature</h3>
-    <p style="color: #94a3b8; max-width: 500px; margin: 0 auto 1rem auto; font-size: 0.9rem;">
+<section class="card trade-panel-locked">
+    <div class="broker-lock-icon">🔒</div>
+    <h3>Live Trading is a Premium Feature</h3>
+    <p>
         Upgrade your account to connect your brokerage, execute trades, and view position entry points directly from your StockLens charts.
     </p>
-    <a href="/pricing" class="btn btn-primary" style="padding: 0.6rem 1.2rem; font-weight: 600; text-decoration: none; display: inline-block;">
+    <a href="/pricing" class="btn btn-primary broker-upgrade-button">
         Upgrade to Premium
     </a>
 </section>
@@ -257,7 +257,7 @@
                     <div><dt>Articles</dt><dd>{{ item.detail.article_count }}</dd></div>
                     {% if user_role == "premium_user" %}
                     <div style="margin-top: 0.75rem;">
-                        <a href="/premium/news/{{ stock.symbol }}" class="btn btn-outline btn-sm" style="width: 100%; text-align: center; display: block;">
+                        <a href="/premium/news/{{ stock.symbol }}" class="btn btn-outline btn-sm score-panel-action">
                             View News Feed →
                         </a>
                     </div>
@@ -267,7 +267,7 @@
                     <div><dt>Period</dt><dd>{{ item.detail.period }}</dd></div>
                     <div><dt>Confidence</dt><dd>{{ "%.1f" | format(item.detail.confidence) }}%</dd></div>
                     <div style="margin-top: 0.75rem;">
-                        <a href="/stocks/{{ stock.symbol }}/financial_report" class="btn btn-outline btn-sm" style="width: 100%; text-align: center; display: block;">
+                        <a href="/stocks/{{ stock.symbol }}/financial_report" class="btn btn-outline btn-sm score-panel-action">
                             View Full Financial Report →
                         </a>
                     </div>
@@ -278,7 +278,7 @@
 
             {% if item.name == "Technical" and user_role == "premium_user" %}
             <details class="technical-details">
-                <summary>
+                <summary class="btn btn-outline btn-sm score-panel-action technical-details-toggle">
                     <span>Technical indicators</span>
                     <span class="technical-details-chevron" aria-hidden="true">&#8964;</span>
                 </summary>
@@ -431,6 +431,7 @@
 })();
 </script>
 {% endif %}
+{% if user_role == "premium_user" %}
 <!-- BROKER & TRADING JAVASCRIPT LOGIC -->
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
@@ -519,7 +520,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         buyBtn.disabled = true;
         sellBtn.disabled = true;
         statusMsg.style.display = "block";
-        statusMsg.style.color = "#94a3b8";
+        statusMsg.className = "broker-status-message broker-status-pending";
         statusMsg.textContent = `Submitting ${action} order for ${units} share(s) of ${symbol}...`;
 
         try {
@@ -539,16 +540,16 @@ document.addEventListener("DOMContentLoaded", async () => {
             const result = await response.json();
 
             if (response.ok && result.status === "success") {
-                statusMsg.style.color = "#4ade80";
+                statusMsg.className = "broker-status-message broker-status-success";
                 statusMsg.textContent = `✓ Order executed! Successfully placed ${action} order for ${units} share(s) of ${symbol}.`;
                 unitsInput.value = "";
             } else {
-                statusMsg.style.color = "#f87171";
+                statusMsg.className = "broker-status-message broker-status-error";
                 statusMsg.textContent = `✕ Trade failed: ${result.detail || 'Could not execute trade.'}`;
             }
         } catch (err) {
             console.error("Trade error:", err);
-            statusMsg.style.color = "#f87171";
+            statusMsg.className = "broker-status-message broker-status-error";
             statusMsg.textContent = "✕ An unexpected error occurred while processing the order.";
         } finally {
             buyBtn.disabled = false;
@@ -594,6 +595,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 </script>
+{% endif %}
 
 {% if user_role == "premium_user" %}
 <script>

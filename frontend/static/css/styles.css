@@ -592,6 +592,21 @@ a {
     box-shadow: 0 18px 42px rgba(15, 23, 42, 0.09);
 }
 
+.feature-media {
+    overflow: hidden;
+    width: 100%;
+    border: 1px solid #d7dee8;
+    border-radius: 8px;
+    background: #f7f9fc;
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.09);
+}
+
+.feature-media img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
 .feature-media-placeholder small {
     position: absolute;
     right: 1rem;
@@ -2156,7 +2171,8 @@ a {
 /* Trend Colors & Badges */
 .text-success { color: #10b981; } /* Emerald Green */
 .text-danger { color: #ef4444; } /* Red */
-.text-muted { color: var(--text-secondary, #6b7280); }
+.text-neutral { color: #b45309; }
+.text-muted { color: var(--text-muted, #6b7280); }
 .hover-danger:hover { color: #ef4444; cursor: pointer; }
 
 .btn-danger {
@@ -2518,7 +2534,7 @@ a {
 
 .fill-success { background-color: #10b981; } /* Emerald */
 .fill-danger { background-color: #ef4444; } /* Red */
-.fill-neutral { background-color: #f8fafc; } /* Slate Gray */
+.fill-neutral { background-color: #d99b3d; }
 
 .dashboard-grid {
     display: grid;
@@ -2877,6 +2893,272 @@ a {
 
 .detail-date-form {
     min-width: 380px;
+}
+
+.trade-panel,
+.trade-panel-locked {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+    border-color: var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-main);
+}
+
+.broker-panel-heading {
+    margin-bottom: 1rem;
+}
+
+.broker-panel-heading h2,
+.trade-panel-locked h3 {
+    margin: 0;
+    color: var(--text-main);
+}
+
+.broker-loading {
+    padding: 1rem 0;
+    color: var(--text-muted);
+}
+
+.broker-disconnected,
+.trade-panel-locked {
+    text-align: center;
+}
+
+.broker-disconnected {
+    padding: 1rem 0;
+}
+
+.broker-disconnected p,
+.trade-panel-locked p {
+    color: var(--text-muted);
+}
+
+.broker-disconnected p {
+    margin: 0 0 1rem;
+}
+
+.broker-connect-button {
+    padding: 0.75rem 1.5rem;
+}
+
+.broker-trade-grid {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1.5rem;
+}
+
+.broker-field {
+    min-width: 120px;
+    flex: 1;
+}
+
+.broker-field-wide {
+    min-width: 220px;
+}
+
+.broker-field label {
+    display: block;
+    margin-bottom: 0.4rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.broker-control {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.65rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-dark);
+    color: var(--text-main);
+    font: inherit;
+}
+
+.broker-control::placeholder {
+    color: var(--text-muted);
+}
+
+.broker-control:focus {
+    border-color: var(--accent-blue);
+    outline: 2px solid color-mix(in srgb, var(--accent-blue) 28%, transparent);
+}
+
+.broker-trade-actions {
+    display: flex;
+    min-width: 220px;
+    flex: 1;
+    gap: 1rem;
+}
+
+.broker-trade-button {
+    flex: 1;
+    padding: 0.65rem 1rem;
+    border: 0;
+    border-radius: 6px;
+    color: #ffffff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.broker-buy-button {
+    background: #10b981;
+}
+
+.broker-sell-button {
+    background: #ef4444;
+}
+
+.broker-buy-button:hover {
+    background: #059669;
+}
+
+.broker-sell-button:hover {
+    background: #dc2626;
+}
+
+.broker-position {
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-dark);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.broker-position-label {
+    color: #10b981;
+    font-weight: 700;
+}
+
+.broker-status-message {
+    margin-top: 1rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.broker-status-success {
+    color: #10b981;
+}
+
+.broker-status-error {
+    color: #ef4444;
+}
+
+.broker-lock-icon {
+    margin-bottom: 0.5rem;
+    font-size: 2rem;
+}
+
+.trade-panel-locked h3 {
+    margin-bottom: 0.5rem;
+}
+
+.trade-panel-locked p {
+    max-width: 500px;
+    margin: 0 auto 1rem;
+    font-size: 0.9rem;
+}
+
+.broker-upgrade-button {
+    padding: 0.6rem 1.2rem;
+}
+
+.technical-details {
+    margin-top: 0.75rem;
+}
+
+.score-panel-action {
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.technical-details-toggle {
+    list-style: none;
+    gap: 0.35rem;
+}
+
+.technical-details-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.technical-details-chevron {
+    transition: transform 0.2s ease;
+}
+
+.technical-details[open] .technical-details-chevron {
+    transform: rotate(180deg);
+}
+
+.technical-details-content {
+    margin-top: 0.75rem;
+    padding: 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-dark);
+    color: var(--text-muted);
+}
+
+.technical-details-date {
+    margin: 0 0 0.8rem;
+    font-size: 0.72rem;
+}
+
+.indicator-group + .indicator-group {
+    margin-top: 1rem;
+}
+
+.indicator-group h3 {
+    margin: 0 0 0.55rem;
+    color: var(--text-main);
+    font-size: 0.8rem;
+}
+
+.indicator-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem 0.8rem;
+    margin: 0;
+}
+
+.indicator-grid > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.7rem;
+}
+
+.indicator-grid dt {
+    color: var(--text-muted);
+}
+
+.indicator-grid dd {
+    margin: 0;
+    color: var(--text-main);
+    font-weight: 700;
+    text-align: right;
+}
+
+html[data-premium-theme="midnight"] .theme-premium .broker-control {
+    color-scheme: dark;
+}
+
+@media (max-width: 620px) {
+    .broker-trade-actions {
+        min-width: 100%;
+    }
+
+    .indicator-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .stock-table-shell,
@@ -3890,6 +4172,10 @@ html[data-premium-theme="midnight"] .theme-premium .text-accent,
 html[data-premium-theme="midnight"] .theme-premium .company-cell strong,
 html[data-premium-theme="midnight"] .theme-premium .row-action {
     color: #d4a84b;
+}
+
+html[data-premium-theme="midnight"] .theme-premium .text-neutral {
+    color: #f2c66d;
 }
 
 html[data-premium-theme="midnight"] .theme-premium .btn-primary {
