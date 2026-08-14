@@ -87,6 +87,19 @@ def test_idempotency_skips_existing_scores():
     mocks["fetch_finnhub"].assert_not_called()
 
 
+def test_refresh_existing_fetches_again_and_recalculates_existing_headlines():
+    with patched_pipeline(has_data=True, finnhub_data=[], gnews_data=[]) as mocks:
+        result = run_pipeline(refresh_existing=True)
+
+    assert [row["status"] for row in result["results"]] == [
+        "no_new_data",
+        "no_new_data",
+    ]
+    assert mocks["fetch_finnhub"].call_count == len(ACTIVE_STOCKS)
+    assert mocks["save_daily_score"].call_count == len(ACTIVE_STOCKS)
+    mocks["save_neutral_daily_score"].assert_not_called()
+
+
 def test_one_symbol_failure_does_not_stop_other_active_stocks():
     side_effect = [Exception("Finnhub down"), MOCK_HEADLINES[:1]]
     with patched_pipeline(finnhub_side_effect=side_effect):

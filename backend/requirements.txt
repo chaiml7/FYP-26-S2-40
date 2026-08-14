@@ -4,7 +4,8 @@ python-dotenv
 supabase
 yfinance
 pandas
-APScheduler
+APScheduler>=3.11,<4
+tzdata>=2024.1
 requests
 itsdangerous
 jinja2

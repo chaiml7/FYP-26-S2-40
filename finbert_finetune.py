@@ -97,6 +97,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import (
     accuracy_score,
+    balanced_accuracy_score,
     precision_recall_fscore_support,
     confusion_matrix,
     classification_report
@@ -218,12 +219,14 @@ def compute_metrics(eval_pred: EvalPrediction) -> Dict[str, float]:
     predictions = np.argmax(logits, axis=-1)
 
     accuracy = accuracy_score(labels, predictions)
+    balanced_accuracy = balanced_accuracy_score(labels, predictions)
     precision, recall, f1, _ = precision_recall_fscore_support(
         labels, predictions, average='macro', zero_division=0
     )
 
     return {
         "accuracy": accuracy,
+        "balanced_accuracy": balanced_accuracy,
         "precision": precision,
         "recall": recall,
         "f1_macro": f1,
@@ -275,6 +278,7 @@ def evaluate_model_detailed(
 
     # Calculate metrics
     accuracy = accuracy_score(all_labels, all_predictions)
+    balanced_accuracy = balanced_accuracy_score(all_labels, all_predictions)
     precision, recall, f1, _ = precision_recall_fscore_support(
         all_labels, all_predictions, average='macro', zero_division=0
     )
@@ -289,6 +293,7 @@ def evaluate_model_detailed(
 
     results = {
         "accuracy": float(accuracy),
+        "balanced_accuracy": float(balanced_accuracy),
         "precision_macro": float(precision),
         "recall_macro": float(recall),
         "f1_macro": float(f1),
@@ -299,6 +304,7 @@ def evaluate_model_detailed(
     }
 
     print(f"  Accuracy: {accuracy:.4f}")
+    print(f"  Balanced Accuracy: {balanced_accuracy:.4f}")
     print(f"  F1 Macro: {f1:.4f}")
     print(f"  F1 per class: Neg={f1_per_class[0]:.4f}, "
           f"Neu={f1_per_class[1]:.4f}, Pos={f1_per_class[2]:.4f}")
@@ -488,6 +494,7 @@ def run_fine_tuning_experiment(
                 "train_loss": train_loss,
                 "eval_loss": eval_metrics["eval_loss"],
                 "eval_accuracy": eval_metrics["eval_accuracy"],
+                "eval_balanced_accuracy": eval_metrics["eval_balanced_accuracy"],
                 "eval_f1_macro": eval_metrics["eval_f1_macro"],
             })
 
@@ -667,6 +674,7 @@ def save_results_summary(all_results: Dict[str, Dict], baseline_results: Dict):
         "Epochs": "N/A",
         "Frozen Layers": "N/A",
         "Accuracy": f"{baseline_results['accuracy']:.4f}",
+        "Balanced Accuracy": f"{baseline_results['balanced_accuracy']:.4f}",
         "F1 Macro": f"{baseline_results['f1_macro']:.4f}",
         "F1 Positive": f"{baseline_results['f1_positive']:.4f}",
         "F1 Neutral": f"{baseline_results['f1_neutral']:.4f}",
@@ -688,6 +696,7 @@ def save_results_summary(all_results: Dict[str, Dict], baseline_results: Dict):
             "Epochs": config.get("num_epochs", "N/A"),
             "Frozen Layers": "Yes" if config.get("freeze_layers") else "No",
             "Accuracy": f"{test_results['accuracy']:.4f}",
+            "Balanced Accuracy": f"{test_results['balanced_accuracy']:.4f}",
             "F1 Macro": f"{test_results['f1_macro']:.4f}",
             "F1 Positive": f"{test_results['f1_positive']:.4f}",
             "F1 Neutral": f"{test_results['f1_neutral']:.4f}",

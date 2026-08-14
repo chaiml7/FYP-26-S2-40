@@ -100,13 +100,17 @@ def test_sentiment_registry_metrics_format_for_homepage():
     result = _model_performance_row(
         "Sentiment",
         "balibpt/finbert-stocklens",
-        {"accuracy": 0.872, "macro_f1": 0.83},
+        {
+            "accuracy": 0.872,
+            "balanced_accuracy": 0.83,
+            "macro_f1": 0.83,
+        },
         "held_out_70_15_15_test_split",
     )
 
     assert result["accuracy"] == 87.2
     assert result["f1"] == 83.0
-    assert result["balanced_accuracy"] is None
+    assert result["balanced_accuracy"] == 83.0
     assert result["log_loss"] is None
     assert result["evaluation_status"] == "Held-out test"
 
