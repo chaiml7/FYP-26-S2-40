@@ -1,61 +1,69 @@
 {% extends base_layout %}
 
-{% block title %}Account Settings - StockLens{% endblock %}
+{% block title %}Account - StockLens{% endblock %}
 
 {% block content %}
-<div class="page-content">
-    <h1 class="text-2xl font-bold text-main mb-6">Account Settings</h1>
+<section class="account-page" aria-labelledby="account-title">
+    <header class="account-page-header">
+        <div>
+            <p class="account-eyebrow">Account settings</p>
+            <h1 id="account-title">Your account</h1>
+            <p>Review your personal details, membership and account security.</p>
+        </div>
+    </header>
 
-    <div class="card" style="max-width: 480px; margin-bottom: 1.5rem;">
-        <h2 class="text-lg font-bold text-main mb-4">Change password</h2>
+    <article class="account-profile-card">
+        <div class="account-profile-summary">
+            <span class="account-avatar" aria-hidden="true">{{ account.initials }}</span>
+            <div>
+                <h2>{{ account.full_name }}</h2>
+                <p>{{ account.email }}</p>
+            </div>
+            <span class="account-plan-badge account-plan-{{ account.plan_style }}">
+                {{ account.plan_name }}
+            </span>
+        </div>
 
-        {% if password_status == "updated" %}
-        <p class="text-success">Password updated successfully.</p>
-        {% endif %}
-        {% if password_error %}
-        <p class="text-danger">{{ password_error }}</p>
-        {% endif %}
+        <dl class="account-details-grid">
+            <div class="account-detail">
+                <dt>Full name</dt>
+                <dd>{{ account.full_name }}</dd>
+            </div>
+            <div class="account-detail">
+                <dt>Email address</dt>
+                <dd>{{ account.email }}</dd>
+            </div>
+            <div class="account-detail">
+                <dt>Membership</dt>
+                <dd>{{ account.plan_name }}</dd>
+            </div>
+            <div class="account-detail">
+                <dt>Member since</dt>
+                <dd>{{ account.created_at[:10] if account.created_at else "Not available" }}</dd>
+            </div>
+            <div class="account-detail">
+                <dt>Account status</dt>
+                <dd class="account-status">{{ "Active" if account.is_active else "Suspended" }}</dd>
+            </div>
+        </dl>
+    </article>
 
-        <form action="/user/account/password" method="POST" class="auth-form">
-            <div class="form-group">
-                <label for="current_password" class="form-label">Current password</label>
-                <input type="password" id="current_password" name="current_password" class="form-control" required>
+    <div class="account-actions-grid">
+        <article class="account-action-card">
+            <div>
+                <h2>Password and security</h2>
+                <p>Update the password used to access your StockLens account.</p>
             </div>
-            <div class="form-group">
-                <label for="new_password" class="form-label">New password</label>
-                <input type="password" id="new_password" name="new_password" class="form-control" minlength="8" required>
+            <a href="/user/account/password" class="btn btn-primary">Change password</a>
+        </article>
+
+        <article class="account-action-card account-action-danger">
+            <div>
+                <h2>Delete account</h2>
+                <p>Permanently remove your account and saved StockLens data.</p>
             </div>
-            <div class="form-group">
-                <label for="confirm_password" class="form-label">Confirm new password</label>
-                <input type="password" id="confirm_password" name="confirm_password" class="form-control" minlength="8" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Update password</button>
-        </form>
+            <a href="/user/account/delete" class="btn btn-danger">Delete account</a>
+        </article>
     </div>
-
-    <div class="card border-t-danger" style="max-width: 480px;">
-        <h2 class="text-lg font-bold text-main mb-4">Delete account</h2>
-        <p class="text-muted mb-4">
-            This permanently deletes your StockLens account, watchlist, notification
-            preferences and billing records. This cannot be undone.
-        </p>
-
-        {% if delete_error %}
-        <p class="text-danger">{{ delete_error }}</p>
-        {% endif %}
-
-        <form
-            action="/user/account/delete"
-            method="POST"
-            class="auth-form"
-            onsubmit="return confirm('Delete your StockLens account? This cannot be undone.');"
-        >
-            <div class="form-group">
-                <label for="delete_current_password" class="form-label">Confirm your password</label>
-                <input type="password" id="delete_current_password" name="current_password" class="form-control" required>
-            </div>
-            <button type="submit" class="btn btn-danger">Delete my account</button>
-        </form>
-    </div>
-</div>
+</section>
 {% endblock %}
