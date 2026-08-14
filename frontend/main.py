@@ -22,6 +22,7 @@ from backend.services.billing_service import (
     BillingConfigurationError,
     BillingError,
     create_checkout_session,
+    reconcile_user_subscription_role,
 )
 from backend.services.auth_service import AuthServiceError, create_account
 from backend.services.user_profile_service import get_profile
@@ -74,9 +75,12 @@ async def refresh_cached_user_role(request: Request, call_next):
                 and profiles
                 and isinstance(profiles[0], dict)
             ):
-                request.session["user_role"] = str(
+                stored_role = str(
                     profiles[0].get("role_id") or "basic_user"
                 ).lower()
+                request.session["user_role"] = reconcile_user_subscription_role(
+                    str(user_id), stored_role
+                )
                 request.session["role_checked_at"] = time.time()
         except Exception as exc:
             # A temporary database failure must not log the user out. Premium
@@ -135,6 +139,35 @@ async def home(request: Request):
         },
     )
 
+
+# ==========================================
+# Public Legal Pages
+# ==========================================
+def _legal_page_context(request: Request) -> dict[str, str | Request]:
+    return {
+        "request": request,
+        "effective_date": "14 August 2026",
+        "legal_contact_email": os.getenv("LEGAL_CONTACT_EMAIL", "").strip(),
+    }
+
+
+@app.get("/terms")
+async def terms_of_service(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="legal/terms.html",
+        context=_legal_page_context(request),
+    )
+
+
+@app.get("/privacy")
+async def privacy_policy(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="legal/privacy.html",
+        context=_legal_page_context(request),
+    )
+
 # ==========================================
 # Login / Logout Route + function
 # ==========================================
@@ -170,7 +203,12 @@ async def process_login(
         
         # Safely extract the role, defaulting to basic_user if the profile is empty
         if profile_data and len(profile_data) > 0:
-            user_role = str(profile_data[0].get("role_id", "basic_user")).lower()
+            stored_role = str(
+                profile_data[0].get("role_id", "basic_user")
+            ).lower()
+            user_role = reconcile_user_subscription_role(
+                str(user_id), stored_role
+            )
         else:
             user_role = "basic_user"
 
@@ -252,8 +290,19 @@ async def process_signup(
     email: str = Form(...),
     password: str = Form(...),
     plan: str = Form("free"),
+    terms: str | None = Form(None),
 ):
     selected_plan = "premium" if plan.lower() == "premium" else "free"
+    if terms != "accepted":
+        return templates.TemplateResponse(
+            request=request,
+            name="signup.html",
+            context={
+                "error": "You must accept the Terms of Service and Privacy Policy to create an account.",
+                "selected_plan": selected_plan,
+            },
+            status_code=400,
+        )
     try:
         auth_response = create_account(email, password, firstName)
     except AuthServiceError as e:

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StockLens - Predict Markets</title>
-    <link rel="stylesheet" href="/static/css/styles.css?v=20260814-neutral-score">
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260814-legal-sidebar">
 </head>
 <body>
 
@@ -340,7 +340,7 @@
 
         <aside class="risk-disclosure" aria-labelledby="risk-title">
             <strong id="risk-title">Educational use and risk disclosure</strong>
-            <p>StockLens provides probabilistic research outputs for educational purposes. It does not provide financial advice, execute trades, or guarantee future performance. Model scores can be incomplete, delayed, or incorrect. Always perform independent research before making an investment decision.</p>
+            <p>StockLens provides probabilistic research outputs for educational purposes and does not provide financial advice or guarantee future performance. Its optional brokerage integration can transmit user-requested orders, but StockLens does not guarantee execution or outcomes. Model scores can be incomplete, delayed, or incorrect. Always independently verify information before making an investment decision.</p>
         </aside>
 
         <section class="section">
@@ -392,6 +392,8 @@
             </div>
         </section>
     </main>
+
+    {% include "/includes/legal_footer.html" %}
 
     <script>
         // Find all FAQ question elements

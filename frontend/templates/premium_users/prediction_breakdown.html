@@ -59,7 +59,7 @@
                     <div class="confidence-fill {% if data.sentiment_score > 5 %}fill-success{% elif data.sentiment_score == 5 %}fill-neutral{% else %}fill-danger{% endif %}" style="width: {{ data.sentiment_score * 10 }}%;"></div>
                 </div>
                 <div style="margin-top: 6px; text-align: right;">
-                    <a href="/premium/news/{{ data.symbol }}" style="font-size: 0.78rem; color: var(--text-muted); text-decoration: none;"
+                    <a href="/user/news_social?symbol={{ data.symbol | urlencode }}" style="font-size: 0.78rem; color: var(--text-muted); text-decoration: none;"
                        onmouseover="this.style.color='#3b82f6'" onmouseout="this.style.color='var(--text-muted)'">
                         View news feed →
                     </a>

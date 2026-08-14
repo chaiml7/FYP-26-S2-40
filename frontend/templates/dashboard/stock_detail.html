@@ -257,7 +257,7 @@
                     <div><dt>Articles</dt><dd>{{ item.detail.article_count }}</dd></div>
                     {% if user_role == "premium_user" %}
                     <div style="margin-top: 0.75rem;">
-                        <a href="/premium/news/{{ stock.symbol }}" class="btn btn-outline btn-sm score-panel-action">
+                        <a href="/user/news_social?symbol={{ stock.symbol | urlencode }}" class="btn btn-outline btn-sm score-panel-action">
                             View News Feed →
                         </a>
                     </div>
