@@ -16,6 +16,7 @@ from backend.schemas import (
     WatchlistAdd,
 )
 from backend.services.account_deletion_service import delete_user_account
+from backend.services.activity_log_service import log_activity
 from backend.services.auth_service import (
     AuthServiceError,
     admin_get_user,
@@ -562,6 +563,7 @@ async def update_account_password(
         try:
             admin_update_user(session["user_id"], {"password": new_password})
             password_status = "updated"
+            log_activity(session["user_email"], "password_changed")
         except AuthServiceError as error:
             password_error = error.detail
 
@@ -612,6 +614,7 @@ async def delete_account(
             },
         )
 
+    log_activity(session["user_email"], "account_deleted")
     delete_user_account(session["user_id"])
     request.session.clear()
     return RedirectResponse(url="/login?deleted=1", status_code=303)

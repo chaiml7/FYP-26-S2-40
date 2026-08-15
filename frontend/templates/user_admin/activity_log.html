@@ -1,0 +1,45 @@
+{% extends "user_admin/base.html" %}
+
+{% block title %}Activity Log - StockLens{% endblock %}
+
+{% block nav_activitylog %}active{% endblock %}
+
+{% block content %}
+
+<header class="table-controls">
+    <h1 class="text-2xl font-bold text-main m-0">Activity Log</h1>
+</header>
+
+<div class="table-card" style="border: 1px solid var(--border-color); border-radius: 8px;">
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th style="width: 20%;">When</th>
+                <th style="width: 30%;">User</th>
+                <th style="width: 20%;">Action</th>
+                <th style="width: 30%;">Detail</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+            <tr>
+                <td class="text-muted text-sm">{{ entry.created_at[:19] | replace("T", " ") if entry.created_at else "" }}</td>
+                <td class="font-bold text-main">{{ entry.email }}</td>
+                <td>
+                    <span style="background-color: rgba(148, 163, 184, 0.1); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; color: var(--text-muted);">
+                        {{ entry.action.replace("_", " ") }}
+                    </span>
+                </td>
+                <td class="text-muted text-sm">{{ entry.detail or "" }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                    No activity recorded yet.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -10,7 +10,9 @@ from backend.services.sentiment_source_service import (
     delete_sentiment_source,
     get_all_sentiment_sources,
     set_sentiment_source_active,
+    update_sentiment_source,
 )
+from backend.services.activity_log_service import get_activity_log, log_activity
 from backend.services.user_profile_service import get_profile, update_user_status
 
 router = APIRouter()
@@ -25,7 +27,7 @@ def _admin_report_session(request: Request):
     return None
 
 @router.get("/admin/user_management")
-async def user_management_page(request: Request, filter: str = "all"):
+async def user_management_page(request: Request, filter: str = "all", q: str = ""):
     session_role = request.session.get("user_role")
     if not session_role or session_role != "admin":
         return RedirectResponse(url="/login", status_code=303)
@@ -35,30 +37,41 @@ async def user_management_page(request: Request, filter: str = "all"):
     all_users = response.data
 
     stats = {
-        "total_users": len(all_users), 
+        "total_users": len(all_users),
         "premium_users": sum(1 for u in all_users if str(u.get("role_id")).lower() == "premium_user"),
         "suspended_users": sum(1 for u in all_users if str(u.get("is_active")).lower() == "false"),
-        "active_today": 0 
+        "active_today": 0
     }
 
     mapped_users = []
     for u in all_users:
         is_active_str = str(u.get("is_active", "true")).lower()
         role_id_raw = str(u.get("role_id", "basic_user")).lower()
-        
+
         mapped_users.append({
             "id": u.get("id"),
             "username": u.get("username") or u.get("email", "").split("@")[0],
             "full_name": u.get("full_name") or "Unknown User",
+            "email": u.get("email") or "",
             "role_id": role_id_raw,
             "status": "Active" if is_active_str == "true" else "Suspended"
         })
-    
+
     display_users = mapped_users
     if filter == "active":
-        display_users = [u for u in mapped_users if u["status"] == "Active"]
+        display_users = [u for u in display_users if u["status"] == "Active"]
     elif filter == "suspended":
-        display_users = [u for u in mapped_users if u["status"] == "Suspended"]
+        display_users = [u for u in display_users if u["status"] == "Suspended"]
+
+    search_term = q.strip().lower()
+    if search_term:
+        display_users = [
+            u for u in display_users
+            if search_term in str(u["id"]).lower()
+            or search_term in u["username"].lower()
+            or search_term in u["full_name"].lower()
+            or search_term in u["email"].lower()
+        ]
 
     return templates.TemplateResponse(
         request=request,
@@ -68,9 +81,26 @@ async def user_management_page(request: Request, filter: str = "all"):
             "request": request,
             "users": display_users,
             "stats": stats,
-            "current_filter": filter
+            "current_filter": filter,
+            "search_query": q,
         }
     )
+
+@router.get("/admin/activity_log")
+async def admin_activity_log_page(request: Request):
+    role = request.session.get("user_role")
+    if not role or role != "admin":
+        return RedirectResponse(url="/login", status_code=303)
+    session = get_session_context(request)
+
+    entries = get_activity_log()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="user_admin/activity_log.html",
+        context={**session, "request": request, "entries": entries}
+    )
+
 
 @router.get("/admin/users/{user_id}")
 async def admin_user_detail(request: Request, user_id: str):
@@ -114,6 +144,10 @@ async def admin_suspend_user(request: Request, user_id: str):
     updated = update_user_status(user_id, False)
     if not updated:
         raise HTTPException(status_code=404, detail="User not found")
+
+    target_email = updated[0].get("email", user_id)
+    admin_email = request.session.get("user_email", "admin")
+    log_activity(target_email, "account_suspended", f"Suspended by {admin_email}")
     return RedirectResponse(url="/admin/user_management", status_code=303)
 
 
@@ -126,6 +160,10 @@ async def admin_unsuspend_user(request: Request, user_id: str):
     updated = update_user_status(user_id, True)
     if not updated:
         raise HTTPException(status_code=404, detail="User not found")
+
+    target_email = updated[0].get("email", user_id)
+    admin_email = request.session.get("user_email", "admin")
+    log_activity(target_email, "account_reactivated", f"Reactivated by {admin_email}")
     return RedirectResponse(url="/admin/user_management", status_code=303)
 
 
@@ -336,6 +374,22 @@ async def admin_add_sentiment_source(
         return RedirectResponse(url="/login", status_code=303)
 
     add_sentiment_source(source_type.strip(), account.strip(), relevance.strip() or None)
+    return RedirectResponse(url="/admin/sentiment", status_code=303)
+
+
+@router.post("/admin/sentiment/{source_id}/edit")
+async def admin_edit_sentiment_source(
+    request: Request,
+    source_id: str,
+    source_type: str = Form(...),
+    account: str = Form(...),
+    relevance: str = Form(default=""),
+):
+    role = request.session.get("user_role")
+    if not role or role != "admin":
+        return RedirectResponse(url="/login", status_code=303)
+
+    update_sentiment_source(source_id, source_type.strip(), account.strip(), relevance.strip() or None)
     return RedirectResponse(url="/admin/sentiment", status_code=303)
 
 
