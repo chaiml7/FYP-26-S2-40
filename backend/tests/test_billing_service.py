@@ -178,6 +178,50 @@ def test_active_subscription_for_another_price_does_not_grant_premium(
     mock_set_role.assert_called_once_with("user-id", premium=False)
 
 
+@patch("backend.services.billing_service.get_user_subscription", return_value=None)
+@patch("backend.services.billing_service._set_managed_role", return_value="basic_user")
+def test_legacy_premium_role_without_subscription_is_repaired(
+    mock_set_role, _mock_subscription
+):
+    role = billing_service.reconcile_user_subscription_role(
+        "user-id", "premium_user"
+    )
+
+    assert role == "basic_user"
+    mock_set_role.assert_called_once_with(
+        "user-id", premium=False, current_role="premium_user"
+    )
+
+
+@patch("backend.services.billing_service._premium_price_id", return_value="price_test")
+@patch(
+    "backend.services.billing_service.get_user_subscription",
+    return_value={"status": "active", "stripe_price_id": "price_test"},
+)
+@patch("backend.services.billing_service._set_managed_role", return_value="premium_user")
+def test_active_configured_subscription_grants_premium_during_role_refresh(
+    mock_set_role, _mock_subscription, _mock_price
+):
+    role = billing_service.reconcile_user_subscription_role(
+        "user-id", "basic_user"
+    )
+
+    assert role == "premium_user"
+    mock_set_role.assert_called_once_with(
+        "user-id", premium=True, current_role="basic_user"
+    )
+
+
+@patch("backend.services.billing_service.get_user_subscription")
+def test_admin_role_is_not_managed_by_subscription(mock_subscription):
+    role = billing_service.reconcile_user_subscription_role(
+        "admin-id", "frontend_admin"
+    )
+
+    assert role == "frontend_admin"
+    mock_subscription.assert_not_called()
+
+
 def test_invoice_subscription_id_supports_new_invoice_parent_shape():
     invoice = {
         "parent": {

@@ -82,6 +82,46 @@ def _current_user(authorization: str = None):
     return user, token
 
 
+def _account_context(request: Request, session: dict) -> dict:
+    """Build the safe, display-only account summary used by account pages."""
+    try:
+        profiles = get_profile(str(session["user_id"])) or []
+    except Exception:
+        profiles = []
+
+    profile = profiles[0] if profiles and isinstance(profiles[0], dict) else {}
+    email = str(profile.get("email") or session.get("user_email") or "")
+    full_name = str(profile.get("full_name") or "").strip()
+    if not full_name:
+        full_name = email.split("@", 1)[0] if email else "StockLens user"
+
+    role = str(session.get("user_role") or profile.get("role_id") or "basic_user").lower()
+    plan_by_role = {
+        "basic_user": ("Free", "free"),
+        "premium_user": ("Premium", "premium"),
+        "frontend_admin": ("Administrator", "admin"),
+        "backend_admin": ("Administrator", "admin"),
+        "user_admin": ("Administrator", "admin"),
+    }
+    plan_name, plan_style = plan_by_role.get(role, ("Free", "free"))
+    name_parts = [part for part in full_name.split() if part]
+    initials = "".join(part[0] for part in name_parts[:2]).upper() or "U"
+
+    return {
+        **session,
+        "request": request,
+        "account": {
+            "full_name": full_name,
+            "email": email,
+            "created_at": str(profile.get("created_at") or ""),
+            "plan_name": plan_name,
+            "plan_style": plan_style,
+            "initials": initials,
+            "is_active": profile.get("is_active") is not False,
+        },
+    }
+
+
 def _require_backend_admin(authorization: str = None):
     user, token = _current_user(authorization)
     profile = get_profile(user["id"])
@@ -428,6 +468,19 @@ async def account_settings(request: Request):
     return templates.TemplateResponse(
         request=request,
         name="account/settings.html",
+        context=_account_context(request, session),
+    )
+
+
+@router.get("/user/account/password")
+async def change_account_password(request: Request):
+    session = get_session_context(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=303)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="account/change_password.html",
         context={**session, "request": request},
     )
 
@@ -464,13 +517,26 @@ async def update_account_password(
 
     return templates.TemplateResponse(
         request=request,
-        name="account/settings.html",
+        name="account/change_password.html",
         context={
             **session,
             "request": request,
             "password_status": password_status,
             "password_error": password_error,
         },
+    )
+
+
+@router.get("/user/account/delete")
+async def delete_account_page(request: Request):
+    session = get_session_context(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=303)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="account/delete_account.html",
+        context={**session, "request": request},
     )
 
 
@@ -488,7 +554,7 @@ async def delete_account(
     except AuthServiceError:
         return templates.TemplateResponse(
             request=request,
-            name="account/settings.html",
+            name="account/delete_account.html",
             context={
                 **session,
                 "request": request,

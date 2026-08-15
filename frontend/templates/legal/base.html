@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Legal - StockLens{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260814-legal-sidebar">
+</head>
+<body class="legal-page">
+    <header class="legal-topbar">
+        <a href="/" class="legal-brand" aria-label="StockLens home">StockLens</a>
+        <nav class="legal-topbar-links" aria-label="Legal pages">
+            <a href="/terms" {% if active_legal_page == "terms" %}aria-current="page"{% endif %}>Terms</a>
+            <a href="/privacy" {% if active_legal_page == "privacy" %}aria-current="page"{% endif %}>Privacy</a>
+            <a href="/login">Log in</a>
+        </nav>
+    </header>
+
+    <main class="legal-document">
+        <header class="legal-document-header">
+            <p class="workspace-eyebrow">StockLens legal</p>
+            <h1>{% block legal_title %}{% endblock %}</h1>
+            <p>Effective date: {{ effective_date }}</p>
+        </header>
+
+        <div class="legal-summary">
+            {% block legal_summary %}{% endblock %}
+        </div>
+
+        <article class="legal-copy">
+            {% block legal_content %}{% endblock %}
+        </article>
+    </main>
+
+    {% include "/includes/legal_footer.html" %}
+</body>
+</html>

@@ -592,6 +592,21 @@ a {
     box-shadow: 0 18px 42px rgba(15, 23, 42, 0.09);
 }
 
+.feature-media {
+    overflow: hidden;
+    width: 100%;
+    border: 1px solid #d7dee8;
+    border-radius: 8px;
+    background: #f7f9fc;
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.09);
+}
+
+.feature-media img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
 .feature-media-placeholder small {
     position: absolute;
     right: 1rem;
@@ -2023,13 +2038,16 @@ a {
     background-color: var(--page-bg);
     display: flex;
     flex-direction: column;
+    height: 100vh;
     min-height: 100vh;
+    overflow: hidden;
 }
 
 .app-layout {
     display: flex;
     flex: 1;
     min-height: 0;
+    overflow: hidden;
 }
 
 /* Sidebar overrides for User App */
@@ -2040,6 +2058,15 @@ a {
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.app-layout > .sidebar {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
 }
 
 /* Topbar */
@@ -2047,7 +2074,9 @@ a {
     flex: 1;
     display: flex;
     flex-direction: column;
+    min-height: 0;
     overflow-x: hidden;
+    overflow-y: auto;
 }
 
 .app-topbar {
@@ -2058,6 +2087,9 @@ a {
     background-color: #2563eb;
     border-bottom: 1px solid #1d4ed8;
     color: #ffffff;
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 100;
 }
 
 .app-topbar .topbar-brand > span:first-child,
@@ -2156,7 +2188,8 @@ a {
 /* Trend Colors & Badges */
 .text-success { color: #10b981; } /* Emerald Green */
 .text-danger { color: #ef4444; } /* Red */
-.text-muted { color: var(--text-secondary, #6b7280); }
+.text-neutral { color: #b45309; }
+.text-muted { color: var(--text-muted, #6b7280); }
 .hover-danger:hover { color: #ef4444; cursor: pointer; }
 
 .btn-danger {
@@ -2518,7 +2551,7 @@ a {
 
 .fill-success { background-color: #10b981; } /* Emerald */
 .fill-danger { background-color: #ef4444; } /* Red */
-.fill-neutral { background-color: #f8fafc; } /* Slate Gray */
+.fill-neutral { background-color: #d99b3d; }
 
 .dashboard-grid {
     display: grid;
@@ -2877,6 +2910,272 @@ a {
 
 .detail-date-form {
     min-width: 380px;
+}
+
+.trade-panel,
+.trade-panel-locked {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+    border-color: var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-main);
+}
+
+.broker-panel-heading {
+    margin-bottom: 1rem;
+}
+
+.broker-panel-heading h2,
+.trade-panel-locked h3 {
+    margin: 0;
+    color: var(--text-main);
+}
+
+.broker-loading {
+    padding: 1rem 0;
+    color: var(--text-muted);
+}
+
+.broker-disconnected,
+.trade-panel-locked {
+    text-align: center;
+}
+
+.broker-disconnected {
+    padding: 1rem 0;
+}
+
+.broker-disconnected p,
+.trade-panel-locked p {
+    color: var(--text-muted);
+}
+
+.broker-disconnected p {
+    margin: 0 0 1rem;
+}
+
+.broker-connect-button {
+    padding: 0.75rem 1.5rem;
+}
+
+.broker-trade-grid {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1.5rem;
+}
+
+.broker-field {
+    min-width: 120px;
+    flex: 1;
+}
+
+.broker-field-wide {
+    min-width: 220px;
+}
+
+.broker-field label {
+    display: block;
+    margin-bottom: 0.4rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.broker-control {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.65rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-dark);
+    color: var(--text-main);
+    font: inherit;
+}
+
+.broker-control::placeholder {
+    color: var(--text-muted);
+}
+
+.broker-control:focus {
+    border-color: var(--accent-blue);
+    outline: 2px solid color-mix(in srgb, var(--accent-blue) 28%, transparent);
+}
+
+.broker-trade-actions {
+    display: flex;
+    min-width: 220px;
+    flex: 1;
+    gap: 1rem;
+}
+
+.broker-trade-button {
+    flex: 1;
+    padding: 0.65rem 1rem;
+    border: 0;
+    border-radius: 6px;
+    color: #ffffff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.broker-buy-button {
+    background: #10b981;
+}
+
+.broker-sell-button {
+    background: #ef4444;
+}
+
+.broker-buy-button:hover {
+    background: #059669;
+}
+
+.broker-sell-button:hover {
+    background: #dc2626;
+}
+
+.broker-position {
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-dark);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.broker-position-label {
+    color: #10b981;
+    font-weight: 700;
+}
+
+.broker-status-message {
+    margin-top: 1rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.broker-status-success {
+    color: #10b981;
+}
+
+.broker-status-error {
+    color: #ef4444;
+}
+
+.broker-lock-icon {
+    margin-bottom: 0.5rem;
+    font-size: 2rem;
+}
+
+.trade-panel-locked h3 {
+    margin-bottom: 0.5rem;
+}
+
+.trade-panel-locked p {
+    max-width: 500px;
+    margin: 0 auto 1rem;
+    font-size: 0.9rem;
+}
+
+.broker-upgrade-button {
+    padding: 0.6rem 1.2rem;
+}
+
+.technical-details {
+    margin-top: 0.75rem;
+}
+
+.score-panel-action {
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.technical-details-toggle {
+    list-style: none;
+    gap: 0.35rem;
+}
+
+.technical-details-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.technical-details-chevron {
+    transition: transform 0.2s ease;
+}
+
+.technical-details[open] .technical-details-chevron {
+    transform: rotate(180deg);
+}
+
+.technical-details-content {
+    margin-top: 0.75rem;
+    padding: 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-dark);
+    color: var(--text-muted);
+}
+
+.technical-details-date {
+    margin: 0 0 0.8rem;
+    font-size: 0.72rem;
+}
+
+.indicator-group + .indicator-group {
+    margin-top: 1rem;
+}
+
+.indicator-group h3 {
+    margin: 0 0 0.55rem;
+    color: var(--text-main);
+    font-size: 0.8rem;
+}
+
+.indicator-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem 0.8rem;
+    margin: 0;
+}
+
+.indicator-grid > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.7rem;
+}
+
+.indicator-grid dt {
+    color: var(--text-muted);
+}
+
+.indicator-grid dd {
+    margin: 0;
+    color: var(--text-main);
+    font-weight: 700;
+    text-align: right;
+}
+
+html[data-premium-theme="midnight"] .theme-premium .broker-control {
+    color-scheme: dark;
+}
+
+@media (max-width: 620px) {
+    .broker-trade-actions {
+        min-width: 100%;
+    }
+
+    .indicator-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .stock-table-shell,
@@ -3856,6 +4155,204 @@ html[data-admin-theme="graphite"] .theme-admin .text-accent {
     line-height: 1;
 }
 
+/* =========================================
+   LEGAL PAGES & UNOBTRUSIVE FOOTER
+   ========================================= */
+.legal-footer {
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.35rem 1rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    line-height: 1.4;
+}
+
+.legal-footer-links {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.85rem;
+}
+
+.legal-footer a {
+    color: var(--text-muted);
+}
+
+.legal-footer a:hover,
+.legal-footer a:focus-visible {
+    color: var(--accent-blue);
+    text-decoration: underline;
+}
+
+.app-main > .legal-footer,
+.admin-main > .legal-footer {
+    margin-top: auto;
+    background: color-mix(in srgb, var(--bg-card) 78%, transparent);
+}
+
+.auth-container > .legal-footer {
+    margin-top: 1.25rem;
+    padding: 0.8rem 0;
+    border-top: 0;
+}
+
+.legal-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--page-bg);
+}
+
+.legal-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem max(1.25rem, calc((100vw - 900px) / 2));
+    background: #2563eb;
+    border-bottom: 1px solid #1d4ed8;
+}
+
+.legal-brand {
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+}
+
+.legal-topbar-links {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.78rem;
+}
+
+.legal-topbar-links a {
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.legal-topbar-links a:hover,
+.legal-topbar-links a:focus-visible,
+.legal-topbar-links a[aria-current="page"] {
+    color: #ffffff;
+    text-decoration: underline;
+    text-underline-offset: 0.25rem;
+}
+
+.legal-document {
+    width: min(860px, calc(100% - 2rem));
+    box-sizing: border-box;
+    margin: 2.5rem auto;
+    padding: clamp(1.25rem, 3vw, 2.75rem);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    background: var(--bg-card);
+    color: var(--text-main);
+    box-shadow: 0 12px 35px rgba(15, 23, 42, 0.07);
+}
+
+.legal-document-header {
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.legal-document-header h1 {
+    margin: 0.2rem 0 0.35rem;
+    color: var(--text-main);
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    line-height: 1.15;
+}
+
+.legal-document-header > p:last-child {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+
+.legal-summary {
+    margin: 1.5rem 0 2rem;
+    padding: 1rem 1.15rem;
+    border-left: 3px solid var(--accent-blue);
+    border-radius: 0 8px 8px 0;
+    background: color-mix(in srgb, var(--accent-blue) 7%, var(--bg-dark));
+}
+
+.legal-summary strong {
+    color: var(--text-main);
+}
+
+.legal-summary p {
+    margin: 0.35rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+}
+
+.legal-copy {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.legal-copy section + section {
+    margin-top: 2rem;
+    padding-top: 0.25rem;
+}
+
+.legal-copy h2 {
+    margin: 0 0 0.65rem;
+    color: var(--text-main);
+    font-size: 1.1rem;
+}
+
+.legal-copy h3 {
+    margin: 1rem 0 0.35rem;
+    color: var(--text-main);
+    font-size: 0.92rem;
+}
+
+.legal-copy p {
+    margin: 0.55rem 0;
+}
+
+.legal-copy li + li {
+    margin-top: 0.35rem;
+}
+
+.legal-copy a {
+    color: var(--accent-blue);
+    text-decoration: underline;
+    text-underline-offset: 0.15rem;
+}
+
+@media (max-width: 620px) {
+    .legal-footer {
+        align-items: center;
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .legal-topbar {
+        padding: 0.85rem 1rem;
+    }
+
+    .legal-topbar-links {
+        gap: 0.7rem;
+    }
+
+    .legal-document {
+        margin: 1rem auto;
+    }
+}
+
 html[data-premium-theme="midnight"] .theme-premium {
     --page-bg: #0b1020;
     --bg-dark: #101827;
@@ -3890,6 +4387,10 @@ html[data-premium-theme="midnight"] .theme-premium .text-accent,
 html[data-premium-theme="midnight"] .theme-premium .company-cell strong,
 html[data-premium-theme="midnight"] .theme-premium .row-action {
     color: #d4a84b;
+}
+
+html[data-premium-theme="midnight"] .theme-premium .text-neutral {
+    color: #f2c66d;
 }
 
 html[data-premium-theme="midnight"] .theme-premium .btn-primary {
@@ -4731,5 +5232,289 @@ html[data-premium-theme="midnight"] .theme-premium .notification-badge {
 
     .notification-dropdown-header {
         flex-direction: column;
+    }
+}
+
+/* Account overview and security pages */
+.account-page {
+    display: grid;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 920px;
+    margin: 0 auto;
+}
+
+.account-page-header h1,
+.account-form-card h1 {
+    margin: 0;
+    color: var(--text-main);
+    font-size: clamp(1.7rem, 3vw, 2.15rem);
+    line-height: 1.2;
+}
+
+.account-page-header p:last-child,
+.account-form-intro {
+    margin: 0.5rem 0 0;
+    color: var(--text-muted);
+}
+
+.account-eyebrow {
+    margin: 0 0 0.4rem;
+    color: var(--accent-blue);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.account-profile-card,
+.account-action-card,
+.account-form-card {
+    box-sizing: border-box;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    box-shadow: 0 10px 28px color-mix(in srgb, var(--text-main) 6%, transparent);
+}
+
+.account-profile-summary {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.account-profile-summary h2 {
+    margin: 0;
+    color: var(--text-main);
+    font-size: 1.15rem;
+}
+
+.account-profile-summary p {
+    overflow-wrap: anywhere;
+    margin: 0.18rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.86rem;
+}
+
+.account-avatar {
+    display: inline-grid;
+    width: 52px;
+    height: 52px;
+    place-items: center;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--accent-blue) 15%, var(--bg-card));
+    color: var(--accent-blue);
+    font-weight: 850;
+    letter-spacing: 0.03em;
+}
+
+.account-plan-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 0.7rem;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.account-plan-free {
+    background: color-mix(in srgb, var(--accent-blue) 12%, var(--bg-card));
+    border-color: color-mix(in srgb, var(--accent-blue) 25%, var(--border-color));
+    color: var(--accent-blue);
+}
+
+.account-plan-premium {
+    background: rgba(245, 158, 11, 0.13);
+    border-color: rgba(245, 158, 11, 0.28);
+    color: #d97706;
+}
+
+.account-plan-admin {
+    background: rgba(139, 92, 246, 0.13);
+    border-color: rgba(139, 92, 246, 0.28);
+    color: #8b5cf6;
+}
+
+.account-details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+    padding: 0.25rem 1.5rem 1.5rem;
+}
+
+.account-detail {
+    min-width: 0;
+    padding: 1.15rem 0 0.9rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.account-detail:nth-child(odd) {
+    padding-right: 1.5rem;
+}
+
+.account-detail:nth-child(even) {
+    padding-left: 1.5rem;
+    border-left: 1px solid var(--border-color);
+}
+
+.account-detail dt {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 750;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.account-detail dd {
+    overflow-wrap: anywhere;
+    margin: 0.3rem 0 0;
+    color: var(--text-main);
+    font-size: 0.9rem;
+    font-weight: 650;
+}
+
+.account-detail dd.account-status {
+    color: #059669;
+}
+
+.account-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.account-action-card {
+    display: flex;
+    min-height: 170px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.25rem;
+    padding: 1.4rem;
+    border-top: 3px solid var(--accent-blue);
+}
+
+.account-action-card h2 {
+    margin: 0;
+    color: var(--text-main);
+    font-size: 1rem;
+}
+
+.account-action-card p {
+    margin: 0.45rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.84rem;
+}
+
+.account-action-danger {
+    border-top-color: #ef4444;
+}
+
+.account-form-page {
+    max-width: 620px;
+}
+
+.account-back-link {
+    width: fit-content;
+    color: var(--accent-blue);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.account-back-link:hover {
+    color: var(--accent-hover);
+}
+
+.account-form-card {
+    padding: clamp(1.35rem, 4vw, 2rem);
+}
+
+.account-form-card .auth-form {
+    margin-top: 1.5rem;
+}
+
+.account-form-card .form-control {
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.account-field-help {
+    display: block;
+    margin-top: 0.35rem;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+}
+
+.account-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.35rem;
+}
+
+.account-message,
+.account-subscription-warning {
+    margin-top: 1.25rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid;
+    border-radius: 9px;
+    font-size: 0.82rem;
+}
+
+.account-message-success {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #059669;
+}
+
+.account-message-error,
+.account-subscription-warning {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.25);
+    color: #dc2626;
+}
+
+.account-delete-card {
+    border-top: 3px solid #ef4444;
+}
+
+.account-danger-eyebrow {
+    color: #ef4444;
+}
+
+.account-subscription-warning strong {
+    color: var(--text-main);
+}
+
+.account-subscription-warning p {
+    margin: 0.35rem 0 0.8rem;
+    color: var(--text-muted);
+}
+
+@media (max-width: 640px) {
+    .account-profile-summary {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .account-plan-badge {
+        grid-column: 1 / -1;
+        width: fit-content;
+    }
+
+    .account-details-grid,
+    .account-actions-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .account-detail:nth-child(odd),
+    .account-detail:nth-child(even) {
+        padding-right: 0;
+        padding-left: 0;
+        border-left: 0;
     }
 }

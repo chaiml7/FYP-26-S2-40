@@ -1,6 +1,8 @@
 import time
 import logging
-from datetime import date
+import os
+from datetime import date, datetime
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from backend.services.sentiment.finnhub_service import fetch_news as fetch_finnhub
 from backend.services.sentiment.gnews_service import fetch_news as fetch_gnews
@@ -15,9 +17,29 @@ from backend.services.stock_list_service import get_active_stocks
 
 logger = logging.getLogger(__name__)
 
-def run_pipeline() -> dict:
+
+def _current_score_date() -> date:
+    timezone_name = os.getenv(
+        "SENTIMENT_TIMEZONE",
+        os.getenv("ANALYSIS_SCHEDULER_TIMEZONE", "Asia/Singapore"),
+    )
+    try:
+        return datetime.now(ZoneInfo(timezone_name)).date()
+    except ZoneInfoNotFoundError:
+        logger.warning(
+            "Unknown SENTIMENT_TIMEZONE %s; falling back to UTC.",
+            timezone_name,
+        )
+        return datetime.now(ZoneInfo("UTC")).date()
+
+
+def run_pipeline(
+    *,
+    refresh_existing: bool = False,
+    score_date: date | None = None,
+) -> dict:
     results = []
-    from_date = date.today()
+    from_date = score_date or _current_score_date()
     active_stocks = get_active_stocks() or []
 
     for stock in active_stocks:
@@ -26,7 +48,7 @@ def run_pipeline() -> dict:
             logger.warning("Skipping active stock with no symbol: %s", stock)
             continue
         company_name = stock.get("company_name") or symbol
-        if has_data_for_today(symbol):
+        if not refresh_existing and has_data_for_today(symbol, from_date):
             results.append({"symbol": symbol, "headlines_scored": 0, "status": "skipped"})
             continue
         try:
@@ -36,6 +58,17 @@ def run_pipeline() -> dict:
                 time.sleep(0.5)
             headlines += list(fetch_gnews(symbol, company_name, from_date=from_date))
             if not headlines:
+                if refresh_existing:
+                    existing_result = save_daily_sentiment_score(symbol, from_date)
+                    if existing_result.get("rows_saved", 0) > 0:
+                        results.append({
+                            "symbol": symbol,
+                            "headlines_scored": 0,
+                            "daily_score_saved": existing_result["rows_saved"],
+                            "sentiment_fallback": "existing_headlines",
+                            "status": "no_new_data",
+                        })
+                        continue
                 daily_score_result = save_neutral_daily_sentiment_score(symbol, from_date)
                 results.append({
                     "symbol": symbol,
@@ -60,6 +93,8 @@ def run_pipeline() -> dict:
             results.append({"symbol": symbol, "headlines_scored": 0, "status": "error", "reason": str(e)})
     return {
         "message": "Pipeline complete",
+        "score_date": from_date.isoformat(),
+        "refresh_existing": refresh_existing,
         "active_stocks_found": len(active_stocks),
         "symbols_processed": len([r for r in results if r["status"] not in ("skipped",)]),
         "results": results,

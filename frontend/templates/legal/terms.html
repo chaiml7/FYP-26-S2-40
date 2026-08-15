@@ -1,0 +1,94 @@
+{% extends "legal/base.html" %}
+{% set active_legal_page = "terms" %}
+
+{% block title %}Terms of Service - StockLens{% endblock %}
+{% block legal_title %}Terms of Service{% endblock %}
+
+{% block legal_summary %}
+<strong>Please read these terms before using StockLens.</strong>
+<p>StockLens is a research and analysis application. Its model outputs are probabilistic, may be wrong or delayed, and are not financial advice.</p>
+{% endblock %}
+
+{% block legal_content %}
+<section>
+    <h2>1. Acceptance and eligibility</h2>
+    <p>By creating an account, purchasing a subscription, connecting a brokerage account, or otherwise using StockLens, you agree to these Terms of Service and the <a href="/privacy">Privacy Policy</a>. If you do not agree, do not use the service.</p>
+    <p>You must be at least 18 years old and legally able to enter into these terms. You are responsible for complying with the laws and brokerage requirements that apply to you.</p>
+</section>
+
+<section>
+    <h2>2. Accounts and security</h2>
+    <p>You must provide accurate account information and keep your login credentials confidential. You are responsible for activity performed through your account. Notify the StockLens administrator promptly through the in-app feedback feature if you suspect unauthorized access.</p>
+    <p>We may suspend access where reasonably necessary to protect users or the service, investigate misuse, comply with law, or address an unpaid or invalid subscription.</p>
+</section>
+
+<section>
+    <h2>3. Research service; no financial advice</h2>
+    <p>StockLens presents market data, technical indicators, sentiment analysis, financial analysis, model scores and related research tools for informational and educational purposes. StockLens is not a financial adviser, broker, exchange, fiduciary, tax adviser or legal adviser.</p>
+    <p>Nothing in StockLens is an offer, solicitation, personalized recommendation or guarantee to buy, sell or hold a security. You must independently assess every investment decision and, where appropriate, consult a qualified professional.</p>
+</section>
+
+<section>
+    <h2>4. Model and market-data limitations</h2>
+    <p>Predictions are estimates based on historical and third-party data. Past performance does not predict future results. Scores, prices, news, company information and model metrics may be incomplete, inaccurate, delayed, unavailable or affected by data and software errors.</p>
+    <p>Displayed accuracy statistics describe a particular evaluation method and period. They do not establish that a model will be profitable or accurate for a future trade. You should verify time-sensitive information with an authoritative market source before acting.</p>
+</section>
+
+<section>
+    <h2>5. Brokerage connections and orders</h2>
+    <p>Eligible Premium users may connect a supported brokerage through SnapTrade and submit orders from StockLens. When you submit an order, you instruct the connected brokerage to process it under that brokerage's terms. StockLens does not custody funds or securities and does not control brokerage execution, pricing, rejection, delay or settlement.</p>
+    <p>You are responsible for reviewing the symbol, side, quantity, order type and account before confirming an order. You accept the risk of market movement, technical failure, duplicate action, delay and loss. Disconnecting a brokerage from StockLens does not cancel an order already sent to the brokerage.</p>
+</section>
+
+<section>
+    <h2>6. Free and Premium plans</h2>
+    <p>Features may differ between Free and Premium plans. Premium subscriptions are recurring and are billed through Stripe at the price, currency and billing interval shown at checkout. Taxes may apply where required.</p>
+    <p>You authorize recurring charges until cancellation. You can manage or cancel through the StockLens billing portal. Unless checkout states otherwise, cancellation takes effect at the end of the current paid billing period and Premium access continues until then. Charges already paid are not prorated or refundable except where required by law or expressly agreed by StockLens.</p>
+    <p>We may change plan features or future pricing. A price change will apply only after any notice required by applicable law or the payment provider.</p>
+</section>
+
+<section>
+    <h2>7. Acceptable use</h2>
+    <p>You may not misuse StockLens, attempt unauthorized access, evade role or subscription controls, disrupt the service, introduce malicious code, scrape at a level that harms the service, reverse engineer protected components, use another person's brokerage connection, or use the service for unlawful market activity.</p>
+</section>
+
+<section>
+    <h2>8. Third-party services</h2>
+    <p>StockLens relies on services including Supabase, Stripe, SendGrid, SnapTrade, Render and market or news data providers. Their availability and handling of information are governed by their own terms and policies. StockLens is not responsible for a third party's independent service, outage or decision.</p>
+</section>
+
+<section>
+    <h2>9. Intellectual property</h2>
+    <p>StockLens and its original interface, code, branding and analytical presentation are protected by applicable intellectual-property laws. You receive a limited, personal, non-exclusive and revocable right to use the service in accordance with these terms. Third-party data and marks remain the property of their respective owners.</p>
+</section>
+
+<section>
+    <h2>10. Availability and changes</h2>
+    <p>We may maintain, update, restrict or discontinue features. We do not guarantee uninterrupted availability, permanent storage of every output, compatibility with every device, or that every active stock will always have current analysis.</p>
+</section>
+
+<section>
+    <h2>11. Disclaimers and limitation of liability</h2>
+    <p>To the maximum extent permitted by law, StockLens is provided "as is" and "as available" without warranties of accuracy, availability, fitness for a particular purpose or investment outcome.</p>
+    <p>To the maximum extent permitted by law, StockLens and its operator will not be liable for indirect, incidental, special or consequential loss; lost profit or opportunity; trading loss; or loss arising from model output, market data, third-party services, brokerage execution or unauthorized account use. Nothing in these terms excludes liability or consumer rights that cannot lawfully be excluded.</p>
+</section>
+
+<section>
+    <h2>12. Account deletion and termination</h2>
+    <p>You may delete your account from Account Settings. Account deletion is intended to remove the StockLens account and associated application data, subject to records that must be retained for security, dispute, payment or legal purposes. Deleting StockLens does not automatically close a brokerage account or reverse completed transactions.</p>
+</section>
+
+<section>
+    <h2>13. Changes to these terms</h2>
+    <p>We may update these terms when the service or legal requirements change. The effective date above will be updated. Material changes may also be communicated through the service. Continued use after an updated version takes effect constitutes acceptance where permitted by law.</p>
+</section>
+
+<section>
+    <h2>14. Contact</h2>
+    {% if legal_contact_email %}
+    <p>Questions about these terms can be sent to <a href="mailto:{{ legal_contact_email }}">{{ legal_contact_email }}</a>.</p>
+    {% else %}
+    <p>Questions about these terms can be submitted through the Feedback page after signing in.</p>
+    {% endif %}
+</section>
+{% endblock %}

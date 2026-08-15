@@ -6,6 +6,7 @@ import pytest
 
 from backend.routes.dashboard_routes import stock_detail
 from backend.routes.premium_user_routes import (
+    premium_news_feed,
     premium_user_weightages,
     save_premium_weightages,
 )
@@ -68,6 +69,18 @@ def test_personal_model_weightage_page_is_premium_only(role):
 
     assert response.status_code == 303
     assert response.headers["location"] == "/login"
+
+
+def test_legacy_premium_news_route_opens_shared_filtered_feed():
+    request = MagicMock()
+    with patch(
+        "backend.routes.premium_user_routes.get_session_context",
+        return_value={"user_id": "user-123", "user_role": "premium_user"},
+    ):
+        response = asyncio.run(premium_news_feed(request, "aapl"))
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/user/news_social?symbol=AAPL"
 
 
 @patch("backend.routes.premium_user_routes.supabase")

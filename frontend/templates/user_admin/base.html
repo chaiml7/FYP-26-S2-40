@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}User Admin - StockLens{% endblock %}</title>
-    <link rel="stylesheet" href="/static/css/styles.css?v=20260810-notification-center">
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260814-account-pages">
     <script>
         try {
             document.documentElement.dataset.adminTheme =
@@ -45,6 +45,7 @@
         <main class="admin-main">
             {% block content %}
             {% endblock %}
+            {% include "/includes/legal_footer.html" %}
         </main>
     </div>
 

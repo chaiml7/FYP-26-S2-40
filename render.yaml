@@ -78,6 +78,12 @@ services:
         value: 3.12.7
       - key: APP_PUBLIC_URL
         sync: false
+      - key: ENABLE_ANALYSIS_SCHEDULER
+        value: "false"
+      - key: ANALYSIS_SCHEDULER_TIMEZONE
+        value: Asia/Singapore
+      - key: TECHNICAL_IMPORT_PERIOD
+        value: 2y
       # Cron/scheduled jobs left off until you're ready to run them against
       # production data — flip to "true" in the Render dashboard when ready.
       - key: ENABLE_SENTIMENT_SCHEDULER

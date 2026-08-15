@@ -40,7 +40,7 @@
                 <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.85rem;">
                     <span class="text-main font-bold">Technical</span>
                     <span class="text-muted">{{ data.tech_weight }}% weight &nbsp; 
-                        <span class="font-bold {% if data.technical_score > 5 %}text-success{% elif data.technical_score == 5 %}text-muted{% else %}text-danger{% endif %}">{{ data.technical_score }}/10</span>
+                        <span class="font-bold {% if data.technical_score > 5 %}text-success{% elif data.technical_score == 5 %}text-neutral{% else %}text-danger{% endif %}">{{ data.technical_score }}/10</span>
                     </span>
                 </div>
                 <div class="confidence-bg" style="height: 6px; width: 100%;">
@@ -52,14 +52,14 @@
                 <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.85rem;">
                     <span class="text-main font-bold">Sentiment</span>
                     <span class="text-muted">{{ data.sent_weight }}% weight &nbsp;
-                        <span class="font-bold {% if data.sentiment_score > 5 %}text-success{% elif data.sentiment_score == 5 %}text-muted{% else %}text-danger{% endif %}">{{ data.sentiment_score }}/10</span>
+                        <span class="font-bold {% if data.sentiment_score > 5 %}text-success{% elif data.sentiment_score == 5 %}text-neutral{% else %}text-danger{% endif %}">{{ data.sentiment_score }}/10</span>
                     </span>
                 </div>
                 <div class="confidence-bg" style="height: 6px; width: 100%;">
                     <div class="confidence-fill {% if data.sentiment_score > 5 %}fill-success{% elif data.sentiment_score == 5 %}fill-neutral{% else %}fill-danger{% endif %}" style="width: {{ data.sentiment_score * 10 }}%;"></div>
                 </div>
                 <div style="margin-top: 6px; text-align: right;">
-                    <a href="/premium/news/{{ data.symbol }}" style="font-size: 0.78rem; color: var(--text-muted); text-decoration: none;"
+                    <a href="/user/news_social?symbol={{ data.symbol | urlencode }}" style="font-size: 0.78rem; color: var(--text-muted); text-decoration: none;"
                        onmouseover="this.style.color='#3b82f6'" onmouseout="this.style.color='var(--text-muted)'">
                         View news feed →
                     </a>
@@ -70,7 +70,7 @@
                 <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.85rem;">
                     <span class="text-main font-bold">Financial Analysis</span>
                     <span class="text-muted">{{ data.fin_weight }}% weight &nbsp;
-                        <span class="font-bold {% if data.financial_score > 5 %}text-success{% elif data.financial_score == 5 %}text-muted{% else %}text-danger{% endif %}">{{ data.financial_score }}/10</span>
+                        <span class="font-bold {% if data.financial_score > 5 %}text-success{% elif data.financial_score == 5 %}text-neutral{% else %}text-danger{% endif %}">{{ data.financial_score }}/10</span>
                     </span>
                 </div>
                 <div class="confidence-bg" style="height: 6px; width: 100%;">
@@ -81,7 +81,7 @@
 
         <div style="border-top: 1px solid var(--border-color); padding-top: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
             <span class="panel-header" style="margin: 0;">Composite Confidence</span>
-            <span style="font-size: 2rem; font-weight: 800; line-height: 1;" class="{% if data.composite > 5 %}text-success{% elif data.composite == 5 %}text-muted{% else %}text-danger{% endif %}">
+            <span style="font-size: 2rem; font-weight: 800; line-height: 1;" class="{% if data.composite > 5 %}text-success{% elif data.composite == 5 %}text-neutral{% else %}text-danger{% endif %}">
                 {{ data.composite }}/10
             </span>
         </div>

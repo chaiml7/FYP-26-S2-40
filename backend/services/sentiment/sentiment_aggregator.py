@@ -313,8 +313,8 @@ def get_latest_weighted_sentiment_score(symbol: str) -> dict:
     return rows[0] if rows else None
 
 
-def has_data_for_today(symbol: str) -> bool:
-    today = date.today().isoformat()
+def has_data_for_today(symbol: str, score_date: date = None) -> bool:
+    today = (score_date or date.today()).isoformat()
     response = (
         supabase.table("sentiment_daily_scores")
         .select("id")

@@ -15,6 +15,7 @@ from backend.services.billing_service import (
     create_checkout_session,
     create_customer_portal_session,
     get_user_subscription,
+    reconcile_user_subscription_role,
 )
 from backend.services.session_context import get_session_context
 from backend.services.user_profile_service import get_profile
@@ -47,7 +48,8 @@ def _refresh_session_role(request: Request) -> str | None:
     profiles = get_profile(str(user_id))
     if not profiles:
         return None
-    role = str(profiles[0].get("role_id") or "basic_user").lower()
+    stored_role = str(profiles[0].get("role_id") or "basic_user").lower()
+    role = reconcile_user_subscription_role(str(user_id), stored_role)
     request.session["user_role"] = role
     return role
 

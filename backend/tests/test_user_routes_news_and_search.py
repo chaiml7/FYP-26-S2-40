@@ -64,6 +64,22 @@ def test_api_news_ignores_invalid_label(mock_news):
     mock_news.assert_called_once_with(symbol=None, label=None, q=None, page=1)
 
 
+@patch(f"{MODULE}.get_active_stocks", return_value=[
+    {"symbol": "AAPL", "company_name": "Apple Inc.", "is_active": True},
+])
+@patch(f"{MODULE}.get_recent_news", return_value=MOCK_NEWS_RESULT)
+def test_news_social_page_preselects_symbol_from_stock_link(mock_news, _mock_stocks):
+    client.cookies.set("session", _session_cookie(role="premium_user"))
+    response = client.get("/user/news_social?symbol=aapl")
+    client.cookies.clear()
+
+    assert response.status_code == 200
+    assert '<option value="AAPL" selected>' in response.text
+    mock_news.assert_called_once_with(
+        symbol="AAPL", label=None, q="", page=1
+    )
+
+
 @patch(f"{MODULE}.search_active_stocks", return_value=[{"symbol": "AAPL", "company_name": "Apple Inc."}])
 def test_api_stocks_search_requires_login(mock_search):
     client.cookies.clear()

@@ -1,0 +1,96 @@
+{% extends "legal/base.html" %}
+{% set active_legal_page = "privacy" %}
+
+{% block title %}Privacy Policy - StockLens{% endblock %}
+{% block legal_title %}Privacy Policy{% endblock %}
+
+{% block legal_summary %}
+<strong>Your information is used to operate StockLens and the features you choose.</strong>
+<p>This policy explains what is collected, why it is used, the service providers involved, and the controls available to you.</p>
+{% endblock %}
+
+{% block legal_content %}
+<section>
+    <h2>1. Scope</h2>
+    <p>This Privacy Policy applies to the StockLens website, account dashboards, subscriptions, notifications, feedback and optional brokerage integration. It should be read together with the <a href="/terms">Terms of Service</a>.</p>
+</section>
+
+<section>
+    <h2>2. Information we collect</h2>
+    <h3>Account information</h3>
+    <p>We collect your name, email address, account identifier, role and account status. Password credentials are processed by Supabase Auth; StockLens does not store your plaintext password.</p>
+    <h3>Preferences and content</h3>
+    <p>We store information you provide or configure, including watchlist stocks, model weightages, notification preferences and feedback submissions.</p>
+    <h3>Subscription information</h3>
+    <p>We store Stripe customer, subscription and price identifiers, subscription status, renewal-period information and cancellation status. Card and other payment details are entered on Stripe's hosted checkout and are handled by Stripe rather than stored in the StockLens database.</p>
+    <h3>Brokerage information</h3>
+    <p>If you choose to connect a brokerage, StockLens and SnapTrade process connection identifiers and authorization credentials needed to access supported account information and submit your requested orders. StockLens may display account, position and order information returned by SnapTrade.</p>
+    <h3>Device and service information</h3>
+    <p>Hosting, authentication and security providers may process IP address, browser or device information, request timestamps, pages requested and diagnostic logs. StockLens uses a signed session cookie. Your browser may also store theme choice and notification read or dismissed state in local storage.</p>
+</section>
+
+<section>
+    <h2>3. How information is used</h2>
+    <p>We use information to create and secure accounts; provide dashboards, watchlists and analysis; apply user-selected model settings; process Premium subscriptions; provide optional brokerage features; send opted-in analysis-ready emails; display in-app notifications; respond to feedback; prevent misuse; troubleshoot errors; and comply with legal obligations.</p>
+    <p>StockLens does not sell or rent personal information. We do not use brokerage credentials or order information to place trades without a user-requested action.</p>
+</section>
+
+<section>
+    <h2>4. Email notifications</h2>
+    <p>Premium users can opt in to analysis-ready email notifications for their watchlists. SendGrid processes the destination email and delivery information. You can turn these emails off from Watchlist settings. Essential account, security or billing communications may still be sent where necessary.</p>
+</section>
+
+<section>
+    <h2>5. Service providers and disclosure</h2>
+    <p>Information is disclosed only as reasonably needed to operate the service, complete a user-requested action, protect the service, or comply with law. Current providers and integrations include:</p>
+    <ul>
+        <li><strong>Supabase</strong> for authentication and database services.</li>
+        <li><strong>Render</strong> for application hosting and operational logs.</li>
+        <li><strong>Stripe</strong> for checkout, recurring billing and customer billing management.</li>
+        <li><strong>SendGrid</strong> for opted-in email delivery.</li>
+        <li><strong>SnapTrade</strong> for optional brokerage connection and order routing.</li>
+        <li><strong>Market, company and news providers</strong>, including Finnhub and Yahoo Finance data accessed through application services.</li>
+    </ul>
+    <p>These providers process information under their own terms and privacy notices. We may also disclose information to advisers, authorities or affected parties where reasonably necessary to meet legal obligations, investigate fraud or security incidents, or protect rights and safety.</p>
+</section>
+
+<section>
+    <h2>6. International processing</h2>
+    <p>StockLens and its service providers may process information in countries other than your own. Where required, reasonable contractual or other safeguards will be used for cross-border transfers. Provider locations and safeguards may change as their infrastructure changes.</p>
+</section>
+
+<section>
+    <h2>7. Retention</h2>
+    <p>We retain account and feature data while your account is active and for as long as reasonably needed to provide the service. After deletion, some security, payment, webhook, dispute or legal records may be retained for the period necessary for those purposes. Browser local-storage data remains on your device until you clear it or the application replaces it.</p>
+</section>
+
+<section>
+    <h2>8. Security</h2>
+    <p>We use access controls, signed sessions, server-side credentials and provider security features intended to protect personal information. No online service can guarantee absolute security. Keep your password private, use a secure device and notify the StockLens administrator if you suspect unauthorized activity.</p>
+</section>
+
+<section>
+    <h2>9. Your choices and requests</h2>
+    <p>You can change watchlist and model preferences, opt out of watchlist emails, disconnect supported integrations, manage billing, change your password and delete your account through the available application controls.</p>
+    <p>Subject to applicable law, you may request access to or correction of personal information, ask questions about its use or disclosure, or withdraw consent for optional processing. Withdrawal may prevent the affected optional feature from working.</p>
+</section>
+
+<section>
+    <h2>10. Children's privacy</h2>
+    <p>StockLens is not intended for anyone under 18. We do not knowingly offer accounts to children. If you believe a child has provided personal information, contact the StockLens administrator so the account can be reviewed and removed where appropriate.</p>
+</section>
+
+<section>
+    <h2>11. Changes to this policy</h2>
+    <p>We may update this policy when features, providers or legal requirements change. The effective date above will be updated, and material changes may also be communicated through the service.</p>
+</section>
+
+<section>
+    <h2>12. Contact</h2>
+    {% if legal_contact_email %}
+    <p>Privacy questions and requests can be sent to <a href="mailto:{{ legal_contact_email }}">{{ legal_contact_email }}</a>.</p>
+    {% else %}
+    <p>Privacy questions and requests can be submitted through the Feedback page after signing in.</p>
+    {% endif %}
+</section>
+{% endblock %}

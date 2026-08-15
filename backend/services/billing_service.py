@@ -233,21 +233,26 @@ def _price_from_subscription(subscription: dict[str, Any]) -> str | None:
     return _identifier(price)
 
 
-def _set_managed_role(user_id: str, *, premium: bool) -> None:
-    profile_response = (
-        supabase.table("user_profiles")
-        .select("role_id")
-        .eq("id", user_id)
-        .limit(1)
-        .execute()
-    )
-    profile = _first_row(profile_response)
-    if not profile:
-        raise BillingError("The subscription user profile could not be found.")
+def _set_managed_role(
+    user_id: str, *, premium: bool, current_role: str | None = None
+) -> str:
+    if current_role is None:
+        profile_response = (
+            supabase.table("user_profiles")
+            .select("role_id")
+            .eq("id", user_id)
+            .limit(1)
+            .execute()
+        )
+        profile = _first_row(profile_response)
+        if not profile:
+            raise BillingError("The subscription user profile could not be found.")
+        current_role = str(profile.get("role_id") or "basic_user").lower()
+    else:
+        current_role = str(current_role or "basic_user").lower()
 
-    current_role = str(profile.get("role_id") or "basic_user").lower()
     if current_role not in MANAGED_USER_ROLES:
-        return
+        return current_role
     desired_role = "premium_user" if premium else "basic_user"
     if current_role != desired_role:
         (
@@ -256,6 +261,32 @@ def _set_managed_role(user_id: str, *, premium: bool) -> None:
             .eq("id", user_id)
             .execute()
         )
+    return desired_role
+
+
+def reconcile_user_subscription_role(user_id: str, stored_role: str) -> str:
+    """Return and persist the role justified by this user's subscription.
+
+    Administrator roles are never managed by Stripe. Customer accounts receive
+    Premium access only while the configured Premium price has an active or
+    trialing subscription. This also repairs legacy profiles that were manually
+    marked Premium without a subscription.
+    """
+    current_role = str(stored_role or "basic_user").lower()
+    if current_role not in MANAGED_USER_ROLES:
+        return current_role
+
+    subscription = get_user_subscription(user_id) or {}
+    status = str(subscription.get("status") or "inactive").lower()
+    premium = False
+    if status in PREMIUM_SUBSCRIPTION_STATUSES:
+        premium = subscription.get("stripe_price_id") == _premium_price_id()
+
+    return _set_managed_role(
+        user_id,
+        premium=premium,
+        current_role=current_role,
+    )
 
 
 def synchronize_subscription(

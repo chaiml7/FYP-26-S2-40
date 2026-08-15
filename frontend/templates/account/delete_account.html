@@ -1,0 +1,48 @@
+{% extends base_layout %}
+
+{% block title %}Delete Account - StockLens{% endblock %}
+
+{% block content %}
+<section class="account-page account-form-page" aria-labelledby="delete-title">
+    <a href="/user/account" class="account-back-link">&larr; Back to account</a>
+
+    <article class="account-form-card account-delete-card">
+        <p class="account-eyebrow account-danger-eyebrow">Danger zone</p>
+        <h1 id="delete-title">Delete account</h1>
+        <p class="account-form-intro">
+            This permanently deletes your StockLens profile, watchlist, notification
+            preferences and saved settings. This action cannot be undone.
+        </p>
+
+        {% if user_role == "premium_user" %}
+        <div class="account-subscription-warning">
+            <strong>Premium subscription</strong>
+            <p>Cancel your active subscription in the billing portal before deleting your account. Account deletion does not cancel Stripe billing automatically.</p>
+            <form action="/billing/portal" method="POST">
+                <button type="submit" class="btn btn-outline btn-sm">Manage billing first</button>
+            </form>
+        </div>
+        {% endif %}
+
+        {% if delete_error %}
+        <div class="account-message account-message-error" role="alert">{{ delete_error }}</div>
+        {% endif %}
+
+        <form
+            action="/user/account/delete"
+            method="POST"
+            class="auth-form"
+            onsubmit="return confirm('Delete your StockLens account? This cannot be undone.');"
+        >
+            <div class="form-group">
+                <label for="delete_current_password" class="form-label">Confirm your password</label>
+                <input type="password" id="delete_current_password" name="current_password" class="form-control" autocomplete="current-password" required>
+            </div>
+            <div class="account-form-actions">
+                <button type="submit" class="btn btn-danger">Permanently delete account</button>
+                <a href="/user/account" class="btn btn-outline">Cancel</a>
+            </div>
+        </form>
+    </article>
+</section>
+{% endblock %}

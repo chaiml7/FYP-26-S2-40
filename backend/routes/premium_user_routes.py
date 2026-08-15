@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from urllib.parse import urlencode
 from dotenv import load_dotenv
 import uuid
 from fastapi import APIRouter, Request, Form, HTTPException
@@ -31,7 +32,6 @@ from backend.services.prediction_service import (
     get_latest_direction_outlook,
     risk_tier_from_volatility,
 )
-from backend.services.sentiment.sentiment_aggregator import get_sentiment_summary
 from backend.services.stock_history_service import get_recent_stock_history
 from backend.services.user_watchlist_service import (
     add_watchlist_by_symbol,
@@ -415,26 +415,12 @@ async def premium_news_feed(request: Request, symbol: str, days: int = 7):
     if not session or session["user_role"] != "premium_user":
         return RedirectResponse(url="/dashboard", status_code=303)
 
-    target_symbol = symbol.upper()
-    summary = get_sentiment_summary(target_symbol, days=days)
-
-    # Resolve company name from active stocks list
-    stocks = get_active_stocks()
-    company_name = next(
-        (s.get("company_name", target_symbol) for s in stocks if s.get("symbol", "").upper() == target_symbol),
-        target_symbol,
-    )
-
-    return templates.TemplateResponse(
-        request=request,
-        name="premium_users/news_feed.html",
-        context={
-            **session,
-            "request": request,
-            "symbol": target_symbol,
-            "company_name": company_name,
-            "summary": summary,
-        },
+    # Preserve old bookmarks while using the same filtered feed as the
+    # working News & Social page.
+    target_symbol = symbol.strip().upper()
+    return RedirectResponse(
+        url=f"/user/news_social?{urlencode({'symbol': target_symbol})}",
+        status_code=303,
     )
 
 
