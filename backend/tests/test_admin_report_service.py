@@ -6,7 +6,44 @@ from backend.services.admin_report_service import (
     _build_watchlist_summary,
     _freshness_row,
     _model_row,
+    _version_row,
 )
+
+
+def test_version_row_extracts_metrics_and_active_flag():
+    row = _version_row(
+        {
+            "model_version": "tech_v3",
+            "trained_at": "2026-08-01T00:00:00Z",
+            "is_active": True,
+            "test_metrics": {
+                "accuracy": 0.72,
+                "balanced_accuracy": 0.70,
+                "macro_f1": 0.69,
+                "log_loss": 0.5,
+            },
+        },
+        ["test_metrics", "metrics"],
+    )
+
+    assert row["version"] == "tech_v3"
+    assert row["trained_at"] == "2026-08-01"
+    assert row["is_active"] is True
+    assert row["accuracy"] == "72.0%"
+    assert row["balanced_accuracy"] == "70.0%"
+    assert row["macro_f1"] == "69.0%"
+    assert row["log_loss"] == "0.5000"
+
+
+def test_version_row_handles_missing_metrics():
+    row = _version_row(
+        {"model_version": "fin_v1", "created_at": "2026-07-01T00:00:00Z", "is_active": False},
+        ["metrics", "test_metrics"],
+    )
+
+    assert row["version"] == "fin_v1"
+    assert row["is_active"] is False
+    assert row["accuracy"] == "N/A"
 
 
 def test_watchlist_summary_ranks_current_favourites():

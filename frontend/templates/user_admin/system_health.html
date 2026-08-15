@@ -1,0 +1,112 @@
+{% extends "user_admin/base.html" %}
+
+{% block title %}System Health - StockLens{% endblock %}
+
+{% block nav_systemhealth %}active{% endblock %}
+
+{% block content %}
+<header class="admin-report-header">
+    <div>
+        <h1 class="text-2xl font-bold text-main m-0">System Health</h1>
+        <p class="text-muted text-sm m-0">Checked at {{ health.checked_at }}</p>
+    </div>
+</header>
+
+<div class="stats-grid admin-report-kpis">
+    <div class="card stat-card">
+        <span class="stat-title">DATABASE</span>
+        <span class="stat-value report-stat-value {% if health.db_status == 'Operational' %}status-active{% else %}status-suspended{% endif %}">
+            {{ health.db_status }}
+        </span>
+        <span class="stat-trend text-muted">Response time {{ health.db_latency_ms }} ms</span>
+    </div>
+    <div class="card stat-card">
+        <span class="stat-title">DATA HEALTH FLAGS</span>
+        <span class="stat-value report-stat-value">{{ health.freshness_summary.rows | selectattr("stale_count", "gt", 0) | list | length + health.freshness_summary.rows | selectattr("missing_count", "gt", 0) | list | length }}</span>
+        <span class="stat-trend text-muted">Datasets with missing or stale coverage</span>
+    </div>
+    <div class="card stat-card">
+        <span class="stat-title">INTEGRATIONS CONFIGURED</span>
+        <span class="stat-value report-stat-value">{{ health.integrations | selectattr("configured") | list | length }} / {{ health.integrations | length }}</span>
+        <span class="stat-trend text-muted">External services with credentials set</span>
+    </div>
+</div>
+
+{% if health.errors %}
+<section class="report-section">
+    <div class="section-title-row table-controls">
+        <h2 class="text-main m-0">Errors</h2>
+    </div>
+    <div class="table-card report-table-card" style="padding: 1rem;">
+        {% for error in health.errors %}
+        <p class="text-danger text-sm">{{ error }}</p>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<section class="report-section">
+    <div class="section-title-row table-controls">
+        <h2 class="text-main m-0">Data Freshness</h2>
+        <span class="text-muted text-sm">Stale after {{ health.freshness_summary.stale_after_days }} days</span>
+    </div>
+    <div class="table-card report-table-card">
+        <table class="admin-table report-table">
+            <thead>
+                <tr>
+                    <th>Dataset</th>
+                    <th>Latest</th>
+                    <th>Covered Stocks</th>
+                    <th>Missing</th>
+                    <th>Stale</th>
+                    <th>Missing Examples</th>
+                    <th>Stale Examples</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in health.freshness_summary.rows %}
+                <tr>
+                    <td>{{ row.name }}</td>
+                    <td>{{ row.latest_date }}</td>
+                    <td>{{ row.covered_count }}</td>
+                    <td>{{ row.missing_count }}</td>
+                    <td>{{ row.stale_count }}</td>
+                    <td>{{ row.missing_examples }}</td>
+                    <td>{{ row.stale_examples }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="report-section">
+    <div class="section-title-row table-controls">
+        <h2 class="text-main m-0">External Integrations</h2>
+    </div>
+    <div class="table-card report-table-card">
+        <table class="admin-table report-table">
+            <thead>
+                <tr>
+                    <th>Integration</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for integration in health.integrations %}
+                <tr>
+                    <td>{{ integration.name }}</td>
+                    <td>
+                        {% if integration.configured %}
+                        <span class="status-active status-text bg-opacity-10 px-2 py-1 rounded-full">Configured</span>
+                        {% else %}
+                        <span class="status-suspended status-text bg-opacity-10 px-2 py-1 rounded-full">Not configured</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

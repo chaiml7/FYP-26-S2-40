@@ -2,7 +2,11 @@ from fastapi import APIRouter, Request, Form, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 from backend.database.supabase_client import supabase
-from backend.services.admin_report_service import build_admin_report
+from backend.services.admin_report_service import (
+    build_admin_report,
+    build_model_accuracy_log,
+    build_system_health,
+)
 from backend.services.session_context import get_session_context
 from backend.services.stock_list_service import get_all_stocks
 from backend.services.sentiment_source_service import (
@@ -455,6 +459,36 @@ async def generate_admin_report_page(request: Request):
             "report": report,
         },
     )
+
+@router.get("/admin/prediction_logs")
+async def admin_prediction_logs_page(request: Request):
+    session = _admin_report_session(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=303)
+
+    log = build_model_accuracy_log()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="user_admin/prediction_logs.html",
+        context={**session, "request": request, "log": log}
+    )
+
+
+@router.get("/admin/system_health")
+async def admin_system_health_page(request: Request):
+    session = _admin_report_session(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=303)
+
+    health = build_system_health()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="user_admin/system_health.html",
+        context={**session, "request": request, "health": health}
+    )
+
 
 @router.get("/admin/stocks/new")
 async def add_stock_page(request: Request):
