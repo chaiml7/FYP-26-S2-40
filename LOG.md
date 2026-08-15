@@ -1036,6 +1036,29 @@ Date: 2026-08-10
 
 ---
 
+### 2026-08-15 — Bali — Merged changes from main (commit `bf5d510`)
+
+**What changed on main:**
+
+Teammate: chaiml7 (mingliang0312@gmail.com)
+Commit: `bf5d5101c0bd7776fb9e66450b2eabfff27cafe9`
+Date: 2026-08-14
+
+- `bf5d510` — update account details
+- `661692b` — Fix Bugs
+- `edd1731` — minor bugs
+- `fd931e3` — added scheduler for analysis pipeline and added balanced accuracy metric for sentiment analysis
+
+**Files changed (e7a3d1f..bf5d510):** 44 files changed, 2001 insertions(+), 195 deletions(-) — notably new `backend/services/analysis_pipeline.py` + `analysis_scheduler.md`, account/legal pages (`frontend/templates/account/*`, `frontend/templates/legal/*`), homepage screenshots, and a new Supabase migration `20260814000000_add_sentiment_balanced_accuracy.sql`.
+
+**Conflict resolved:** `backend/.env.example` — both branches appended new env vars in the same spot (bali added `GMAIL_SMTP_*`, main added `ENABLE_ANALYSIS_SCHEDULER`/`ANALYSIS_SCHEDULER_TIMEZONE`/`TECHNICAL_IMPORT_PERIOD`); kept both blocks, no actual overlap.
+
+**Integration impact:**
+- [ ] `sentiment_aggregator.py` and `sentiment_pipeline.py` both changed on main — diff against bali's sentiment work before next pipeline run to confirm no regressions.
+- [ ] New `add_sentiment_balanced_accuracy` migration needs to be applied to the shared Supabase project if not already.
+
+---
+
 ## Issues / Bugs Tracker
 
 | Date | Issue | Status | Resolution |
