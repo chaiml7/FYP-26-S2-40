@@ -65,7 +65,7 @@ class WatchlistAdd(BaseModel):
 
 
 class UserRoleUpdate(BaseModel):
-    role_id: Literal["basic_user", "premium_user", "frontend_admin", "backend_admin"]
+    role_id: Literal["basic_user", "premium_user", "admin"]
 
 
 class UserStatusUpdate(BaseModel):

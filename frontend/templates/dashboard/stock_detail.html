@@ -182,7 +182,7 @@
         </span>
     </div>
 
-    <article class="overall-score-card score-{{ stock.overall_tone }}{% if user_role in ["premium_user", "frontend_admin"] %} overall-score-adjustable{% endif %}" id="overall-score-card">
+    <article class="overall-score-card score-{{ stock.overall_tone }}{% if user_role in ["premium_user", "admin"] %} overall-score-adjustable{% endif %}" id="overall-score-card">
         <div class="overall-score-copy">
             <p class="workspace-eyebrow">Weighted outlook</p>
             <h3>Overall score</h3>
@@ -193,7 +193,7 @@
             </p>
         </div>
 
-        {% if user_role in ["premium_user", "frontend_admin"] %}
+        {% if user_role in ["premium_user", "admin"] %}
         <div class="overall-weight-controls" aria-label="Temporary model weight simulator">
             <div class="overall-weight-controls-heading">
                 <strong>Try different weights</strong>
@@ -358,7 +358,7 @@
 {% endblock %}
 
 {% block scripts %}
-{% if user_role in ["premium_user", "frontend_admin"] %}
+{% if user_role in ["premium_user", "admin"] %}
 <script>
 (() => {
     const card = document.getElementById("overall-score-card");

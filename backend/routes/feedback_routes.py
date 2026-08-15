@@ -21,7 +21,7 @@ router = APIRouter()
 templates = Jinja2Templates(directory="frontend/templates")
 
 USER_ROLES = {"basic_user", "premium_user"}
-FRONTEND_ADMIN_ROLE = "frontend_admin"
+ADMIN_ROLE = "admin"
 
 
 def _user_context(request: Request) -> dict | None:
@@ -44,7 +44,7 @@ def _user_context(request: Request) -> dict | None:
 
 
 def _admin_is_authenticated(request: Request) -> bool:
-    return request.session.get("user_role") == FRONTEND_ADMIN_ROLE
+    return request.session.get("user_role") == ADMIN_ROLE
 
 
 def _admin_context(request: Request) -> dict:

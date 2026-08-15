@@ -564,7 +564,7 @@ def _admin_in_app_notifications() -> list[dict[str, Any]]:
 def get_in_app_notifications(user_id: str | None, user_role: str) -> dict[str, Any]:
     if user_role == "premium_user" and user_id:
         notifications = _premium_in_app_notifications(user_id)
-    elif user_role == "frontend_admin":
+    elif user_role == "admin":
         notifications = _admin_in_app_notifications()
     else:
         notifications = [

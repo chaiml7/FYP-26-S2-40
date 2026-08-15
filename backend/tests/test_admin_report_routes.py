@@ -11,7 +11,7 @@ from frontend.main import app
 client = TestClient(app)
 
 
-def _session_cookie(role="frontend_admin", email="admin@example.com", user_id="admin-id"):
+def _session_cookie(role="admin", email="admin@example.com", user_id="admin-id"):
     signer = TimestampSigner("my-super-secret-key")
     data = {"user_role": role, "user_email": email, "user_id": user_id}
     payload = base64.b64encode(json.dumps(data).encode("utf-8"))
@@ -26,8 +26,8 @@ def test_admin_reports_requires_login():
     assert response.headers["location"] == "/login"
 
 
-def test_admin_reports_page_renders_for_frontend_admin():
-    client.cookies.set("session", _session_cookie(role="frontend_admin"))
+def test_admin_reports_page_renders_for_admin():
+    client.cookies.set("session", _session_cookie(role="admin"))
     response = client.get("/admin/reports")
     client.cookies.clear()
 
@@ -114,7 +114,7 @@ MOCK_REPORT = {
 
 @patch("backend.routes.admin_routes.build_admin_report", return_value=MOCK_REPORT)
 def test_generate_admin_report_renders_model_cards_without_na(mock_report):
-    client.cookies.set("session", _session_cookie(role="frontend_admin"))
+    client.cookies.set("session", _session_cookie(role="admin"))
     response = client.post("/admin/reports/generate")
     client.cookies.clear()
 

@@ -196,7 +196,7 @@ def _build_user_summary(users: list) -> dict:
         "admin_users": sum(
             count
             for role, count in role_counts.items()
-            if role == "frontend_admin"
+            if role == "admin"
         ),
         "role_distribution": _counter_rows(role_counts, total_users, role_labels=True),
     }
@@ -653,7 +653,7 @@ def _role_label(role: str) -> str:
     return {
         "basic_user": "Basic user",
         "premium_user": "Premium user",
-        "frontend_admin": "Frontend admin",
+        "admin": "Admin",
     }.get(role, role.replace("_", " ").title())
 
 
