@@ -5,6 +5,7 @@ from backend.services.sentiment_source_service import (
     delete_sentiment_source,
     get_all_sentiment_sources,
     set_sentiment_source_active,
+    update_sentiment_source,
 )
 
 MODULE = "backend.services.sentiment_source_service"
@@ -41,6 +42,18 @@ def test_add_sentiment_source_inserts_row(mock_supa):
         "account": "Reuters",
         "relevance": "Market-wide",
     }
+
+
+@patch(f"{MODULE}.supabase")
+def test_update_sentiment_source_updates_row(mock_supa):
+    update_sentiment_source("abc-123", "RSS", "Bloomberg", "Market-wide")
+
+    mock_supa.table.return_value.update.assert_called_with({
+        "source_type": "RSS",
+        "account": "Bloomberg",
+        "relevance": "Market-wide",
+    })
+    mock_supa.table.return_value.update.return_value.eq.assert_called_with("id", "abc-123")
 
 
 @patch(f"{MODULE}.supabase")

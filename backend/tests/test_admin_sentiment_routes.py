@@ -131,3 +131,32 @@ def test_admin_delete_sentiment_source(mock_delete):
     assert response.status_code == 303
     assert response.headers["location"] == "/admin/sentiment"
     mock_delete.assert_called_once_with("1")
+
+
+@patch("backend.routes.admin_routes.update_sentiment_source")
+def test_admin_edit_sentiment_source_requires_login(mock_update):
+    client.cookies.clear()
+    response = client.post(
+        "/admin/sentiment/1/edit",
+        data={"source_type": "API", "account": "Bloomberg", "relevance": ""},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"
+    mock_update.assert_not_called()
+
+
+@patch("backend.routes.admin_routes.update_sentiment_source")
+def test_admin_edit_sentiment_source_redirects(mock_update):
+    client.cookies.set("session", _session_cookie())
+    response = client.post(
+        "/admin/sentiment/1/edit",
+        data={"source_type": "API", "account": "Bloomberg", "relevance": "Market-wide"},
+        follow_redirects=False,
+    )
+    client.cookies.clear()
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/admin/sentiment"
+    mock_update.assert_called_once_with("1", "API", "Bloomberg", "Market-wide")

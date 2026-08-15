@@ -25,14 +25,15 @@
 </div>
 
 <div class="table-controls">
-    <form action="/admin/search" method="GET" class="search-bar" title="Not yet implemented">
+    <form action="/admin/user_management" method="GET" class="search-bar">
         <span class="search-icon">🔍</span>
-        <input type="text" name="q" placeholder="Search by name, email, or ID... (coming soon)" class="form-control search-input" disabled>
+        <input type="text" name="q" value="{{ search_query }}" placeholder="Search by name, email, or ID..." class="form-control search-input">
+        <input type="hidden" name="filter" value="{{ current_filter }}">
     </form>
     <div class="filter-pills">
-        <a href="/admin/user_management?filter=all" class="pill {% if current_filter == 'all' %}active{% endif %}">All</a>
-        <a href="/admin/user_management?filter=active" class="pill {% if current_filter == 'active' %}active{% endif %}">Active</a>
-        <a href="/admin/user_management?filter=suspended" class="pill {% if current_filter == 'suspended' %}active{% endif %}">Suspended</a>
+        <a href="/admin/user_management?filter=all&q={{ search_query }}" class="pill {% if current_filter == 'all' %}active{% endif %}">All</a>
+        <a href="/admin/user_management?filter=active&q={{ search_query }}" class="pill {% if current_filter == 'active' %}active{% endif %}">Active</a>
+        <a href="/admin/user_management?filter=suspended&q={{ search_query }}" class="pill {% if current_filter == 'suspended' %}active{% endif %}">Suspended</a>
     </div>
 </div>
 
