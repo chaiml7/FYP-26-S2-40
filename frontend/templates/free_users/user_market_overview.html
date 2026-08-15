@@ -9,6 +9,15 @@
 <div class="page-content">
     <h1 class="text-2xl font-bold text-main mb-6">Market Overview</h1>
 
+    <form action="/user/market_overview" method="GET" class="movers-date-filter mb-6">
+        <label for="trade_date" class="form-label">Trading day</label>
+        <input type="date" id="trade_date" name="trade_date" class="form-control" value="{{ selected_date }}" max="{{ today }}">
+        <button type="submit" class="btn btn-primary">View</button>
+    </form>
+    {% if date_error %}
+    <p class="account-message account-message-error" role="alert">{{ date_error }}</p>
+    {% endif %}
+
     <div class="grid-2">
         
         <div class="card movers-card border-t-success">

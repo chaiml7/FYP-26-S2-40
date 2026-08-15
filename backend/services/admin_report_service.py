@@ -3,6 +3,8 @@
 from collections import Counter
 from datetime import date, datetime
 import json
+import os
+import time
 
 from backend.database.supabase_client import supabase
 
@@ -196,7 +198,7 @@ def _build_user_summary(users: list) -> dict:
         "admin_users": sum(
             count
             for role, count in role_counts.items()
-            if role == "frontend_admin"
+            if role == "admin"
         ),
         "role_distribution": _counter_rows(role_counts, total_users, role_labels=True),
     }
@@ -653,7 +655,7 @@ def _role_label(role: str) -> str:
     return {
         "basic_user": "Basic user",
         "premium_user": "Premium user",
-        "frontend_admin": "Frontend admin",
+        "admin": "Admin",
     }.get(role, role.replace("_", " ").title())
 
 
@@ -792,3 +794,114 @@ def _symbol_examples(symbols: list, limit: int = 5) -> str:
         return "-"
     suffix = "" if len(symbols) <= limit else f" +{len(symbols) - limit} more"
     return ", ".join(symbols[:limit]) + suffix
+
+
+def _version_row(row: dict, metric_keys: list) -> dict:
+    metrics = {}
+    for key in metric_keys:
+        metrics = _coerce_metrics(row.get(key))
+        if metrics:
+            break
+
+    return {
+        "version": row.get("model_version") or "N/A",
+        "trained_at": _format_date(row.get("trained_at") or row.get("created_at")),
+        "is_active": bool(row.get("is_active")),
+        "accuracy": _format_metric_percent(metrics.get("accuracy")),
+        "balanced_accuracy": _format_metric_percent(metrics.get("balanced_accuracy")),
+        "macro_f1": _format_metric_percent(metrics.get("macro_f1")),
+        "log_loss": _format_metric_number(metrics.get("log_loss")),
+    }
+
+
+def build_model_accuracy_log(limit: int = 20) -> dict:
+    """A chronological log of trained model versions and their held-out
+    accuracy, so an admin can see whether accuracy is improving or
+    degrading across retrains — distinct from the aggregate report, which
+    only surfaces the single active/latest version."""
+    errors = []
+    technical_models = _fetch_rows(
+        "technical_model_versions", errors, limit=limit, order_by="trained_at"
+    )
+    financial_models = _fetch_rows(
+        "financial_model_versions", errors, limit=limit, order_by="trained_at"
+    )
+
+    return {
+        "technical": [
+            _version_row(row, ["test_metrics", "metrics"]) for row in technical_models
+        ],
+        "financial": [
+            _version_row(row, ["metrics", "test_metrics"]) for row in financial_models
+        ],
+        "errors": errors,
+    }
+
+
+def build_system_health() -> dict:
+    """A minimal system health snapshot: live DB connectivity, per-table
+    data freshness, and whether external integrations are configured."""
+    errors = []
+
+    start = time.monotonic()
+    try:
+        supabase.table("stocks").select("id").limit(1).execute()
+        db_status = "Operational"
+    except Exception as exc:
+        db_status = "Unreachable"
+        errors.append(f"Database connectivity check failed: {exc}")
+    db_latency_ms = round((time.monotonic() - start) * 1000, 1)
+
+    stocks = _fetch_rows("stocks", errors)
+    active_symbols = sorted(
+        {
+            str(stock.get("symbol", "")).upper()
+            for stock in stocks
+            if stock.get("symbol") and _is_active(stock.get("is_active"))
+        }
+    )
+    prices = _fetch_rows("daily_ohlcv", errors, order_by="trade_date")
+    technical_indicators = _fetch_rows(
+        "technical_indicators", errors, order_by="date"
+    )
+    technical_predictions = _fetch_rows(
+        "direction_predictions", errors, order_by="created_at"
+    )
+    sentiment_daily_scores = _fetch_rows(
+        "sentiment_daily_scores", errors, order_by="score_date"
+    )
+    financial_predictions = _fetch_rows(
+        "financial_predictions", errors, order_by="created_at"
+    )
+
+    freshness_summary = _build_data_freshness(
+        active_symbols,
+        prices,
+        technical_indicators,
+        technical_predictions,
+        sentiment_daily_scores,
+        financial_predictions,
+    )
+
+    integrations = [
+        {"name": "FinnHub (sentiment news)", "configured": bool(os.getenv("FINNHUB_API_KEY"))},
+        {"name": "NewsAPI (sentiment news)", "configured": bool(os.getenv("NEWSAPI_KEY"))},
+        {"name": "Financial Modeling Prep (financial data)", "configured": bool(os.getenv("FMP_API_KEY"))},
+        {
+            "name": "SnapTrade (brokerage integration)",
+            "configured": bool(os.getenv("SNAPTRADE_CLIENT_ID") and os.getenv("SNAPTRADE_CONSUMER_KEY")),
+        },
+        {
+            "name": "Gmail SMTP (email notifications)",
+            "configured": bool(os.getenv("GMAIL_SMTP_USER") and os.getenv("GMAIL_SMTP_APP_PASSWORD")),
+        },
+    ]
+
+    return {
+        "checked_at": datetime.now().astimezone().strftime("%Y-%m-%d %H:%M %Z"),
+        "db_status": db_status,
+        "db_latency_ms": db_latency_ms,
+        "freshness_summary": freshness_summary,
+        "integrations": integrations,
+        "errors": errors,
+    }

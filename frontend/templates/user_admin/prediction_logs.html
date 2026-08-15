@@ -1,0 +1,98 @@
+{% extends "user_admin/base.html" %}
+
+{% block title %}Prediction Accuracy Logs - StockLens{% endblock %}
+
+{% block nav_predictionlogs %}active{% endblock %}
+
+{% block content %}
+<header class="admin-report-header">
+    <div>
+        <h1 class="text-2xl font-bold text-main m-0">Prediction Accuracy Logs</h1>
+        <p class="text-muted text-sm m-0">Held-out accuracy for every trained model version, in training order, so you can see whether accuracy is improving or degrading across retrains.</p>
+    </div>
+</header>
+
+<section class="report-section">
+    <div class="section-title-row table-controls">
+        <h2 class="text-main m-0">Technical Model Versions</h2>
+    </div>
+    <div class="table-card report-table-card">
+        <table class="admin-table report-table">
+            <thead>
+                <tr>
+                    <th>Version</th>
+                    <th>Trained</th>
+                    <th>Active</th>
+                    <th>Accuracy</th>
+                    <th>Balanced Accuracy</th>
+                    <th>Macro F1</th>
+                    <th>Log Loss</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in log.technical %}
+                <tr>
+                    <td class="font-bold text-main">{{ row.version }}</td>
+                    <td>{{ row.trained_at }}</td>
+                    <td>
+                        {% if row.is_active %}
+                        <span class="status-active status-text bg-opacity-10 px-2 py-1 rounded-full">Active</span>
+                        {% else %}
+                        <span class="text-muted text-sm">—</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ row.accuracy }}</td>
+                    <td>{{ row.balanced_accuracy }}</td>
+                    <td>{{ row.macro_f1 }}</td>
+                    <td>{{ row.log_loss }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-muted" style="text-align:center; padding: 2rem;">No technical model versions recorded yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="report-section">
+    <div class="section-title-row table-controls">
+        <h2 class="text-main m-0">Financial Model Versions</h2>
+    </div>
+    <div class="table-card report-table-card">
+        <table class="admin-table report-table">
+            <thead>
+                <tr>
+                    <th>Version</th>
+                    <th>Trained</th>
+                    <th>Active</th>
+                    <th>Accuracy</th>
+                    <th>Balanced Accuracy</th>
+                    <th>Macro F1</th>
+                    <th>Log Loss</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in log.financial %}
+                <tr>
+                    <td class="font-bold text-main">{{ row.version }}</td>
+                    <td>{{ row.trained_at }}</td>
+                    <td>
+                        {% if row.is_active %}
+                        <span class="status-active status-text bg-opacity-10 px-2 py-1 rounded-full">Active</span>
+                        {% else %}
+                        <span class="text-muted text-sm">—</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ row.accuracy }}</td>
+                    <td>{{ row.balanced_accuracy }}</td>
+                    <td>{{ row.macro_f1 }}</td>
+                    <td>{{ row.log_loss }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-muted" style="text-align:center; padding: 2rem;">No financial model versions recorded yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

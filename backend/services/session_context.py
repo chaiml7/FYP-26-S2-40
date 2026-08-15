@@ -12,7 +12,7 @@ from fastapi import Request
 BASE_LAYOUT_BY_ROLE = {
     "premium_user": "premium_users/base.html",
     "basic_user": "free_users/base.html",
-    "frontend_admin": "user_admin/base.html",
+    "admin": "user_admin/base.html",
 }
 
 

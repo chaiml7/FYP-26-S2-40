@@ -207,7 +207,7 @@ def _dashboard_price_summaries(
     }
 
 
-def get_top_movers(limit: int = 5) -> dict[str, list]:
+def get_top_movers(limit: int = 5, selected_date: date = None) -> dict[str, list]:
     """Top gainers/losers by day-over-day % change, restricted to the active
     stocks we list — real daily_ohlcv data, no external symbols."""
     stocks = get_active_stocks() or []
@@ -217,7 +217,7 @@ def get_top_movers(limit: int = 5) -> dict[str, list]:
         if stock.get("symbol")
     }
     symbols = list(stocks_by_symbol.keys())
-    summaries = _dashboard_price_summaries(symbols)
+    summaries = _dashboard_price_summaries(symbols, selected_date)
 
     movers = []
     for symbol, summary in summaries.items():

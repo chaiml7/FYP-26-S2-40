@@ -24,6 +24,7 @@ from backend.services.billing_service import (
     create_checkout_session,
     reconcile_user_subscription_role,
 )
+from backend.services.activity_log_service import log_activity
 from backend.services.auth_service import AuthServiceError, create_account
 from backend.services.user_profile_service import get_profile
 from backend.services.dashboard_service import (
@@ -48,9 +49,9 @@ app.include_router(stock_router)
 # admin_router must be registered before user_router: both are mounted here
 # with no prefix, and they both define GET /admin/users/{user_id} (this one
 # session-cookie HTML, user_router's a bearer-token JSON endpoint gated on
-# the separate backend_admin role). Route matching is first-registered-wins,
-# so this order makes the HTML page win on this app. user_router's JSON
-# variant is unaffected on backend.main:app, where it's mounted under /api.
+# the admin role). Route matching is first-registered-wins, so this order
+# makes the HTML page win on this app. user_router's JSON variant is
+# unaffected on backend.main:app, where it's mounted under /api.
 app.include_router(admin_router)
 app.include_router(user_router)
 app.include_router(premium_user_router)
@@ -75,6 +76,10 @@ async def refresh_cached_user_role(request: Request, call_next):
                 and profiles
                 and isinstance(profiles[0], dict)
             ):
+                if profiles[0].get("is_active") is False:
+                    request.session.clear()
+                    return RedirectResponse(url="/login", status_code=303)
+
                 stored_role = str(
                     profiles[0].get("role_id") or "basic_user"
                 ).lower()
@@ -200,7 +205,15 @@ async def process_login(
         
         # Get role using the service layer
         profile_data = get_profile(user_id)
-        
+
+        if profile_data and len(profile_data) > 0 and profile_data[0].get("is_active") is False:
+            _supabase_auth.auth.sign_out()
+            return templates.TemplateResponse(
+                request=request,
+                name="login.html",
+                context={"error": "This account has been suspended. Contact support for assistance."},
+            )
+
         # Safely extract the role, defaulting to basic_user if the profile is empty
         if profile_data and len(profile_data) > 0:
             stored_role = str(
@@ -216,6 +229,8 @@ async def process_login(
         request.session["user_email"] = email
         request.session["user_id"] = str(user_id)
         request.session["user_role"] = user_role
+
+        log_activity(email, "login")
 
         pending_plan = request.session.pop("pending_plan", None)
         if pending_plan == "premium" and user_role == "basic_user":
@@ -243,10 +258,8 @@ async def process_login(
                     status_code=503,
                 )
 
-        if user_role == "user_admin":
+        if user_role == "admin":
             return RedirectResponse(url="/admin/user_management", status_code=303)
-        elif user_role == "backend_admin":
-            return RedirectResponse(url="/backend_admin/stocks", status_code=303)
         else:
             return RedirectResponse(url="/dashboard", status_code=303)
 
@@ -259,6 +272,10 @@ async def process_login(
     
 @app.get("/logout")
 async def logout(request: Request):
+    email = request.session.get("user_email")
+    if email:
+        log_activity(email, "logout")
+
     try:
         # Kill active Auth session
         _supabase_auth.auth.sign_out()

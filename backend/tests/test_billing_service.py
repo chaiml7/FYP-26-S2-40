@@ -215,10 +215,10 @@ def test_active_configured_subscription_grants_premium_during_role_refresh(
 @patch("backend.services.billing_service.get_user_subscription")
 def test_admin_role_is_not_managed_by_subscription(mock_subscription):
     role = billing_service.reconcile_user_subscription_role(
-        "admin-id", "frontend_admin"
+        "admin-id", "admin"
     )
 
-    assert role == "frontend_admin"
+    assert role == "admin"
     mock_subscription.assert_not_called()
 
 

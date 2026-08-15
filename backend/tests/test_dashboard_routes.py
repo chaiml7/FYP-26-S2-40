@@ -16,7 +16,7 @@ from backend.routes.premium_user_routes import (
     ("role", "expected_weight_user_id", "include_indicators"),
     [
         ("free_user", None, False),
-        ("frontend_admin", None, False),
+        ("admin", None, False),
         ("premium_user", "user-123", True),
     ],
 )
@@ -58,7 +58,7 @@ def test_stock_detail_uses_role_appropriate_weightages(
     )
 
 
-@pytest.mark.parametrize("role", ["free_user", "frontend_admin"])
+@pytest.mark.parametrize("role", ["free_user", "admin"])
 def test_personal_model_weightage_page_is_premium_only(role):
     request = MagicMock()
     with patch(

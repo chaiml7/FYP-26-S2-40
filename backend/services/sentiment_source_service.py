@@ -28,6 +28,22 @@ def add_sentiment_source(source_type: str, account: str, relevance: str = None):
     return response.data
 
 
+def update_sentiment_source(source_id: str, source_type: str, account: str, relevance: str = None):
+    response = (
+        supabase
+        .table("sentiment_sources")
+        .update({
+            "source_type": source_type,
+            "account": account,
+            "relevance": relevance,
+        })
+        .eq("id", source_id)
+        .execute()
+    )
+
+    return response.data
+
+
 def set_sentiment_source_active(source_id: str, is_active: bool):
     response = (
         supabase
