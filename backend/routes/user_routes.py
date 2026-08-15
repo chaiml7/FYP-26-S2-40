@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Form, Header, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
@@ -99,9 +101,7 @@ def _account_context(request: Request, session: dict) -> dict:
     plan_by_role = {
         "basic_user": ("Free", "free"),
         "premium_user": ("Premium", "premium"),
-        "frontend_admin": ("Administrator", "admin"),
-        "backend_admin": ("Administrator", "admin"),
-        "user_admin": ("Administrator", "admin"),
+        "admin": ("Administrator", "admin"),
     }
     plan_name, plan_style = plan_by_role.get(role, ("Free", "free"))
     name_parts = [part for part in full_name.split() if part]
@@ -122,12 +122,12 @@ def _account_context(request: Request, session: dict) -> dict:
     }
 
 
-def _require_backend_admin(authorization: str = None):
+def _require_admin(authorization: str = None):
     user, token = _current_user(authorization)
     profile = get_profile(user["id"])
 
-    if len(profile) == 0 or profile[0].get("role_id") != "backend_admin":
-        raise HTTPException(status_code=403, detail="Backend admin access required")
+    if len(profile) == 0 or profile[0].get("role_id") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
 
     return user, token, profile[0]
 
@@ -335,7 +335,7 @@ def remove_current_user_watchlist_stock(
 
 @router.get("/admin/users")
 def view_admin_users(authorization: str = Header(default=None)):
-    _require_backend_admin(authorization)
+    _require_admin(authorization)
 
     try:
         auth_result = admin_list_users()
@@ -353,7 +353,7 @@ def view_admin_users(authorization: str = Header(default=None)):
 
 @router.get("/admin/users/{user_id}")
 def view_admin_user(user_id: str, authorization: str = Header(default=None)):
-    _require_backend_admin(authorization)
+    _require_admin(authorization)
 
     try:
         auth_user = admin_get_user(user_id)
@@ -373,7 +373,7 @@ def edit_admin_user_role(
     role_data: UserRoleUpdate,
     authorization: str = Header(default=None),
 ):
-    _require_backend_admin(authorization)
+    _require_admin(authorization)
     updated = update_user_role(user_id, role_data.role_id)
 
     if len(updated) == 0:
@@ -388,7 +388,7 @@ def edit_admin_user_status(
     status_data: UserStatusUpdate,
     authorization: str = Header(default=None),
 ):
-    _require_backend_admin(authorization)
+    _require_admin(authorization)
     updated = update_user_status(user_id, status_data.is_active)
 
     if len(updated) == 0:
@@ -469,6 +469,56 @@ async def account_settings(request: Request):
         request=request,
         name="account/settings.html",
         context=_account_context(request, session),
+    )
+
+
+@router.get("/user/account/profile")
+async def edit_account_profile(request: Request):
+    session = get_session_context(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=303)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="account/edit_profile.html",
+        context=_account_context(request, session),
+    )
+
+
+@router.post("/user/account/profile")
+async def update_account_profile(
+    request: Request,
+    full_name: str = Form(...),
+):
+    session = get_session_context(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=303)
+
+    profile_error = None
+    profile_status = None
+
+    trimmed_name = full_name.strip()
+    if not trimmed_name:
+        profile_error = "Full name cannot be empty."
+    else:
+        try:
+            update_profile(session["user_id"], {"full_name": trimmed_name})
+            profile_status = "updated"
+        except Exception:
+            profile_error = "Profile could not be updated. Please try again."
+
+    context = _account_context(request, session)
+    if profile_status == "updated":
+        context["account"]["full_name"] = trimmed_name
+
+    return templates.TemplateResponse(
+        request=request,
+        name="account/edit_profile.html",
+        context={
+            **context,
+            "profile_status": profile_status,
+            "profile_error": profile_error,
+        },
     )
 
 
@@ -568,13 +618,21 @@ async def delete_account(
 
 
 @router.get("/user/market_overview")
-async def market_overview(request: Request):
+async def market_overview(request: Request, trade_date: str = None):
     session = get_session_context(request)
     if not session:
         return RedirectResponse(url="/login", status_code=303)
 
+    selected_date = None
+    date_error = None
+    if trade_date:
+        try:
+            selected_date = date.fromisoformat(trade_date)
+        except ValueError:
+            date_error = "Invalid date. Please pick a valid date."
+
     try:
-        movers = get_top_movers()
+        movers = get_top_movers(selected_date=selected_date)
     except Exception:
         movers = {"gainers": [], "losers": []}
 
@@ -586,6 +644,9 @@ async def market_overview(request: Request):
             "request": request,
             "gainers": movers["gainers"],
             "losers": movers["losers"],
+            "selected_date": trade_date or date.today().isoformat(),
+            "today": date.today().isoformat(),
+            "date_error": date_error,
         }
     )
 

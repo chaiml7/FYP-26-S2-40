@@ -87,7 +87,7 @@ def test_account_overview_uses_current_premium_membership(_mock_profile):
 }])
 def test_account_overview_uses_administrator_membership(_mock_profile):
     response = _get_as(
-        "/user/account", role="frontend_admin", email="admin@example.com"
+        "/user/account", role="admin", email="admin@example.com"
     )
 
     assert response.status_code == 200

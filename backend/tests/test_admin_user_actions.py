@@ -10,7 +10,7 @@ from frontend.main import app
 client = TestClient(app)
 
 
-def _session_cookie(role="frontend_admin", email="admin@example.com", user_id="admin-id"):
+def _session_cookie(role="admin", email="admin@example.com", user_id="admin-id"):
     signer = TimestampSigner("my-super-secret-key")
     data = {"user_role": role, "user_email": email, "user_id": user_id}
     payload = base64.b64encode(json.dumps(data).encode("utf-8"))

@@ -48,9 +48,9 @@ app.include_router(stock_router)
 # admin_router must be registered before user_router: both are mounted here
 # with no prefix, and they both define GET /admin/users/{user_id} (this one
 # session-cookie HTML, user_router's a bearer-token JSON endpoint gated on
-# the separate backend_admin role). Route matching is first-registered-wins,
-# so this order makes the HTML page win on this app. user_router's JSON
-# variant is unaffected on backend.main:app, where it's mounted under /api.
+# the admin role). Route matching is first-registered-wins, so this order
+# makes the HTML page win on this app. user_router's JSON variant is
+# unaffected on backend.main:app, where it's mounted under /api.
 app.include_router(admin_router)
 app.include_router(user_router)
 app.include_router(premium_user_router)
@@ -243,10 +243,8 @@ async def process_login(
                     status_code=503,
                 )
 
-        if user_role == "user_admin":
+        if user_role == "admin":
             return RedirectResponse(url="/admin/user_management", status_code=303)
-        elif user_role == "backend_admin":
-            return RedirectResponse(url="/backend_admin/stocks", status_code=303)
         else:
             return RedirectResponse(url="/dashboard", status_code=303)
 
