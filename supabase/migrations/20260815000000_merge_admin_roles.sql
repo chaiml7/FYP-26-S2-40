@@ -5,15 +5,8 @@
 
 -- 1. Make sure an "admin" row exists in roles, seeded from frontend_admin's
 --    row when available (falls back to a sensible default otherwise).
-insert into roles (id, name, tag, desc)
-select 'admin', 'Admin', coalesce(tag, 'badge-purple'),
-       'Full administrative access across user management, stock database, sentiment sources, weightages, and reports.'
-from roles
-where id = 'frontend_admin'
-on conflict (id) do nothing;
-
-insert into roles (id, name, tag, desc)
-values ('admin', 'Admin', 'badge-purple',
+insert into roles (id, name, description)
+values ('admin', 'Admin',
         'Full administrative access across user management, stock database, sentiment sources, weightages, and reports.')
 on conflict (id) do nothing;
 
