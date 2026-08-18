@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ symbol }} Preview - StockLens</title>
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260815-reviews-section">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="brand" style="text-decoration: none; color: inherit;">
+                <span class="logo-icon">📈</span>
+                <span class="brand-name">StockLens</span>
+            </a>
+            <div class="nav-actions">
+                <a href="/login" class="btn btn-outline">Log In</a>
+                <a href="/signup" class="btn btn-primary">Sign Up</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <section class="hero" style="padding-top: 2rem;">
+            <a href="/" class="text-muted text-sm">&larr; Back to StockLens</a>
+
+            {% if limit_reached %}
+            <h1 class="hero-title" style="font-size: 2rem; margin-top: 1rem;">Daily preview limit reached</h1>
+            <p class="hero-subtitle">You have reached your daily preview limit. Sign up for a free account to continue.</p>
+            <div class="hero-buttons">
+                <a href="/signup" class="btn btn-primary btn-large">Sign up for free &rarr;</a>
+            </div>
+
+            {% elif preview_error %}
+            <h1 class="hero-title" style="font-size: 2rem; margin-top: 1rem;">{{ preview_error }}</h1>
+            <p class="hero-subtitle">{{ guest_previews_remaining }} of {{ guest_preview_limit }} free previews left today.</p>
+            <form action="/guest/preview" method="get" style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                <input type="text" name="symbol" placeholder="Try a ticker, e.g. AAPL" class="form-input" style="max-width: 220px;" required>
+                <button type="submit" class="btn btn-outline">Preview prediction &rarr;</button>
+            </form>
+
+            {% else %}
+            <h1 class="hero-title" style="font-size: 2rem; margin-top: 1rem;">{{ preview.symbol }} &mdash; {{ preview.company_name }}</h1>
+
+            {% if preview.overall_score is not none %}
+            <div class="score-ring score-{{ preview.tone }}" style="font-size: 2rem; width: 5rem; height: 5rem; margin: 1.5rem 0;">{{ preview.overall_score }}</div>
+            <span class="analysis-label analysis-{{ preview.tone }}">{{ preview.tone|capitalize }}</span>
+            {% else %}
+            <p class="hero-subtitle">No prediction data is available for {{ preview.symbol }} yet.</p>
+            {% endif %}
+
+            <p class="hero-subtitle" style="margin-top: 1rem;">{{ guest_previews_remaining }} of {{ guest_preview_limit }} free previews left today.</p>
+
+            <div class="hero-buttons">
+                <a href="/signup" class="btn btn-primary btn-large">Sign up for unlimited previews &rarr;</a>
+            </div>
+            {% endif %}
+        </section>
+    </main>
+
+    {% include "/includes/legal_footer.html" %}
+</body>
+</html>
