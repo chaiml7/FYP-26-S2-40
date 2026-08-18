@@ -2,9 +2,9 @@
 
 Source review: `docs/Test Case_FYP-26-S2-40.docx` cross-checked against actual
 routes/services and against `docs/PRD.md` use cases, while building out the
-11 items from the "not built / built differently" audit. These 3 test cases
+11 items from the "not built / built differently" audit. These 4 test cases
 were found to describe behavior that doesn't match — and, for good reason,
-shouldn't be made to match — what the system actually does. All 3 were
+shouldn't be made to match — what the system actually does. All 4 were
 previously marked "P" (Pass) in the doc despite the mismatch.
 
 Live doc (`docs/Test Case_FYP-26-S2-40.docx`) needs manual updates — this
@@ -75,6 +75,31 @@ metrics log. No code anywhere evaluates individual predictions against
 realized closing prices to compute directional hit rate or mean error, and
 no PRD use case requires it. Building that would be a real new feature
 (a prediction-vs-actual evaluation engine), not a wording fix.
+
+---
+
+## TC-107: System health reflects a degraded component
+
+**Objective:** System health shows a component as Degraded whenever its
+underlying data is missing or stale, alongside Healthy components
+
+**Classification:** Functional
+
+**Pre-requisites:** An admin is logged in and the System Health page is
+available.
+
+| Step | Action | Expected Result |
+|---|---|---|
+| 1 | Open the System Health page from the admin dashboard and review the four components — API, Database, Data Ingestion Pipeline, Prediction Service. | Each component shows a status of Healthy or Degraded along with the timestamp of its last successful run, with Degraded triggered whenever a component's underlying data is missing or stale. |
+
+**Change from original:** dropped "stop the data ingestion job" as a
+precondition — there's no UI/API action that does this (it's a server-side
+`APScheduler` job with no admin toggle). Reworded so the test verifies the
+actual degraded-detection logic by inspecting whatever the component list
+shows, rather than requiring someone to artificially break the backend.
+Verified at the code level (unit tests on `_component_from_freshness` for
+both the Healthy and Degraded paths) but not yet re-run as a live
+click-through — needs a real browser pass before re-signing.
 
 ---
 
