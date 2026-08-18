@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Form, HTTPException
+from fastapi import APIRouter, Request, Form, HTTPException, Response
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 from backend.database.supabase_client import supabase
@@ -6,6 +6,8 @@ from backend.services.admin_report_service import (
     build_admin_report,
     build_model_accuracy_log,
     build_system_health,
+    render_report_csv,
+    render_report_pdf,
 )
 from backend.services.session_context import get_session_context
 from backend.services.stock_list_service import get_all_stocks
@@ -91,18 +93,34 @@ async def user_management_page(request: Request, filter: str = "all", q: str = "
     )
 
 @router.get("/admin/activity_log")
-async def admin_activity_log_page(request: Request):
+async def admin_activity_log_page(
+    request: Request,
+    user: str = "",
+    date_from: str = "",
+    date_to: str = "",
+):
     role = request.session.get("user_role")
     if not role or role != "admin":
         return RedirectResponse(url="/login", status_code=303)
     session = get_session_context(request)
 
-    entries = get_activity_log()
+    entries = get_activity_log(
+        email=user.strip() or None,
+        date_from=date_from.strip() or None,
+        date_to=date_to.strip() or None,
+    )
 
     return templates.TemplateResponse(
         request=request,
         name="user_admin/activity_log.html",
-        context={**session, "request": request, "entries": entries}
+        context={
+            **session,
+            "request": request,
+            "entries": entries,
+            "filter_user": user,
+            "filter_date_from": date_from,
+            "filter_date_to": date_to,
+        }
     )
 
 
@@ -324,6 +342,9 @@ async def save_admin_weightages(
     if not role or role != "admin":
         return RedirectResponse(url="/login", status_code=303)
 
+    if not all(0 <= value <= 100 for value in (technical, sentiment, financial)):
+        return RedirectResponse(url="/admin/weightages", status_code=303)
+
     if technical + sentiment + financial != 100:
         return RedirectResponse(url="/admin/weightages", status_code=303)
 
@@ -443,12 +464,20 @@ async def admin_reports_page(request: Request):
     )
 
 @router.post("/admin/reports/generate")
-async def generate_admin_report_page(request: Request):
+async def generate_admin_report_page(
+    request: Request,
+    date_from: str = Form(""),
+    date_to: str = Form(""),
+):
     session = _admin_report_session(request)
     if not session:
         return RedirectResponse(url="/login", status_code=303)
 
-    report = build_admin_report(session.get("user_email", ""))
+    report = build_admin_report(
+        session.get("user_email", ""),
+        date_from=date_from.strip() or None,
+        date_to=date_to.strip() or None,
+    )
 
     return templates.TemplateResponse(
         request=request,
@@ -460,18 +489,86 @@ async def generate_admin_report_page(request: Request):
         },
     )
 
-@router.get("/admin/prediction_logs")
-async def admin_prediction_logs_page(request: Request):
+
+@router.get("/admin/reports/export.csv")
+async def export_admin_report_csv(
+    request: Request,
+    date_from: str = "",
+    date_to: str = "",
+):
     session = _admin_report_session(request)
     if not session:
         return RedirectResponse(url="/login", status_code=303)
 
-    log = build_model_accuracy_log()
+    report = build_admin_report(
+        session.get("user_email", ""),
+        date_from=date_from.strip() or None,
+        date_to=date_to.strip() or None,
+    )
+    csv_bytes = render_report_csv(report)
+
+    return Response(
+        content=csv_bytes,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": 'attachment; filename="stocklens_admin_report.csv"'
+        },
+    )
+
+
+@router.get("/admin/reports/export.pdf")
+async def export_admin_report_pdf(
+    request: Request,
+    date_from: str = "",
+    date_to: str = "",
+):
+    session = _admin_report_session(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=303)
+
+    report = build_admin_report(
+        session.get("user_email", ""),
+        date_from=date_from.strip() or None,
+        date_to=date_to.strip() or None,
+    )
+    pdf_bytes = render_report_pdf(report)
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": 'attachment; filename="stocklens_admin_report.pdf"'
+        },
+    )
+
+@router.get("/admin/prediction_logs")
+async def admin_prediction_logs_page(
+    request: Request,
+    model_version: str = "",
+    date_from: str = "",
+    date_to: str = "",
+):
+    session = _admin_report_session(request)
+    if not session:
+        return RedirectResponse(url="/login", status_code=303)
+
+    log = build_model_accuracy_log(
+        model_version=model_version.strip() or None,
+        date_from=date_from.strip() or None,
+        date_to=date_to.strip() or None,
+    )
 
     return templates.TemplateResponse(
         request=request,
         name="user_admin/prediction_logs.html",
-        context={**session, "request": request, "log": log}
+        context={
+            **session,
+            "request": request,
+            "log": log,
+            "filter_model_version": model_version,
+            "filter_date_from": date_from,
+            "filter_date_to": date_to,
+        }
     )
 
 

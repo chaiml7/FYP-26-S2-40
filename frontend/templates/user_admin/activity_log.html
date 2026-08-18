@@ -10,6 +10,16 @@
     <h1 class="text-2xl font-bold text-main m-0">Activity Log</h1>
 </header>
 
+<form method="get" action="/admin/activity_log" class="table-controls" style="gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
+    <input type="text" name="user" placeholder="Filter by user email" value="{{ filter_user or '' }}" class="form-input" style="max-width: 240px;">
+    <input type="date" name="date_from" value="{{ filter_date_from or '' }}" class="form-input">
+    <input type="date" name="date_to" value="{{ filter_date_to or '' }}" class="form-input">
+    <button type="submit" class="btn btn-primary">Apply</button>
+    {% if filter_user or filter_date_from or filter_date_to %}
+    <a href="/admin/activity_log" class="btn btn-secondary">Clear</a>
+    {% endif %}
+</form>
+
 <div class="table-card" style="border: 1px solid var(--border-color); border-radius: 8px;">
     <table class="admin-table">
         <thead>

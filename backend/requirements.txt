@@ -13,3 +13,4 @@ python-multipart
 gnews
 snaptrade-python-sdk==12.0.4
 stripe==15.3.1
+fpdf2

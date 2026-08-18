@@ -32,6 +32,38 @@
     </div>
 </div>
 
+<section class="report-section">
+    <div class="section-title-row table-controls">
+        <h2 class="text-main m-0">Component Status</h2>
+    </div>
+    <div class="table-card report-table-card">
+        <table class="admin-table report-table">
+            <thead>
+                <tr>
+                    <th>Component</th>
+                    <th>Status</th>
+                    <th>Last Successful Run</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for component in health.components %}
+                <tr>
+                    <td>{{ component.name }}</td>
+                    <td>
+                        {% if component.status == 'Healthy' %}
+                        <span class="status-active status-text bg-opacity-10 px-2 py-1 rounded-full">Healthy</span>
+                        {% else %}
+                        <span class="status-suspended status-text bg-opacity-10 px-2 py-1 rounded-full">Degraded</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ component.last_successful_run }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
 {% if health.errors %}
 <section class="report-section">
     <div class="section-title-row table-controls">

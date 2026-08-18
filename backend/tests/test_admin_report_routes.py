@@ -127,4 +127,60 @@ def test_generate_admin_report_renders_model_cards_without_na(mock_report):
     assert "Financial Model" not in response.text
     assert "Prediction Summary" not in response.text
     assert "Data Health" in response.text
-    mock_report.assert_called_once_with("admin@example.com")
+    mock_report.assert_called_once_with("admin@example.com", date_from=None, date_to=None)
+
+
+def test_generate_admin_report_passes_date_range():
+    with patch(
+        "backend.routes.admin_routes.build_admin_report", return_value=MOCK_REPORT
+    ) as mock_report:
+        client.cookies.set("session", _session_cookie(role="admin"))
+        response = client.post(
+            "/admin/reports/generate",
+            data={"date_from": "2026-08-01", "date_to": "2026-08-15"},
+        )
+        client.cookies.clear()
+
+        assert response.status_code == 200
+        mock_report.assert_called_once_with(
+            "admin@example.com", date_from="2026-08-01", date_to="2026-08-15"
+        )
+
+
+def test_export_admin_report_csv_requires_login():
+    client.cookies.clear()
+    response = client.get("/admin/reports/export.csv", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"
+
+
+@patch("backend.routes.admin_routes.build_admin_report", return_value=MOCK_REPORT)
+def test_export_admin_report_csv_returns_csv(mock_report):
+    client.cookies.set("session", _session_cookie(role="admin"))
+    response = client.get("/admin/reports/export.csv")
+    client.cookies.clear()
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert "attachment" in response.headers["content-disposition"]
+    assert "Total Users" in response.text
+
+
+def test_export_admin_report_pdf_requires_login():
+    client.cookies.clear()
+    response = client.get("/admin/reports/export.pdf", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"
+
+
+@patch("backend.routes.admin_routes.build_admin_report", return_value=MOCK_REPORT)
+def test_export_admin_report_pdf_returns_pdf(mock_report):
+    client.cookies.set("session", _session_cookie(role="admin"))
+    response = client.get("/admin/reports/export.pdf")
+    client.cookies.clear()
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/pdf"
+    assert response.content[:4] == b"%PDF"
