@@ -41,8 +41,8 @@
                 <!-- <a href="/dashboard-demo" class="btn btn-outline btn-large">View Demo Dashboard</a> -->
             </div>
 
-            <form action="/guest/preview" method="get" class="guest-preview-box" style="margin-top: 2rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-                <input type="text" name="symbol" placeholder="Try a ticker, e.g. AAPL" class="form-input" style="max-width: 220px;" required>
+            <form action="/guest/preview" method="get" class="guest-preview-box">
+                <input type="text" name="symbol" placeholder="Try a ticker, e.g. AAPL" class="form-control" required>
                 <button type="submit" class="btn btn-outline">Preview prediction &rarr;</button>
                 <span class="text-muted text-sm">No account needed &mdash; {{ guest_previews_remaining if guest_previews_remaining is not none else guest_preview_limit }} of {{ guest_preview_limit }} free previews left today.</span>
             </form>
