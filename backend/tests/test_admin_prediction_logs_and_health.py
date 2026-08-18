@@ -59,6 +59,12 @@ def test_admin_system_health_requires_login():
         "checked_at": "2026-08-15 10:00 +08",
         "db_status": "Operational",
         "db_latency_ms": 42.0,
+        "components": [
+            {"name": "API", "status": "Healthy", "last_successful_run": "2026-08-15 10:00 +08"},
+            {"name": "Database", "status": "Healthy", "last_successful_run": "2026-08-15 10:00 +08"},
+            {"name": "Data Ingestion Pipeline", "status": "Degraded", "last_successful_run": "2026-08-10"},
+            {"name": "Prediction Service", "status": "Healthy", "last_successful_run": "2026-08-15"},
+        ],
         "freshness_summary": {"stale_after_days": 7, "rows": []},
         "integrations": [{"name": "FinnHub (sentiment news)", "configured": True}],
         "errors": [],
@@ -72,3 +78,6 @@ def test_admin_system_health_renders(mock_build_health):
     assert response.status_code == 200
     assert "Operational" in response.text
     assert "FinnHub" in response.text
+    assert "Data Ingestion Pipeline" in response.text
+    assert "Degraded" in response.text
+    assert "2026-08-10" in response.text
