@@ -1,7 +1,12 @@
 from datetime import date
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from backend.services.auth_service import (
+    PASSWORD_COMPLEXITY_MESSAGE,
+    password_meets_complexity,
+)
 
 
 class StockCreate(BaseModel):
@@ -41,6 +46,13 @@ class AccountCreate(BaseModel):
     password: str = Field(..., min_length=8)
     full_name: Optional[str] = None
 
+    @field_validator("password")
+    @classmethod
+    def _validate_password(cls, value: str) -> str:
+        if not password_meets_complexity(value):
+            raise ValueError(PASSWORD_COMPLEXITY_MESSAGE)
+        return value
+
 
 class LoginRequest(BaseModel):
     email: str = Field(..., pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -53,6 +65,13 @@ class ProfileUpdate(BaseModel):
 
 class PasswordUpdate(BaseModel):
     new_password: str = Field(..., min_length=8)
+
+    @field_validator("new_password")
+    @classmethod
+    def _validate_new_password(cls, value: str) -> str:
+        if not password_meets_complexity(value):
+            raise ValueError(PASSWORD_COMPLEXITY_MESSAGE)
+        return value
 
 
 class EmailUpdate(BaseModel):
