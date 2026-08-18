@@ -1,4 +1,5 @@
 import os
+import re
 
 import requests
 from dotenv import load_dotenv
@@ -9,11 +10,27 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY")
 
+PASSWORD_COMPLEXITY_MESSAGE = (
+    "Password must be at least 8 characters and contain an uppercase "
+    "letter, a number and a special character."
+)
+_SPECIAL_CHAR_RE = re.compile(r"[^A-Za-z0-9]")
+
 
 class AuthServiceError(Exception):
     def __init__(self, status_code: int, detail: str):
         self.status_code = status_code
         self.detail = detail
+
+
+def password_meets_complexity(password: str) -> bool:
+    return bool(
+        password
+        and len(password) >= 8
+        and any(c.isupper() for c in password)
+        and any(c.isdigit() for c in password)
+        and _SPECIAL_CHAR_RE.search(password)
+    )
 
 
 def _require_config():

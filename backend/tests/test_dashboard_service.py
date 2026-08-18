@@ -12,8 +12,11 @@ from backend.services.dashboard_service import (
     _weighted_overall_score,
     get_dashboard_stocks,
     get_model_weights,
+    get_public_stock_preview,
     get_stock_dashboard,
 )
+
+MODULE = "backend.services.dashboard_service"
 
 
 def test_public_market_score_uses_product_weights():
@@ -53,6 +56,32 @@ def test_model_weights_prefer_premium_user_record(mock_supabase):
         "financial": 15,
     }
     mock_supabase.table.assert_called_once_with("weightages")
+
+
+@patch(f"{MODULE}._financial_prediction", return_value={"fundamental_score": 4})
+@patch(f"{MODULE}._sentiment_prediction", return_value={"bullish_score": 6})
+@patch(f"{MODULE}._technical_prediction", return_value={"technical_score": 8})
+@patch(f"{MODULE}.get_stock_by_symbol", return_value=[{"symbol": "AAPL", "company_name": "Apple Inc."}])
+def test_get_public_stock_preview_returns_composite_score_and_tone(
+    _mock_stock, _mock_technical, _mock_sentiment, _mock_financial
+):
+    result = get_public_stock_preview("aapl")
+
+    assert result == {
+        "symbol": "AAPL",
+        "company_name": "Apple Inc.",
+        "overall_score": 6.6,
+        "tone": "bullish",
+    }
+
+
+@patch(f"{MODULE}.get_stock_by_symbol", return_value=[])
+def test_get_public_stock_preview_returns_none_for_unknown_symbol(_mock_stock):
+    assert get_public_stock_preview("ZZZZ") is None
+
+
+def test_get_public_stock_preview_returns_none_for_blank_symbol():
+    assert get_public_stock_preview("") is None
 
 
 def test_public_market_volume_is_compact():

@@ -516,6 +516,34 @@ def get_public_market_leaders(limit: int = 5) -> list:
     return leaders
 
 
+def get_public_stock_preview(symbol: str) -> dict | None:
+    """A single-symbol composite-score preview for unauthenticated guest
+    access — same scoring as the public market leaders, for one ticker."""
+    symbol = (symbol or "").strip().upper()
+    if not symbol:
+        return None
+
+    stocks = get_stock_by_symbol(symbol) or []
+    stock = next((s for s in stocks if s.get("symbol")), None)
+    if stock is None:
+        return None
+
+    technical = _technical_prediction(symbol)
+    sentiment = _sentiment_prediction(symbol)
+    financial = _financial_prediction(symbol)
+    technical_score = technical.get("technical_score") if technical else None
+    sentiment_score = sentiment.get("bullish_score") if sentiment else None
+    financial_score = financial.get("fundamental_score") if financial else None
+    overall_score = _combined_score(technical_score, sentiment_score, financial_score)
+
+    return {
+        "symbol": symbol,
+        "company_name": stock.get("company_name") or symbol,
+        "overall_score": overall_score,
+        "tone": _score_tone(overall_score),
+    }
+
+
 def _model_performance_row(
     name: str,
     version: str | None,

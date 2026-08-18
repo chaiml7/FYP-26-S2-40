@@ -12,6 +12,16 @@
     </div>
 </header>
 
+<form method="get" action="/admin/prediction_logs" class="table-controls" style="gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
+    <input type="text" name="model_version" placeholder="Filter by model version" value="{{ filter_model_version or '' }}" class="form-input" style="max-width: 240px;">
+    <input type="date" name="date_from" value="{{ filter_date_from or '' }}" class="form-input">
+    <input type="date" name="date_to" value="{{ filter_date_to or '' }}" class="form-input">
+    <button type="submit" class="btn btn-primary">Apply</button>
+    {% if filter_model_version or filter_date_from or filter_date_to %}
+    <a href="/admin/prediction_logs" class="btn btn-secondary">Clear</a>
+    {% endif %}
+</form>
+
 <section class="report-section">
     <div class="section-title-row table-controls">
         <h2 class="text-main m-0">Technical Model Versions</h2>
