@@ -25,11 +25,23 @@ from backend.services.billing_service import (
     reconcile_user_subscription_role,
 )
 from backend.services.activity_log_service import log_activity
-from backend.services.auth_service import AuthServiceError, create_account
+from backend.services.auth_service import (
+    PASSWORD_COMPLEXITY_MESSAGE,
+    AuthServiceError,
+    create_account,
+    password_meets_complexity,
+)
 from backend.services.user_profile_service import get_profile
 from backend.services.dashboard_service import (
     get_public_market_leaders,
     get_public_model_metrics,
+    get_public_stock_preview,
+)
+from backend.services.guest_preview_service import (
+    GUEST_PREVIEW_LIMIT,
+    guest_previews_exhausted,
+    record_guest_preview,
+    remaining_guest_previews,
 )
 
 # Load the keys from .env file into Python's memory
@@ -141,7 +153,50 @@ async def home(request: Request):
             "market_leaders": market_leaders,
             "featured_analysis": featured_analysis,
             "model_metrics": model_metrics,
+            "guest_preview_limit": GUEST_PREVIEW_LIMIT,
+            "guest_previews_remaining": remaining_guest_previews(request),
         },
+    )
+
+
+# ==========================================
+# Guest Stock Preview (unregistered visitors, 3/day)
+# ==========================================
+@app.get("/guest/preview")
+async def guest_stock_preview(request: Request, symbol: str = ""):
+    symbol = symbol.strip().upper()
+    context = {
+        "request": request,
+        "symbol": symbol,
+        "guest_preview_limit": GUEST_PREVIEW_LIMIT,
+    }
+
+    if not symbol:
+        context["preview_error"] = "Enter a ticker symbol to preview."
+        context["guest_previews_remaining"] = remaining_guest_previews(request)
+        return templates.TemplateResponse(
+            request=request, name="guest_preview.html", context=context
+        )
+
+    if guest_previews_exhausted(request):
+        context["limit_reached"] = True
+        context["guest_previews_remaining"] = 0
+        return templates.TemplateResponse(
+            request=request, name="guest_preview.html", context=context
+        )
+
+    preview = get_public_stock_preview(symbol)
+    if preview is None:
+        context["preview_error"] = f'No data available for "{symbol}".'
+        context["guest_previews_remaining"] = remaining_guest_previews(request)
+        return templates.TemplateResponse(
+            request=request, name="guest_preview.html", context=context
+        )
+
+    context["preview"] = preview
+    context["guest_previews_remaining"] = record_guest_preview(request)
+    return templates.TemplateResponse(
+        request=request, name="guest_preview.html", context=context
     )
 
 
@@ -316,6 +371,16 @@ async def process_signup(
             name="signup.html",
             context={
                 "error": "You must accept the Terms of Service and Privacy Policy to create an account.",
+                "selected_plan": selected_plan,
+            },
+            status_code=400,
+        )
+    if not password_meets_complexity(password):
+        return templates.TemplateResponse(
+            request=request,
+            name="signup.html",
+            context={
+                "error": PASSWORD_COMPLEXITY_MESSAGE,
                 "selected_plan": selected_plan,
             },
             status_code=400,
