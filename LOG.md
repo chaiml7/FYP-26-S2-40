@@ -1095,6 +1095,72 @@ Merged `origin/main` (`3c23ccc..667aa2f`) into `bali`. Single new commit: `667aa
 
 ---
 
+### 2026-08-18 — Bali — Closed 7 of the 11 gap-audit items, corrected 3 test cases
+
+Went through the original 11-item "not built / built differently" list from
+`docs/Test Case_FYP-26-S2-40.docx`, but first cross-checked every claimed
+gap against the actual test-case wording and `docs/PRD.md` use cases before
+building anything — several claims turned out to be wrong or overstated.
+
+**Verified already fine (no gap):** admin activity logs (base view),
+edit sentiment source (endpoint existed), system health (endpoint existed),
+prediction accuracy logs (endpoint existed), top gainers/losers date param
+(already worked). Suspend-user token revocation was in the original list but
+isn't asserted by TC-085/086 — no change needed.
+
+**Built this session:**
+- Password complexity (uppercase + digit + special char, min 8) — added to
+  `AccountCreate`/`PasswordUpdate` schemas, the HTML signup form (previously
+  had zero validation), and the HTML change-password flow.
+- Per-field weightage bounds (0–100 each, in addition to the existing
+  sum=100 check).
+- Admin activity log filter by user + date range (`/admin/activity_log`).
+- Admin prediction-accuracy-log filter by model version + date range
+  (`/admin/prediction_logs`).
+- System health reworked into 4 named components (API, Database, Data
+  Ingestion Pipeline, Prediction Service) each with Healthy/Degraded status
+  and last-successful-run time, derived from the existing data-freshness
+  checks.
+- Admin report date-range filter + CSV export (stdlib `csv`) + PDF export
+  (added `fpdf2` to `backend/requirements.txt` — pure-Python, no system
+  deps, safe on Windows).
+- Update Profile: no new fields added (TC-064/070 only ever tested
+  `full_name`, and neither the PRD nor the test suite backs more), but fixed
+  the empty-name error string to match TC-064 exactly.
+- Guest stock preview (3/day) — new public `/guest/preview?symbol=` route,
+  no login required. Composite score + tone reuse the same scoring already
+  behind the public landing-page leaderboard. Daily counter lives in the
+  existing signed session cookie (`request.session`), no new table needed —
+  resets automatically on a new calendar day.
+
+**Explicitly not built (scope calls, not oversights):**
+- Sentiment source edit was NOT reworked into "display name + feed URL" or
+  wired into the live pipeline — no PRD use case backs an edit flow at all,
+  and PRD/test-case/code all disagree on field names. Corrected the test
+  case instead (see `docs/test-case-corrections.md`).
+- Prediction accuracy logs were NOT rebuilt into a per-prediction
+  hit-rate/mean-error evaluation log — no PRD backing, and building a real
+  predictions-vs-actuals evaluation engine this close to the 22 Aug
+  presentation was judged too risky. Corrected the test case instead.
+- Activity log source-IP capture — TC-088 claimed an IP column that never
+  existed; corrected the test case instead of adding IP tracking.
+
+Full reworded text for TC-088, TC-101, TC-104 is in
+`docs/test-case-corrections.md` (source content for you to copy into the
+live `.docx` — that file itself wasn't touched). TC-108/109/110 (Generate
+Report test cases) haven't been cross-checked against the new date-range/
+export behavior yet — flagged as still open.
+
+**Tests:** 236 passing (up from 208 at session start), covering every new
+piece of behavior above.
+
+**PR:** `bali` was already flush with `origin/main` (`667aa2f`) at session
+start, so this time `feature/bali-11-item-audit` branches directly off
+`bali` itself rather than needing a cherry-pick — no docs/LOG/CLAUDE.md
+commits are in it, only code.
+
+---
+
 ## Issues / Bugs Tracker
 
 | Date | Issue | Status | Resolution |
