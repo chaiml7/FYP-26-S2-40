@@ -18,6 +18,7 @@ from backend.schemas import (
 from backend.services.account_deletion_service import delete_user_account
 from backend.services.activity_log_service import log_activity
 from backend.services.auth_service import (
+    PASSWORD_COMPLEXITY_MESSAGE,
     AuthServiceError,
     admin_get_user,
     admin_list_users,
@@ -26,6 +27,7 @@ from backend.services.auth_service import (
     get_auth_user,
     login,
     logout,
+    password_meets_complexity,
     update_email,
     update_password,
 )
@@ -500,7 +502,7 @@ async def update_account_profile(
 
     trimmed_name = full_name.strip()
     if not trimmed_name:
-        profile_error = "Full name cannot be empty."
+        profile_error = "Full name is required."
     else:
         try:
             update_profile(session["user_id"], {"full_name": trimmed_name})
@@ -548,8 +550,8 @@ async def update_account_password(
         return RedirectResponse(url="/login", status_code=303)
 
     password_error = None
-    if len(new_password) < 8:
-        password_error = "New password must be at least 8 characters."
+    if not password_meets_complexity(new_password):
+        password_error = PASSWORD_COMPLEXITY_MESSAGE
     elif new_password != confirm_password:
         password_error = "New password and confirmation do not match."
     else:

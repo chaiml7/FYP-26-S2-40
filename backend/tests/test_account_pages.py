@@ -118,9 +118,42 @@ def test_invalid_new_password_stays_on_change_password_page():
     client.cookies.clear()
 
     assert response.status_code == 200
-    assert "New password must be at least 8 characters." in response.text
+    assert (
+        "Password must be at least 8 characters and contain an uppercase "
+        "letter, a number and a special character." in response.text
+    )
     assert 'action="/user/account/password"' in response.text
     assert 'action="/user/account/delete"' not in response.text
+
+
+@patch(f"{MODULE}.get_profile", return_value=[{
+    "full_name": "Jamie Tan",
+    "email": "jamie@example.com",
+    "is_active": True,
+}])
+def test_update_profile_rejects_empty_full_name(_mock_profile):
+    client.cookies.set("session", _session_cookie(email="jamie@example.com"))
+    response = client.post("/user/account/profile", data={"full_name": "   "})
+    client.cookies.clear()
+
+    assert response.status_code == 200
+    assert "Full name is required." in response.text
+
+
+@patch(f"{MODULE}.update_profile")
+@patch(f"{MODULE}.get_profile", return_value=[{
+    "full_name": "Jamie Tan",
+    "email": "jamie@example.com",
+    "is_active": True,
+}])
+def test_update_profile_saves_new_full_name(_mock_profile, mock_update_profile):
+    client.cookies.set("session", _session_cookie(email="jamie@example.com"))
+    response = client.post("/user/account/profile", data={"full_name": "Jamie Lee"})
+    client.cookies.clear()
+
+    assert response.status_code == 200
+    assert "Jamie Lee" in response.text
+    mock_update_profile.assert_called_once_with("user-id", {"full_name": "Jamie Lee"})
 
 
 def test_delete_account_has_its_own_page_and_premium_billing_warning():
