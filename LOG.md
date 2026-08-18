@@ -1087,6 +1087,14 @@ Date: 2026-08-14
 
 ---
 
+### 2026-08-18 — Merge main into bali (README)
+
+Merged `origin/main` (`3c23ccc..667aa2f`) into `bali`. Single new commit: `667aa2f added readme` — adds top-level `README.md` and trims `frontend/README.md`. Clean merge, no conflicts.
+
+**Integration impact on sentiment pipeline (my scope):** none — docs-only change, no overlap with `backend/services/sentiment/*` or any code path.
+
+---
+
 ## Issues / Bugs Tracker
 
 | Date | Issue | Status | Resolution |
