@@ -734,11 +734,16 @@ async def premium_earnings_calendar(request: Request):
     if not api_key:
         raise HTTPException(status_code=500, detail="FMP API Key is missing from .env")
 
-    # 3. Fetch Earnings Data asynchronously for the next 30 days
+    # 3. Fetch Earnings Data asynchronously for a 60-day window centered on
+    # today. Earnings dates cluster around quarterly report windows, so a
+    # next-30-days-only view frequently shows almost nothing between
+    # earnings seasons; including the past 30 days surfaces recently
+    # reported earnings for the same tracked stocks instead.
     today = date.today()
+    start_date = today - timedelta(days=30)
     end_date = today + timedelta(days=30)
 
-    url = f"https://financialmodelingprep.com/stable/earnings-calendar?from={today}&to={end_date}&apikey={api_key}"
+    url = f"https://financialmodelingprep.com/stable/earnings-calendar?from={start_date}&to={end_date}&apikey={api_key}"
     
     tracked_symbols = {stock.get("symbol", "").upper() for stock in get_active_stocks()}
 
@@ -761,7 +766,11 @@ async def premium_earnings_calendar(request: Request):
                 earnings_data = [
                     item for item in all_earnings
                     if item.get("symbol", "").upper() in tracked_symbols
-                ][:50]
+                ]
+                earnings_data.sort(key=lambda item: item.get("date", ""))
+                for item in earnings_data:
+                    item["is_upcoming"] = item.get("date", "") >= today.isoformat()
+                earnings_data = earnings_data[:50]
         except Exception as e:
             print(f"--- FMP REQUEST CRASHED ---")
             print(f"Error: {e}")
