@@ -1,0 +1,576 @@
+{
+  "class_distribution": {
+    "bearish": 996,
+    "bullish": 2007
+  },
+  "cumulative_training_rows": 3003,
+  "dataset_end": "2026-04-30",
+  "dataset_start": "2009-04-30",
+  "evaluation_mode": "binary_parameter_tuning_with_rolling_year_validation",
+  "feature_columns": [
+    "gross_margin",
+    "operating_margin",
+    "net_margin",
+    "fcf_margin",
+    "current_ratio",
+    "debt_to_equity",
+    "debt_to_assets",
+    "asset_turnover",
+    "roe",
+    "roa",
+    "ocf_to_net_income",
+    "capex_intensity",
+    "rd_intensity",
+    "revenue_growth",
+    "net_income_growth",
+    "fcf_growth"
+  ],
+  "holdout_rows": 126,
+  "hyperparameters": {
+    "colsample_bytree": 0.8,
+    "display_thresholds": {
+      "bearish_below": 0.45,
+      "bullish_above": 0.55,
+      "neutral_between": [
+        0.45,
+        0.55
+      ]
+    },
+    "early_stopping_rounds": 25,
+    "eval_metric": "logloss",
+    "gamma": 1.0,
+    "learning_rate": 0.01,
+    "max_depth": 2,
+    "min_child_weight": 8,
+    "n_estimators": 334,
+    "n_jobs": 2,
+    "num_class": null,
+    "objective": "binary:logistic",
+    "random_state": 42,
+    "reg_alpha": 0.8,
+    "reg_lambda": 8.0,
+    "subsample": 0.9,
+    "verbosity": 0,
+    "weight_power": 0.75
+  },
+  "labels": [
+    "bearish",
+    "bullish"
+  ],
+  "metadata_path": "models/financial/xgboost_financial_binary_20260626T140716596385Z/metadata.json",
+  "metrics": {
+    "accuracy": 0.5635,
+    "balanced_accuracy": 0.5071,
+    "confusion_matrix": [
+      [
+        14,
+        25
+      ],
+      [
+        30,
+        57
+      ]
+    ],
+    "label_order": [
+      "bearish",
+      "bullish"
+    ],
+    "log_loss": 0.6923,
+    "macro_f1": 0.506
+  },
+  "model_family": "xgboost_financial_binary",
+  "model_path": "models/financial/xgboost_financial_binary_20260626T140716596385Z/model.ubj",
+  "model_version": "xgboost_financial_binary_20260626T140716596385Z",
+  "parent_version": null,
+  "trained_at": "2026-06-26T14:07:16.596385+00:00",
+  "training_details": {
+    "binary_strategy": "strong_only",
+    "binary_strategy_description": "neutral rows excluded; negative -> bearish; positive -> bullish",
+    "note": "Binary comparison model. It is not used by the existing 3-class financial prediction flow unless a separate binary prediction endpoint is added.",
+    "rolling_validation": {
+      "average_metrics": {
+        "accuracy": 0.6406,
+        "balanced_accuracy": 0.5791,
+        "log_loss": 0.6542,
+        "macro_f1": 0.5786
+      },
+      "fold_count": 15,
+      "folds": [
+        {
+          "best_n_estimators": 385,
+          "metrics": {
+            "accuracy": 0.5812,
+            "balanced_accuracy": 0.5347,
+            "confusion_matrix": [
+              [
+                14,
+                33
+              ],
+              [
+                16,
+                54
+              ]
+            ],
+            "label_order": [
+              "bearish",
+              "bullish"
+            ],
+            "log_loss": 0.6838,
+            "macro_f1": 0.5258
+          },
+          "test_class_distribution": {
+            "bearish": 47,
+            "bullish": 70
+          },
+          "test_rows": 117,
+          "test_year": 2012,
+          "train_rows": 76,
+          "validation_rows": 92
+        },
+        {
+          "best_n_estimators": 171,
+          "metrics": {
+            "accuracy": 0.6807,
+            "balanced_accuracy": 0.6176,
+            "confusion_matrix": [
+              [
+                16,
+                18
+              ],
+              [
+                20,
+                65
+              ]
+            ],
+            "label_order": [
+              "bearish",
+              "bullish"
+            ],
+            "log_loss": 0.6347,
+            "macro_f1": 0.6155
+          },
+          "test_class_distribution": {
+            "bearish": 34,
+            "bullish": 85
+          },
+          "test_rows": 119,
+          "test_year": 2013,
+          "train_rows": 168,
+          "validation_rows": 117
+        },
+        {
+          "best_n_estimators": 354,
+          "metrics": {
+            "accuracy": 0.6929,
+            "balanced_accuracy": 0.6519,
+            "confusion_matrix": [
+              [
+                23,
+                22
+              ],
+              [
+                17,
+                65
+              ]
+            ],
+            "label_order": [
+              "bearish",
+              "bullish"
+            ],
+            "log_loss": 0.6235,
+            "macro_f1": 0.6552
+          },
+          "test_class_distribution": {
+            "bearish": 45,
+            "bullish": 82
+          },
+          "test_rows": 127,
+          "test_year": 2014,
+          "train_rows": 285,
+          "validation_rows": 119
+        },
+        {
+          "best_n_estimators": 607,
+          "metrics": {
+            "accuracy": 0.6908,
+            "balanced_accuracy": 0.6355,
+            "confusion_matrix": [
+              [
+                24,
+                30
+              ],
+              [
+                17,
+                81
+              ]
+            ],
+            "label_order": [
+              "bearish",
+              "bullish"
+            ],
+            "log_loss": 0.6131,
+            "macro_f1": 0.6402
+          },
+          "test_class_distribution": {
+            "bearish": 54,
+            "bullish": 98
+          },
+          "test_rows": 152,
+          "test_year": 2015,
+          "train_rows": 404,
+          "validation_rows": 127
+        },
+        {
+          "best_n_estimators": 411,
+          "metrics": {
+            "accuracy": 0.6415,
+            "balanced_accuracy": 0.5802,
+            "confusion_matrix": [
+              [
+                20,
+                26
+              ],
+              [
+                31,
+                82
+              ]
+            ],
+            "label_order": [
+              "bearish",
+              "bullish"
+            ],
+            "log_loss": 0.6231,
+            "macro_f1": 0.5772
+          },
+          "test_class_distribution": {
+            "bearish": 46,
+            "bullish": 113
+          },
+          "test_rows": 159,
+          "test_year": 2016,
+          "train_rows": 531,
+          "validation_rows": 152
+        },
+        {
+          "best_n_estimators": 413,
+          "metrics": {
+            "accuracy": 0.6429,
+            "balanced_accuracy": 0.5712,
+            "confusion_matrix": [
+              [
+                21,
+                31
+              ],
+              [
+                34,
+                96
+              ]
+            ],
+            "label_order": [
+              "bearish",
+              "bullish"
+            ],
+            "log_loss": 0.6409,
+            "macro_f1": 0.5698
+          },
+          "test_class_distribution": {
+            "bearish": 52,
+            "bullish": 130
+          },
+          "test_rows": 182,
+          "test_year": 2017,
+          "train_rows": 683,
+          "validation_rows": 159
+        },
+        {
+          "best_n_estimators": 180,
+          "metrics": {
+            "accuracy": 0.6739,
+            "balanced_accuracy": 0.5944,
+            "confusion_matrix": [
+              [
+                22,
+                37
+              ],
+              [
+                23,
+                102
+              ]
+            ],
+            "label_order": [
+              "bearish",
+              "bullish"
+            ],
+            "log_loss": 0.6321,
+            "macro_f1": 0.5979
+          },
+          "test_class_distribution": {
+            "bearish": 59,
+            "bullish": 125
+          },
+          "test_rows": 184,
+          "test_year": 2018,
+          "train_rows": 842,
+          "validation_rows": 182
+        },
+        {
+          "best_n_estimators": 250,
+          "metrics": {
+            "accuracy": 0.6935,
+            "balanced_accuracy": 0.6218,
+            "confusion_matrix": [
+              [
+                27,
+                39
+              ],
+              [
+                22,
+                111
+              ]
+            ],
+            "label_order": [
+              "bearish",
+              "bullish"
+            ],
+            "log_loss": 0.6277,
+            "macro_f1": 0.627
+          },
+          "test_class_distribution": {
+            "bearish": 66,
+            "bullish": 133
+          },
+          "test_rows": 199,
+          "test_year": 2019,
+          "train_rows": 1024,
+          "validation_rows": 184
+        },
+        {
+          "best_n_estimators": 341,
+          "metrics": {
+            "accuracy": 0.6445,
+            "balanced_accuracy": 0.5614,
+            "confusion_matrix": [
+              [
+                22,
+                37
+              ],
+              [
+                38,
+                114
+              ]
+            ],
+            "label_order": [
+              "bearish",
+              "bullish"
+            ],
+            "log_loss": 0.6548,
+            "macro_f1": 0.5611
+          },
+          "test_class_distribution": {
+            "bearish": 59,
+            "bullish": 152
+          },
+          "test_rows": 211,
+          "test_year": 2020,
+          "train_rows": 1208,
+          "validation_rows": 199
+        },
+        {
+          "best_n_estimators": 119,
+          "metrics": {
+            "accuracy": 0.6385,
+            "balanced_accuracy": 0.5898,
+            "confusion_matrix": [
+              [
+                38,
+                46
+              ],
+              [
+                48,
+                128
+              ]
+            ],
+            "label_order": [
+              "bearish",
+              "bullish"
+            ],
+            "log_loss": 0.653,
+            "macro_f1": 0.5892
+          },
+          "test_class_distribution": {
+            "bearish": 84,
+            "bullish": 176
+          },
+          "test_rows": 260,
+          "test_year": 2021,
+          "train_rows": 1407,
+          "validation_rows": 211
+        },
+        {
+          "best_n_estimators": 460,
+          "metrics": {
+            "accuracy": 0.6087,
+            "balanced_accuracy": 0.5788,
+            "confusion_matrix": [
+              [
+                42,
+                78
+              ],
+              [
+                30,
+                126
+              ]
+            ],
+            "label_order": [
+              "bearish",
+              "bullish"
+            ],
+            "log_loss": 0.6824,
+            "macro_f1": 0.5687
+          },
+          "test_class_distribution": {
+            "bearish": 120,
+            "bullish": 156
+          },
+          "test_rows": 276,
+          "test_year": 2022,
+          "train_rows": 1618,
+          "validation_rows": 260
+        },
+        {
+          "best_n_estimators": 177,
+          "metrics": {
+            "accuracy": 0.7011,
+            "balanced_accuracy": 0.6091,
+            "confusion_matrix": [
+              [
+                32,
+                54
+              ],
+              [
+                30,
+                165
+              ]
+            ],
+            "label_order": [
+              "bearish",
+              "bullish"
+            ],
+            "log_loss": 0.6374,
+            "macro_f1": 0.6148
+          },
+          "test_class_distribution": {
+            "bearish": 86,
+            "bullish": 195
+          },
+          "test_rows": 281,
+          "test_year": 2023,
+          "train_rows": 1878,
+          "validation_rows": 276
+        },
+        {
+          "best_n_estimators": 277,
+          "metrics": {
+            "accuracy": 0.6444,
+            "balanced_accuracy": 0.5736,
+            "confusion_matrix": [
+              [
+                32,
+                62
+              ],
+              [
+                34,
+                142
+              ]
+            ],
+            "label_order": [
+              "bearish",
+              "bullish"
+            ],
+            "log_loss": 0.6441,
+            "macro_f1": 0.5737
+          },
+          "test_class_distribution": {
+            "bearish": 94,
+            "bullish": 176
+          },
+          "test_rows": 270,
+          "test_year": 2024,
+          "train_rows": 2154,
+          "validation_rows": 281
+        },
+        {
+          "best_n_estimators": 327,
+          "metrics": {
+            "accuracy": 0.6619,
+            "balanced_accuracy": 0.5724,
+            "confusion_matrix": [
+              [
+                28,
+                44
+              ],
+              [
+                51,
+                158
+              ]
+            ],
+            "label_order": [
+              "bearish",
+              "bullish"
+            ],
+            "log_loss": 0.6489,
+            "macro_f1": 0.5699
+          },
+          "test_class_distribution": {
+            "bearish": 72,
+            "bullish": 209
+          },
+          "test_rows": 281,
+          "test_year": 2025,
+          "train_rows": 2435,
+          "validation_rows": 270
+        },
+        {
+          "best_n_estimators": 291,
+          "metrics": {
+            "accuracy": 0.4118,
+            "balanced_accuracy": 0.3939,
+            "confusion_matrix": [
+              [
+                2,
+                4
+              ],
+              [
+                6,
+                5
+              ]
+            ],
+            "label_order": [
+              "bearish",
+              "bullish"
+            ],
+            "log_loss": 0.8128,
+            "macro_f1": 0.3929
+          },
+          "test_class_distribution": {
+            "bearish": 6,
+            "bullish": 11
+          },
+          "test_rows": 17,
+          "test_year": 2026,
+          "train_rows": 2705,
+          "validation_rows": 281
+        }
+      ]
+    },
+    "tuning": {
+      "best_candidate_name": "regularized_depth_2",
+      "best_weight_power": 0.75,
+      "candidate_count": 50,
+      "ranking_metric": "rolling binary macro_f1, rolling balanced_accuracy, rolling accuracy, latest holdout accuracy, then rolling log_loss"
+    }
+  },
+  "training_mode": "fresh",
+  "training_rows": 3003,
+  "xgboost_version": "3.2.0"
+}

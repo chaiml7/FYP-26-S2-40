@@ -20,7 +20,7 @@ build/
 .DS_Store
 Thumbs.db
 
-# ML model weights (large files — download at runtime)
+# ML model weights (ignored by default)
 *.h5
 *.pkl
 *.joblib
@@ -28,6 +28,11 @@ Thumbs.db
 *.pth
 *.safetensors
 models/
+
+# Deploy all saved model families and versions with the Render services.
+!backend/models/
+!backend/models/**
+
 backend/artifacts/
 technical_analysis/*.json
 technical_analysis/*.html

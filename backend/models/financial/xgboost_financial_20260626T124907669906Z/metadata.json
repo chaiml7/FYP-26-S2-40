@@ -1,0 +1,552 @@
+{
+  "class_distribution": {
+    "negative": 106,
+    "neutral": 95,
+    "positive": 212
+  },
+  "cumulative_training_rows": 413,
+  "dataset_end": "2026-04-30",
+  "dataset_start": "2009-06-27",
+  "evaluation_mode": "rolling_year_validation_with_latest_quarter_holdout",
+  "feature_columns": [
+    "gross_margin",
+    "operating_margin",
+    "net_margin",
+    "fcf_margin",
+    "current_ratio",
+    "debt_to_equity",
+    "debt_to_assets",
+    "asset_turnover",
+    "roe",
+    "roa",
+    "ocf_to_net_income",
+    "capex_intensity",
+    "rd_intensity",
+    "revenue_growth",
+    "net_income_growth",
+    "fcf_growth"
+  ],
+  "holdout_rows": 12,
+  "hyperparameters": {
+    "colsample_bytree": 0.8,
+    "early_stopping_rounds": 25,
+    "eval_metric": "mlogloss",
+    "gamma": 0.5,
+    "learning_rate": 0.01,
+    "max_depth": 2,
+    "min_child_weight": 5,
+    "n_estimators": 23,
+    "n_jobs": 2,
+    "num_class": 3,
+    "objective": "multi:softprob",
+    "random_state": 42,
+    "reg_alpha": 0.5,
+    "reg_lambda": 5.0,
+    "subsample": 0.8,
+    "verbosity": 0
+  },
+  "labels": [
+    "negative",
+    "neutral",
+    "positive"
+  ],
+  "metadata_path": "models/financial/xgboost_financial_20260626T124907669906Z/metadata.json",
+  "metrics": {
+    "accuracy": 0.4167,
+    "balanced_accuracy": 0.3651,
+    "confusion_matrix": [
+      [
+        2,
+        0,
+        1
+      ],
+      [
+        3,
+        3,
+        1
+      ],
+      [
+        2,
+        0,
+        0
+      ]
+    ],
+    "label_order": [
+      "negative",
+      "neutral",
+      "positive"
+    ],
+    "log_loss": 1.096,
+    "macro_f1": 0.3333
+  },
+  "model_family": "xgboost_financial",
+  "model_path": "models/financial/xgboost_financial_20260626T124907669906Z/model.ubj",
+  "model_version": "xgboost_financial_20260626T124907669906Z",
+  "parent_version": null,
+  "trained_at": "2026-06-26T12:49:07.669906+00:00",
+  "training_details": {
+    "early_stopping": {
+      "best_n_estimators": 23,
+      "enabled": true,
+      "final_model_n_estimators": 23,
+      "rounds": 25,
+      "validation_rows": 49,
+      "validation_year": 2025
+    },
+    "rolling_validation": {
+      "average_metrics": {
+        "accuracy": 0.4526,
+        "balanced_accuracy": 0.412,
+        "log_loss": 1.0735,
+        "macro_f1": 0.3766
+      },
+      "fold_count": 11,
+      "folds": [
+        {
+          "best_n_estimators": 172,
+          "metrics": {
+            "accuracy": 0.5,
+            "balanced_accuracy": 0.3603,
+            "confusion_matrix": [
+              [
+                4,
+                0,
+                5
+              ],
+              [
+                1,
+                0,
+                1
+              ],
+              [
+                1,
+                3,
+                7
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 0.9851,
+            "macro_f1": 0.3722
+          },
+          "test_class_distribution": {
+            "negative": 9,
+            "neutral": 2,
+            "positive": 11
+          },
+          "test_rows": 22,
+          "test_year": 2015,
+          "train_rows": 58,
+          "validation_rows": 22
+        },
+        {
+          "best_n_estimators": 303,
+          "metrics": {
+            "accuracy": 0.5,
+            "balanced_accuracy": 0.3718,
+            "confusion_matrix": [
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                1,
+                2,
+                1
+              ],
+              [
+                1,
+                4,
+                8
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 0.9869,
+            "macro_f1": 0.343
+          },
+          "test_class_distribution": {
+            "negative": 3,
+            "neutral": 4,
+            "positive": 13
+          },
+          "test_rows": 20,
+          "test_year": 2016,
+          "train_rows": 80,
+          "validation_rows": 22
+        },
+        {
+          "best_n_estimators": 191,
+          "metrics": {
+            "accuracy": 0.45,
+            "balanced_accuracy": 0.4179,
+            "confusion_matrix": [
+              [
+                3,
+                2,
+                2
+              ],
+              [
+                0,
+                1,
+                4
+              ],
+              [
+                1,
+                2,
+                5
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 1.0551,
+            "macro_f1": 0.4239
+          },
+          "test_class_distribution": {
+            "negative": 7,
+            "neutral": 5,
+            "positive": 8
+          },
+          "test_rows": 20,
+          "test_year": 2017,
+          "train_rows": 102,
+          "validation_rows": 20
+        },
+        {
+          "best_n_estimators": 53,
+          "metrics": {
+            "accuracy": 0.4545,
+            "balanced_accuracy": 0.4861,
+            "confusion_matrix": [
+              [
+                5,
+                0,
+                1
+              ],
+              [
+                3,
+                3,
+                2
+              ],
+              [
+                1,
+                5,
+                2
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 1.1076,
+            "macro_f1": 0.4498
+          },
+          "test_class_distribution": {
+            "negative": 6,
+            "neutral": 8,
+            "positive": 8
+          },
+          "test_rows": 22,
+          "test_year": 2018,
+          "train_rows": 122,
+          "validation_rows": 20
+        },
+        {
+          "best_n_estimators": 4,
+          "metrics": {
+            "accuracy": 0.5,
+            "balanced_accuracy": 0.4508,
+            "confusion_matrix": [
+              [
+                2,
+                1,
+                2
+              ],
+              [
+                3,
+                2,
+                2
+              ],
+              [
+                0,
+                4,
+                8
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 1.0931,
+            "macro_f1": 0.4508
+          },
+          "test_class_distribution": {
+            "negative": 5,
+            "neutral": 7,
+            "positive": 12
+          },
+          "test_rows": 24,
+          "test_year": 2019,
+          "train_rows": 142,
+          "validation_rows": 22
+        },
+        {
+          "best_n_estimators": 168,
+          "metrics": {
+            "accuracy": 0.5,
+            "balanced_accuracy": 0.4127,
+            "confusion_matrix": [
+              [
+                2,
+                0,
+                1
+              ],
+              [
+                3,
+                0,
+                1
+              ],
+              [
+                4,
+                5,
+                12
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 1.0401,
+            "macro_f1": 0.3397
+          },
+          "test_class_distribution": {
+            "negative": 3,
+            "neutral": 4,
+            "positive": 21
+          },
+          "test_rows": 28,
+          "test_year": 2020,
+          "train_rows": 164,
+          "validation_rows": 24
+        },
+        {
+          "best_n_estimators": 181,
+          "metrics": {
+            "accuracy": 0.2941,
+            "balanced_accuracy": 0.3333,
+            "confusion_matrix": [
+              [
+                5,
+                4,
+                1
+              ],
+              [
+                3,
+                2,
+                1
+              ],
+              [
+                12,
+                3,
+                3
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 1.1492,
+            "macro_f1": 0.287
+          },
+          "test_class_distribution": {
+            "negative": 10,
+            "neutral": 6,
+            "positive": 18
+          },
+          "test_rows": 34,
+          "test_year": 2021,
+          "train_rows": 188,
+          "validation_rows": 28
+        },
+        {
+          "best_n_estimators": 62,
+          "metrics": {
+            "accuracy": 0.4194,
+            "balanced_accuracy": 0.4154,
+            "confusion_matrix": [
+              [
+                7,
+                1,
+                5
+              ],
+              [
+                2,
+                2,
+                1
+              ],
+              [
+                5,
+                4,
+                4
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 1.0701,
+            "macro_f1": 0.3999
+          },
+          "test_class_distribution": {
+            "negative": 13,
+            "neutral": 5,
+            "positive": 13
+          },
+          "test_rows": 31,
+          "test_year": 2022,
+          "train_rows": 216,
+          "validation_rows": 34
+        },
+        {
+          "best_n_estimators": 137,
+          "metrics": {
+            "accuracy": 0.5625,
+            "balanced_accuracy": 0.475,
+            "confusion_matrix": [
+              [
+                7,
+                0,
+                1
+              ],
+              [
+                3,
+                0,
+                1
+              ],
+              [
+                9,
+                0,
+                11
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 1.0405,
+            "macro_f1": 0.3951
+          },
+          "test_class_distribution": {
+            "negative": 8,
+            "neutral": 4,
+            "positive": 20
+          },
+          "test_rows": 32,
+          "test_year": 2023,
+          "train_rows": 250,
+          "validation_rows": 31
+        },
+        {
+          "best_n_estimators": 161,
+          "metrics": {
+            "accuracy": 0.5,
+            "balanced_accuracy": 0.4967,
+            "confusion_matrix": [
+              [
+                4,
+                0,
+                1
+              ],
+              [
+                5,
+                1,
+                2
+              ],
+              [
+                8,
+                2,
+                13
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 1.0566,
+            "macro_f1": 0.404
+          },
+          "test_class_distribution": {
+            "negative": 5,
+            "neutral": 8,
+            "positive": 23
+          },
+          "test_rows": 36,
+          "test_year": 2024,
+          "train_rows": 281,
+          "validation_rows": 32
+        },
+        {
+          "best_n_estimators": 363,
+          "metrics": {
+            "accuracy": 0.2982,
+            "balanced_accuracy": 0.3118,
+            "confusion_matrix": [
+              [
+                6,
+                2,
+                4
+              ],
+              [
+                11,
+                2,
+                3
+              ],
+              [
+                14,
+                6,
+                9
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 1.2243,
+            "macro_f1": 0.2776
+          },
+          "test_class_distribution": {
+            "negative": 12,
+            "neutral": 16,
+            "positive": 29
+          },
+          "test_rows": 57,
+          "test_year": 2025,
+          "train_rows": 313,
+          "validation_rows": 36
+        }
+      ],
+      "method": "For each test year, train on older years, use the latest prior year for early stopping, then score the unseen test year."
+    }
+  },
+  "training_mode": "fresh",
+  "training_rows": 413,
+  "xgboost_version": "3.2.0"
+}

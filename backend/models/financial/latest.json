@@ -1,0 +1,5 @@
+{
+  "model_version": "xgboost_financial_binary_20260626T140716596385Z",
+  "model_path": "models/financial/xgboost_financial_binary_20260626T140716596385Z/model.ubj",
+  "metadata_path": "models/financial/xgboost_financial_binary_20260626T140716596385Z/metadata.json"
+}
