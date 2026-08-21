@@ -1196,6 +1196,30 @@ Date: 2026-08-21
 
 ---
 
+### 2026-08-21 — Bali — Ran sentiment pipeline (manual fetch)
+
+**What I did:**
+- Ran `run_pipeline()` directly (`python -c` importing `backend.services.sentiment.sentiment_pipeline`) to fetch and store latest news/sentiment for all 14 active stocks ahead of tomorrow's presentation.
+- All 14 symbols returned `status: ok` — no fallback-to-neutral or error cases. Headline counts ranged 10 (ORCL, PLTR was 14, SGX tickers) to 18 (AMZN, NVDA).
+- Fine-tuned model in use: `balibpt/finbert-stocklens` (87.2% accuracy, F1=0.83) — confirms the HF-hosted fine-tuned model is loading correctly in this environment, not falling back to base `ProsusAI/finbert`.
+- Scores saved to `sentiment_scores` for score_date `2026-08-21`.
+
+---
+
+### 2026-08-21 — Bali — Widened premium Earnings Calendar to ±30 days, PR #32
+
+**What I did:**
+- User flagged that the premium Earnings Calendar tab was showing only 1 of 14 tracked tickers — bad for tomorrow's presentation. Diagnosed: the FMP query only looked at the next 30 days, and most tracked stocks had already reported earnings within the past 30 days (only NVDA had an actual upcoming date, 2026-08-26).
+- Tested a ±30 day window directly against the FMP API before implementing — confirmed it surfaces 9 of 14 tracked tickers instead of 1, all real data (no need to pad with untracked stocks, which the user was rightly wary of for a demo).
+- `backend/routes/premium_user_routes.py`: widened `premium_earnings_calendar()`'s date range from `today..today+30` to `today-30..today+30`, sorted results by date, tagged each row `is_upcoming` (date >= today).
+- `frontend/templates/premium_users/earnings_calendar.html`: renamed heading to "Earnings Calendar" (was "Upcoming Earnings Calendar"), added a Status column with green "Upcoming" / gray "Reported" badges (`.trend-badge`/`.badge-success` classes already in `styles.css`), updated explanatory copy.
+- Verified end-to-end against the running app using a forged premium-role session cookie (same `itsdangerous.TimestampSigner` technique noted in the 2026-08 entries above) rather than a browser login — hit `/premium/earnings_calendar` directly and confirmed 9/14 tickers render with correct Reported/Upcoming badges.
+- Committed to `bali` (`b001a5d`), then branched `feature/bali-earnings-calendar-window` off `origin/main` and cherry-picked just that commit (bali was ahead of main on LOG.md/docs, so couldn't branch bali directly this time) — pushed and opened **PR #32**: https://github.com/chaiml7/FYP-26-S2-40/pull/32.
+
+**Known gap (not fixed):** AVGO, ORCL, and the three SGX tickers (Z74.SI, D05.SI, C6L.SI) still show no earnings data in the ±30 day window — FMP coverage gap (likely no SGX earnings-calendar coverage on the free tier, and AVGO/ORCL fiscal dates fall outside the window), not something the date-window change addresses.
+
+---
+
 ## Issues / Bugs Tracker
 
 | Date | Issue | Status | Resolution |
