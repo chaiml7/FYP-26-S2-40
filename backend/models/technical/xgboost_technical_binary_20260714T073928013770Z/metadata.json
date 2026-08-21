@@ -1,0 +1,253 @@
+{
+  "all_candidate_feature_columns": [
+    "return_1d",
+    "log_return",
+    "return_5d",
+    "high_low_range",
+    "open_close_gap",
+    "close_to_sma_5",
+    "close_to_sma_10",
+    "close_to_sma_20",
+    "close_to_sma_50",
+    "close_to_sma_200",
+    "close_to_ema_10",
+    "close_to_ema_20",
+    "close_to_ema_50",
+    "ema_20_to_ema_50",
+    "trend_filter_50_200",
+    "rsi_14_scaled",
+    "macd_to_close",
+    "macd_signal_to_close",
+    "macd_histogram_to_close",
+    "bb_width",
+    "atr_to_close",
+    "rolling_volatility_5",
+    "rolling_volatility_10",
+    "rolling_volatility_20",
+    "volume_change",
+    "relative_volume",
+    "distance_to_support",
+    "distance_to_resistance",
+    "breakout_indicator",
+    "breakdown_indicator",
+    "return_lag_1",
+    "return_lag_2",
+    "return_lag_3",
+    "return_lag_5",
+    "return_lag_10",
+    "market_spy_return_1d",
+    "market_spy_return_5d",
+    "market_spy_above_sma_200",
+    "market_qqq_return_1d",
+    "market_qqq_return_5d",
+    "market_qqq_above_sma_200",
+    "market_vix_level_scaled",
+    "market_vix_return_1d",
+    "market_vix_return_5d",
+    "market_sector_return_1d",
+    "market_sector_return_5d",
+    "market_sector_above_sma_200"
+  ],
+  "class_distribution": {
+    "down_equal": 15297,
+    "up": 13882
+  },
+  "confidence_threshold": 0.6,
+  "dataset_end": "2026-07-10",
+  "dataset_start": "2017-03-28",
+  "decision_threshold": 0.52,
+  "evaluation_mode": "binary_xgboost_date_grouped_train_validation_test_with_one_date_embargo",
+  "feature_columns": [
+    "breakdown_indicator",
+    "market_spy_above_sma_200",
+    "market_vix_return_1d",
+    "market_qqq_return_1d",
+    "market_qqq_return_5d",
+    "market_vix_return_5d",
+    "log_return",
+    "close_to_sma_20",
+    "market_spy_return_5d",
+    "breakout_indicator",
+    "market_spy_return_1d",
+    "market_vix_level_scaled",
+    "close_to_sma_10",
+    "close_to_ema_20",
+    "return_5d",
+    "return_1d",
+    "close_to_sma_50",
+    "return_lag_3",
+    "market_sector_return_1d",
+    "distance_to_resistance",
+    "trend_filter_50_200",
+    "rsi_14_scaled",
+    "market_qqq_above_sma_200",
+    "open_close_gap",
+    "rolling_volatility_10",
+    "close_to_ema_50",
+    "market_sector_return_5d",
+    "volume_change",
+    "return_lag_5",
+    "bb_width",
+    "return_lag_1",
+    "macd_histogram_to_close",
+    "relative_volume",
+    "return_lag_10",
+    "high_low_range"
+  ],
+  "hyperparameters": {
+    "colsample_bytree": 0.65,
+    "learning_rate": 0.02,
+    "max_depth": 3,
+    "min_child_weight": 12,
+    "n_estimators": 450,
+    "reg_alpha": 0.2,
+    "reg_lambda": 5.0,
+    "subsample": 0.65
+  },
+  "labels": [
+    "down_equal",
+    "up"
+  ],
+  "metadata_path": "models/technical/xgboost_technical_binary_20260714T073928013770Z/metadata.json",
+  "model_family": "xgboost_technical_binary",
+  "model_path": "models/technical/xgboost_technical_binary_20260714T073928013770Z/model.joblib",
+  "model_version": "xgboost_technical_binary_20260714T073928013770Z",
+  "quality_gate": {
+    "accuracy_margin_over_majority_baseline": -0.0072,
+    "checks": {
+      "accuracy_above_majority_baseline": false,
+      "balanced_accuracy": false,
+      "mcc": false,
+      "roc_auc": false
+    },
+    "passed": false,
+    "requirements": {
+      "minimum_test_accuracy_above_majority_baseline": 0.0,
+      "minimum_test_balanced_accuracy": 0.52,
+      "minimum_test_mcc": 0.03,
+      "minimum_test_roc_auc": 0.53
+    }
+  },
+  "return_threshold": 0.002,
+  "test_metrics": {
+    "accuracy": 0.5248,
+    "balanced_accuracy": 0.5098,
+    "confusion_matrix": [
+      [
+        1772,
+        606
+      ],
+      [
+        1518,
+        574
+      ]
+    ],
+    "decision_threshold": 0.52,
+    "f1_score": 0.3509,
+    "label_order": [
+      "down_equal",
+      "up"
+    ],
+    "majority_baseline_accuracy": 0.532,
+    "mcc": 0.0221,
+    "precision": 0.4864,
+    "predicted_up_rate": 0.264,
+    "recall": 0.2744,
+    "roc_auc": 0.5148
+  },
+  "test_rows": 4470,
+  "top_features": [
+    {
+      "feature": "market_spy_above_sma_200",
+      "importance": 0.036617
+    },
+    {
+      "feature": "market_qqq_return_5d",
+      "importance": 0.035524
+    },
+    {
+      "feature": "market_vix_return_1d",
+      "importance": 0.034904
+    },
+    {
+      "feature": "market_spy_return_5d",
+      "importance": 0.034236
+    },
+    {
+      "feature": "market_vix_return_5d",
+      "importance": 0.034176
+    },
+    {
+      "feature": "market_spy_return_1d",
+      "importance": 0.032618
+    },
+    {
+      "feature": "market_qqq_return_1d",
+      "importance": 0.031821
+    },
+    {
+      "feature": "close_to_ema_20",
+      "importance": 0.031476
+    },
+    {
+      "feature": "market_vix_level_scaled",
+      "importance": 0.031364
+    },
+    {
+      "feature": "market_qqq_above_sma_200",
+      "importance": 0.031235
+    },
+    {
+      "feature": "close_to_sma_20",
+      "importance": 0.031018
+    },
+    {
+      "feature": "return_1d",
+      "importance": 0.030993
+    },
+    {
+      "feature": "market_sector_return_1d",
+      "importance": 0.029458
+    },
+    {
+      "feature": "distance_to_resistance",
+      "importance": 0.029439
+    },
+    {
+      "feature": "close_to_sma_50",
+      "importance": 0.029297
+    }
+  ],
+  "train_before_date": null,
+  "train_rows": 20146,
+  "trained_at": "2026-07-14T07:39:28.013770+00:00",
+  "training_rows": 29179,
+  "validation_metrics": {
+    "accuracy": 0.5252,
+    "balanced_accuracy": 0.5233,
+    "confusion_matrix": [
+      [
+        1777,
+        509
+      ],
+      [
+        1645,
+        606
+      ]
+    ],
+    "decision_threshold": 0.52,
+    "f1_score": 0.3601,
+    "label_order": [
+      "down_equal",
+      "up"
+    ],
+    "majority_baseline_accuracy": 0.5039,
+    "mcc": 0.0541,
+    "precision": 0.5435,
+    "predicted_up_rate": 0.2458,
+    "recall": 0.2692,
+    "roc_auc": 0.5226
+  },
+  "validation_rows": 4537,
+  "xgboost_version": "3.2.0"
+}

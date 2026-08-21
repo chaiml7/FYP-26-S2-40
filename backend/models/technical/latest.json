@@ -1,0 +1,6 @@
+{
+  "model_version": "xgboost_technical_binary_20260714T123233768990Z",
+  "model_family": "xgboost_technical_binary",
+  "model_path": "models/technical/xgboost_technical_binary_20260714T123233768990Z/model.joblib",
+  "metadata_path": "models/technical/xgboost_technical_binary_20260714T123233768990Z/metadata.json"
+}

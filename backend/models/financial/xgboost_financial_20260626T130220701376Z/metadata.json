@@ -1,0 +1,550 @@
+{
+  "class_distribution": {
+    "negative": 106,
+    "neutral": 95,
+    "positive": 212
+  },
+  "cumulative_training_rows": 413,
+  "dataset_end": "2026-04-30",
+  "dataset_start": "2009-06-27",
+  "evaluation_mode": "parameter_tuning_with_rolling_year_validation",
+  "feature_columns": [
+    "gross_margin",
+    "operating_margin",
+    "net_margin",
+    "fcf_margin",
+    "current_ratio",
+    "debt_to_equity",
+    "debt_to_assets",
+    "asset_turnover",
+    "roe",
+    "roa",
+    "ocf_to_net_income",
+    "capex_intensity",
+    "rd_intensity",
+    "revenue_growth",
+    "net_income_growth",
+    "fcf_growth"
+  ],
+  "holdout_rows": 12,
+  "hyperparameters": {
+    "colsample_bytree": 0.8,
+    "early_stopping_rounds": 25,
+    "eval_metric": "mlogloss",
+    "gamma": 1.0,
+    "learning_rate": 0.01,
+    "max_depth": 2,
+    "min_child_weight": 8,
+    "n_estimators": 32,
+    "n_jobs": 2,
+    "num_class": 3,
+    "objective": "multi:softprob",
+    "random_state": 42,
+    "reg_alpha": 0.8,
+    "reg_lambda": 8.0,
+    "subsample": 0.9,
+    "verbosity": 0,
+    "weight_power": 1.0
+  },
+  "labels": [
+    "negative",
+    "neutral",
+    "positive"
+  ],
+  "metadata_path": "models/financial/xgboost_financial_20260626T130220701376Z/metadata.json",
+  "metrics": {
+    "accuracy": 0.5,
+    "balanced_accuracy": 0.4762,
+    "confusion_matrix": [
+      [
+        3,
+        0,
+        0
+      ],
+      [
+        3,
+        3,
+        1
+      ],
+      [
+        2,
+        0,
+        0
+      ]
+    ],
+    "label_order": [
+      "negative",
+      "neutral",
+      "positive"
+    ],
+    "log_loss": 1.0933,
+    "macro_f1": 0.3818
+  },
+  "model_family": "xgboost_financial",
+  "model_path": "models/financial/xgboost_financial_20260626T130220701376Z/model.ubj",
+  "model_version": "xgboost_financial_20260626T130220701376Z",
+  "parent_version": null,
+  "trained_at": "2026-06-26T13:02:20.701376+00:00",
+  "training_details": {
+    "rolling_validation": {
+      "average_metrics": {
+        "accuracy": 0.4461,
+        "balanced_accuracy": 0.4196,
+        "log_loss": 1.0745,
+        "macro_f1": 0.3809
+      },
+      "fold_count": 11,
+      "folds": [
+        {
+          "best_n_estimators": 199,
+          "metrics": {
+            "accuracy": 0.5455,
+            "balanced_accuracy": 0.5269,
+            "confusion_matrix": [
+              [
+                4,
+                0,
+                5
+              ],
+              [
+                1,
+                1,
+                0
+              ],
+              [
+                1,
+                3,
+                7
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 1.0078,
+            "macro_f1": 0.4918
+          },
+          "test_class_distribution": {
+            "negative": 9,
+            "neutral": 2,
+            "positive": 11
+          },
+          "test_rows": 22,
+          "test_year": 2015,
+          "train_rows": 58,
+          "validation_rows": 22
+        },
+        {
+          "best_n_estimators": 189,
+          "metrics": {
+            "accuracy": 0.5,
+            "balanced_accuracy": 0.3141,
+            "confusion_matrix": [
+              [
+                0,
+                2,
+                1
+              ],
+              [
+                1,
+                1,
+                2
+              ],
+              [
+                2,
+                2,
+                9
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 0.9907,
+            "macro_f1": 0.3141
+          },
+          "test_class_distribution": {
+            "negative": 3,
+            "neutral": 4,
+            "positive": 13
+          },
+          "test_rows": 20,
+          "test_year": 2016,
+          "train_rows": 80,
+          "validation_rows": 22
+        },
+        {
+          "best_n_estimators": 329,
+          "metrics": {
+            "accuracy": 0.5,
+            "balanced_accuracy": 0.4655,
+            "confusion_matrix": [
+              [
+                4,
+                1,
+                2
+              ],
+              [
+                1,
+                1,
+                3
+              ],
+              [
+                1,
+                2,
+                5
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 1.078,
+            "macro_f1": 0.4644
+          },
+          "test_class_distribution": {
+            "negative": 7,
+            "neutral": 5,
+            "positive": 8
+          },
+          "test_rows": 20,
+          "test_year": 2017,
+          "train_rows": 102,
+          "validation_rows": 20
+        },
+        {
+          "best_n_estimators": 69,
+          "metrics": {
+            "accuracy": 0.3636,
+            "balanced_accuracy": 0.3889,
+            "confusion_matrix": [
+              [
+                4,
+                0,
+                2
+              ],
+              [
+                2,
+                2,
+                4
+              ],
+              [
+                1,
+                5,
+                2
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 1.1147,
+            "macro_f1": 0.3774
+          },
+          "test_class_distribution": {
+            "negative": 6,
+            "neutral": 8,
+            "positive": 8
+          },
+          "test_rows": 22,
+          "test_year": 2018,
+          "train_rows": 122,
+          "validation_rows": 20
+        },
+        {
+          "best_n_estimators": 1,
+          "metrics": {
+            "accuracy": 0.3333,
+            "balanced_accuracy": 0.3587,
+            "confusion_matrix": [
+              [
+                3,
+                0,
+                2
+              ],
+              [
+                5,
+                1,
+                1
+              ],
+              [
+                7,
+                1,
+                4
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 1.0979,
+            "macro_f1": 0.3144
+          },
+          "test_class_distribution": {
+            "negative": 5,
+            "neutral": 7,
+            "positive": 12
+          },
+          "test_rows": 24,
+          "test_year": 2019,
+          "train_rows": 142,
+          "validation_rows": 22
+        },
+        {
+          "best_n_estimators": 212,
+          "metrics": {
+            "accuracy": 0.5,
+            "balanced_accuracy": 0.4127,
+            "confusion_matrix": [
+              [
+                2,
+                0,
+                1
+              ],
+              [
+                3,
+                0,
+                1
+              ],
+              [
+                4,
+                5,
+                12
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 1.0395,
+            "macro_f1": 0.3397
+          },
+          "test_class_distribution": {
+            "negative": 3,
+            "neutral": 4,
+            "positive": 21
+          },
+          "test_rows": 28,
+          "test_year": 2020,
+          "train_rows": 164,
+          "validation_rows": 24
+        },
+        {
+          "best_n_estimators": 170,
+          "metrics": {
+            "accuracy": 0.3529,
+            "balanced_accuracy": 0.4222,
+            "confusion_matrix": [
+              [
+                6,
+                2,
+                2
+              ],
+              [
+                2,
+                3,
+                1
+              ],
+              [
+                13,
+                2,
+                3
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 1.1349,
+            "macro_f1": 0.3662
+          },
+          "test_class_distribution": {
+            "negative": 10,
+            "neutral": 6,
+            "positive": 18
+          },
+          "test_rows": 34,
+          "test_year": 2021,
+          "train_rows": 188,
+          "validation_rows": 28
+        },
+        {
+          "best_n_estimators": 106,
+          "metrics": {
+            "accuracy": 0.4516,
+            "balanced_accuracy": 0.4,
+            "confusion_matrix": [
+              [
+                7,
+                1,
+                5
+              ],
+              [
+                2,
+                1,
+                2
+              ],
+              [
+                6,
+                1,
+                6
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 1.0641,
+            "macro_f1": 0.4038
+          },
+          "test_class_distribution": {
+            "negative": 13,
+            "neutral": 5,
+            "positive": 13
+          },
+          "test_rows": 31,
+          "test_year": 2022,
+          "train_rows": 216,
+          "validation_rows": 34
+        },
+        {
+          "best_n_estimators": 136,
+          "metrics": {
+            "accuracy": 0.5625,
+            "balanced_accuracy": 0.475,
+            "confusion_matrix": [
+              [
+                7,
+                0,
+                1
+              ],
+              [
+                3,
+                0,
+                1
+              ],
+              [
+                9,
+                0,
+                11
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 1.046,
+            "macro_f1": 0.3951
+          },
+          "test_class_distribution": {
+            "negative": 8,
+            "neutral": 4,
+            "positive": 20
+          },
+          "test_rows": 32,
+          "test_year": 2023,
+          "train_rows": 250,
+          "validation_rows": 31
+        },
+        {
+          "best_n_estimators": 238,
+          "metrics": {
+            "accuracy": 0.5,
+            "balanced_accuracy": 0.5239,
+            "confusion_matrix": [
+              [
+                4,
+                0,
+                1
+              ],
+              [
+                4,
+                2,
+                2
+              ],
+              [
+                9,
+                2,
+                12
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 1.0615,
+            "macro_f1": 0.4428
+          },
+          "test_class_distribution": {
+            "negative": 5,
+            "neutral": 8,
+            "positive": 23
+          },
+          "test_rows": 36,
+          "test_year": 2024,
+          "train_rows": 281,
+          "validation_rows": 32
+        },
+        {
+          "best_n_estimators": 257,
+          "metrics": {
+            "accuracy": 0.2982,
+            "balanced_accuracy": 0.3281,
+            "confusion_matrix": [
+              [
+                7,
+                2,
+                3
+              ],
+              [
+                12,
+                2,
+                2
+              ],
+              [
+                17,
+                4,
+                8
+              ]
+            ],
+            "label_order": [
+              "negative",
+              "neutral",
+              "positive"
+            ],
+            "log_loss": 1.1848,
+            "macro_f1": 0.2798
+          },
+          "test_class_distribution": {
+            "negative": 12,
+            "neutral": 16,
+            "positive": 29
+          },
+          "test_rows": 57,
+          "test_year": 2025,
+          "train_rows": 313,
+          "validation_rows": 36
+        }
+      ]
+    },
+    "tuning": {
+      "best_candidate_name": "regularized_depth_2",
+      "best_weight_power": 1.0,
+      "candidate_count": 20,
+      "ranking_metric": "rolling macro_f1, rolling balanced_accuracy, latest holdout accuracy, then rolling log_loss"
+    }
+  },
+  "training_mode": "fresh",
+  "training_rows": 413,
+  "xgboost_version": "3.2.0"
+}

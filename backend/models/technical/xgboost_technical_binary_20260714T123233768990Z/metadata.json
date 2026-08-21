@@ -1,0 +1,373 @@
+{
+  "activation_eligibility": {
+    "minimum_test_accuracy_exclusive": 0.5,
+    "passed": true,
+    "test_accuracy": 0.5272
+  },
+  "all_candidate_feature_columns": [
+    "return_1d",
+    "log_return",
+    "return_5d",
+    "high_low_range",
+    "open_close_gap",
+    "close_to_sma_5",
+    "close_to_sma_10",
+    "close_to_sma_20",
+    "close_to_sma_50",
+    "close_to_sma_200",
+    "close_to_ema_10",
+    "close_to_ema_20",
+    "close_to_ema_50",
+    "ema_20_to_ema_50",
+    "trend_filter_50_200",
+    "rsi_14_scaled",
+    "macd_to_close",
+    "macd_signal_to_close",
+    "macd_histogram_to_close",
+    "bb_width",
+    "atr_to_close",
+    "rolling_volatility_5",
+    "rolling_volatility_10",
+    "rolling_volatility_20",
+    "volume_change",
+    "relative_volume",
+    "distance_to_support",
+    "distance_to_resistance",
+    "breakout_indicator",
+    "breakdown_indicator",
+    "return_lag_1",
+    "return_lag_2",
+    "return_lag_3",
+    "return_lag_5",
+    "return_lag_10",
+    "market_spy_return_1d",
+    "market_spy_return_5d",
+    "market_spy_above_sma_200",
+    "market_qqq_return_1d",
+    "market_qqq_return_5d",
+    "market_qqq_above_sma_200",
+    "market_vix_level_scaled",
+    "market_vix_return_1d",
+    "market_vix_return_5d",
+    "market_sector_return_1d",
+    "market_sector_return_5d",
+    "market_sector_above_sma_200"
+  ],
+  "candidate_validation_results": [
+    {
+      "candidate": 1,
+      "decision_threshold": 0.5,
+      "hyperparameters": {
+        "colsample_bytree": 0.5,
+        "learning_rate": 0.005,
+        "max_depth": 5,
+        "min_child_weight": 4,
+        "n_estimators": 1100,
+        "reg_alpha": 0.03,
+        "reg_lambda": 8.0,
+        "subsample": 0.5
+      },
+      "selected": false,
+      "selected_feature_count": 35,
+      "validation_metrics": {
+        "accuracy": 0.5305,
+        "balanced_accuracy": 0.5216,
+        "confusion_matrix": [
+          [
+            1767,
+            582
+          ],
+          [
+            1542,
+            633
+          ]
+        ],
+        "decision_threshold": 0.5,
+        "f1_score": 0.3735,
+        "label_order": [
+          "down_equal",
+          "up"
+        ],
+        "majority_baseline_accuracy": 0.5192,
+        "mcc": 0.0488,
+        "precision": 0.521,
+        "predicted_up_rate": 0.2686,
+        "recall": 0.291,
+        "roc_auc": 0.5219
+      }
+    },
+    {
+      "candidate": 2,
+      "decision_threshold": 0.5,
+      "hyperparameters": {
+        "colsample_bytree": 0.5,
+        "learning_rate": 0.005,
+        "max_depth": 4,
+        "min_child_weight": 6,
+        "n_estimators": 1200,
+        "reg_alpha": 0.04,
+        "reg_lambda": 8.0,
+        "subsample": 0.5
+      },
+      "selected": true,
+      "selected_feature_count": 35,
+      "validation_metrics": {
+        "accuracy": 0.5327,
+        "balanced_accuracy": 0.5241,
+        "confusion_matrix": [
+          [
+            1760,
+            589
+          ],
+          [
+            1525,
+            650
+          ]
+        ],
+        "decision_threshold": 0.5,
+        "f1_score": 0.3808,
+        "label_order": [
+          "down_equal",
+          "up"
+        ],
+        "majority_baseline_accuracy": 0.5192,
+        "mcc": 0.0539,
+        "precision": 0.5246,
+        "predicted_up_rate": 0.2739,
+        "recall": 0.2989,
+        "roc_auc": 0.5241
+      }
+    },
+    {
+      "candidate": 3,
+      "decision_threshold": 0.49,
+      "hyperparameters": {
+        "colsample_bytree": 0.5,
+        "learning_rate": 0.005,
+        "max_depth": 4,
+        "min_child_weight": 6,
+        "n_estimators": 1000,
+        "reg_alpha": 0.05,
+        "reg_lambda": 8.0,
+        "subsample": 0.6
+      },
+      "selected": false,
+      "selected_feature_count": 35,
+      "validation_metrics": {
+        "accuracy": 0.5292,
+        "balanced_accuracy": 0.5232,
+        "confusion_matrix": [
+          [
+            1596,
+            753
+          ],
+          [
+            1377,
+            798
+          ]
+        ],
+        "decision_threshold": 0.49,
+        "f1_score": 0.4283,
+        "label_order": [
+          "down_equal",
+          "up"
+        ],
+        "majority_baseline_accuracy": 0.5192,
+        "mcc": 0.0488,
+        "precision": 0.5145,
+        "predicted_up_rate": 0.3428,
+        "recall": 0.3669,
+        "roc_auc": 0.5227
+      }
+    }
+  ],
+  "class_distribution": {
+    "down_equal": 15742,
+    "up": 13465
+  },
+  "confidence_threshold": 0.6,
+  "dataset_end": "2026-07-06",
+  "dataset_start": "2017-03-28",
+  "decision_threshold": 0.5,
+  "evaluation_mode": "binary_xgboost_date_grouped_train_validation_test_with_one_date_embargo",
+  "feature_columns": [
+    "market_qqq_above_sma_200",
+    "market_spy_above_sma_200",
+    "market_vix_level_scaled",
+    "market_spy_return_5d",
+    "market_vix_return_5d",
+    "market_qqq_return_5d",
+    "macd_signal_to_close",
+    "market_sector_return_5d",
+    "rolling_volatility_10",
+    "distance_to_resistance",
+    "ema_20_to_ema_50",
+    "market_vix_return_1d",
+    "bb_width",
+    "atr_to_close",
+    "market_qqq_return_1d",
+    "rolling_volatility_5",
+    "market_spy_return_1d",
+    "close_to_sma_50",
+    "trend_filter_50_200",
+    "close_to_ema_20",
+    "macd_to_close",
+    "close_to_sma_20",
+    "macd_histogram_to_close",
+    "rolling_volatility_20",
+    "close_to_ema_50",
+    "market_sector_return_1d",
+    "close_to_sma_200",
+    "close_to_sma_10",
+    "market_sector_above_sma_200",
+    "return_lag_5",
+    "close_to_ema_10",
+    "rsi_14_scaled",
+    "open_close_gap",
+    "close_to_sma_5",
+    "return_5d"
+  ],
+  "hyperparameters": {
+    "colsample_bytree": 0.5,
+    "learning_rate": 0.005,
+    "max_depth": 4,
+    "min_child_weight": 6,
+    "n_estimators": 1200,
+    "reg_alpha": 0.04,
+    "reg_lambda": 8.0,
+    "subsample": 0.5
+  },
+  "labels": [
+    "down_equal",
+    "up"
+  ],
+  "metadata_path": "models/technical/xgboost_technical_binary_20260714T123233768990Z/metadata.json",
+  "model_family": "xgboost_technical_binary",
+  "model_path": "models/technical/xgboost_technical_binary_20260714T123233768990Z/model.joblib",
+  "model_version": "xgboost_technical_binary_20260714T123233768990Z",
+  "prediction_horizon_trading_days": 5,
+  "return_threshold": 0.01,
+  "selected_candidate": 2,
+  "test_metrics": {
+    "accuracy": 0.5272,
+    "balanced_accuracy": 0.5151,
+    "confusion_matrix": [
+      [
+        1565,
+        978
+      ],
+      [
+        1167,
+        827
+      ]
+    ],
+    "decision_threshold": 0.5,
+    "f1_score": 0.4354,
+    "label_order": [
+      "down_equal",
+      "up"
+    ],
+    "majority_baseline_accuracy": 0.5605,
+    "mcc": 0.0306,
+    "precision": 0.4582,
+    "predicted_up_rate": 0.3978,
+    "recall": 0.4147,
+    "roc_auc": 0.527
+  },
+  "test_rows": 4537,
+  "top_features": [
+    {
+      "feature": "market_qqq_above_sma_200",
+      "importance": 0.043366
+    },
+    {
+      "feature": "market_spy_above_sma_200",
+      "importance": 0.03986
+    },
+    {
+      "feature": "market_spy_return_5d",
+      "importance": 0.039574
+    },
+    {
+      "feature": "market_vix_level_scaled",
+      "importance": 0.038656
+    },
+    {
+      "feature": "market_vix_return_5d",
+      "importance": 0.03834
+    },
+    {
+      "feature": "market_qqq_return_5d",
+      "importance": 0.034298
+    },
+    {
+      "feature": "market_sector_return_5d",
+      "importance": 0.031889
+    },
+    {
+      "feature": "rolling_volatility_10",
+      "importance": 0.031791
+    },
+    {
+      "feature": "macd_signal_to_close",
+      "importance": 0.03165
+    },
+    {
+      "feature": "distance_to_resistance",
+      "importance": 0.029948
+    },
+    {
+      "feature": "market_qqq_return_1d",
+      "importance": 0.029668
+    },
+    {
+      "feature": "bb_width",
+      "importance": 0.029467
+    },
+    {
+      "feature": "market_vix_return_1d",
+      "importance": 0.028721
+    },
+    {
+      "feature": "close_to_sma_50",
+      "importance": 0.028025
+    },
+    {
+      "feature": "macd_to_close",
+      "importance": 0.027973
+    }
+  ],
+  "train_before_date": null,
+  "train_rows": 20120,
+  "trained_at": "2026-07-14T12:32:33.768990+00:00",
+  "training_rows": 29207,
+  "use_sentiment_features": false,
+  "validation_metrics": {
+    "accuracy": 0.5327,
+    "balanced_accuracy": 0.5241,
+    "confusion_matrix": [
+      [
+        1760,
+        589
+      ],
+      [
+        1525,
+        650
+      ]
+    ],
+    "decision_threshold": 0.5,
+    "f1_score": 0.3808,
+    "label_order": [
+      "down_equal",
+      "up"
+    ],
+    "majority_baseline_accuracy": 0.5192,
+    "mcc": 0.0539,
+    "precision": 0.5246,
+    "predicted_up_rate": 0.2739,
+    "recall": 0.2989,
+    "roc_auc": 0.5241
+  },
+  "validation_rows": 4524,
+  "xgboost_version": "3.2.0"
+}

@@ -9,6 +9,16 @@
 <div class="page-content">
     <h1 class="text-2xl font-bold text-main mb-6">Market Overview</h1>
 
+    {% if applied_date %}
+    <p class="text-muted mb-4">
+        {% if date_filter_applied %}
+            Market date applied: {{ applied_date }}.
+        {% else %}
+            Latest market date: {{ applied_date }}.
+        {% endif %}
+    </p>
+    {% endif %}
+
     <form action="/user/market_overview" method="GET" class="movers-date-filter mb-6">
         <label for="trade_date" class="form-label">Trading day</label>
         <input type="date" id="trade_date" name="trade_date" class="form-control" value="{{ selected_date }}" max="{{ today }}">
@@ -18,8 +28,9 @@
     <p class="account-message account-message-error" role="alert">{{ date_error }}</p>
     {% endif %}
 
+    {% if gainers or losers %}
     <div class="grid-2">
-        
+
         <div class="card movers-card border-t-success">
             <div class="movers-header text-success">
                 <span class="icon">↗</span> TOP GAINERS
@@ -55,5 +66,10 @@
         </div>
 
     </div>
+    {% else %}
+    <div class="card market-empty-state">
+        <strong>No market data available for the selected date.</strong>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

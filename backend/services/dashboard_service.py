@@ -209,7 +209,14 @@ def _dashboard_price_summaries(
 
 def get_top_movers(limit: int = 5, selected_date: date = None) -> dict[str, list]:
     """Top gainers/losers by day-over-day % change, restricted to the active
-    stocks we list — real daily_ohlcv data, no external symbols."""
+    stocks we list — real daily_ohlcv data, no external symbols.
+
+    When `selected_date` falls on a non-trading day (a weekend, market
+    holiday, or any date with no daily_ohlcv row yet), no stock will have a
+    price summary dated exactly on it, so both lists come back empty — the
+    caller can use that to show a "no market data" message instead of
+    rendering empty tables.
+    """
     stocks = get_active_stocks() or []
     stocks_by_symbol = {
         str(stock.get("symbol", "")).upper(): stock
@@ -218,6 +225,14 @@ def get_top_movers(limit: int = 5, selected_date: date = None) -> dict[str, list
     }
     symbols = list(stocks_by_symbol.keys())
     summaries = _dashboard_price_summaries(symbols, selected_date)
+    market_date = max(
+        (
+            str(summary["trade_date"])
+            for summary in summaries.values()
+            if summary.get("trade_date")
+        ),
+        default=None,
+    )
 
     movers = []
     for symbol, summary in summaries.items():
@@ -236,6 +251,7 @@ def get_top_movers(limit: int = 5, selected_date: date = None) -> dict[str, list
     return {
         "gainers": [row for row in ranked if row["change_percent"] > 0][:limit],
         "losers": [row for row in ranked if row["change_percent"] < 0][-limit:][::-1],
+        "market_date": market_date,
     }
 
 

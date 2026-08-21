@@ -148,6 +148,21 @@ def _combine_auth_user_with_profile(auth_user: dict, profile: dict = None):
     }
 
 
+def _market_overview_applied_date(movers: dict, selected_date: date = None):
+    if selected_date:
+        return selected_date.isoformat()
+
+    if movers.get("market_date"):
+        return str(movers["market_date"])
+
+    for group in ("gainers", "losers"):
+        for stock in movers.get(group, []):
+            if stock.get("trade_date"):
+                return str(stock["trade_date"])
+
+    return None
+
+
 @router.post("/auth/signup")
 def signup(account_data: AccountCreate):
     try:
@@ -639,7 +654,7 @@ async def market_overview(request: Request, trade_date: str = None):
     try:
         movers = get_top_movers(selected_date=selected_date)
     except Exception:
-        movers = {"gainers": [], "losers": []}
+        movers = {"gainers": [], "losers": [], "market_date": None}
 
     return templates.TemplateResponse(
         request=request,
@@ -649,6 +664,11 @@ async def market_overview(request: Request, trade_date: str = None):
             "request": request,
             "gainers": movers["gainers"],
             "losers": movers["losers"],
+            "applied_date": _market_overview_applied_date(
+                movers,
+                selected_date,
+            ),
+            "date_filter_applied": selected_date is not None,
             "selected_date": trade_date or date.today().isoformat(),
             "today": date.today().isoformat(),
             "date_error": date_error,

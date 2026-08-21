@@ -1,0 +1,87 @@
+{
+  "class_distribution": {
+    "negative": 8,
+    "neutral": 9,
+    "positive": 27
+  },
+  "cumulative_training_rows": 44,
+  "dataset_end": "2026-01-31",
+  "dataset_start": "2025-02-28",
+  "evaluation_mode": "chronological_latest_quarter_holdout",
+  "feature_columns": [
+    "gross_margin",
+    "operating_margin",
+    "net_margin",
+    "fcf_margin",
+    "current_ratio",
+    "debt_to_equity",
+    "debt_to_assets",
+    "asset_turnover",
+    "roe",
+    "roa",
+    "ocf_to_net_income",
+    "capex_intensity",
+    "rd_intensity",
+    "revenue_growth",
+    "net_income_growth",
+    "fcf_growth"
+  ],
+  "holdout_rows": 11,
+  "hyperparameters": {
+    "colsample_bytree": 0.8,
+    "eval_metric": "mlogloss",
+    "learning_rate": 0.05,
+    "max_depth": 2,
+    "min_child_weight": 3,
+    "n_estimators": 120,
+    "n_jobs": 2,
+    "num_class": 3,
+    "objective": "multi:softprob",
+    "random_state": 42,
+    "reg_alpha": 0.1,
+    "reg_lambda": 2.0,
+    "subsample": 0.8,
+    "verbosity": 0
+  },
+  "labels": [
+    "negative",
+    "neutral",
+    "positive"
+  ],
+  "metadata_path": "models/financial/xgboost_financial_20260611T070850407000Z/metadata.json",
+  "metrics": {
+    "accuracy": 0.4545,
+    "balanced_accuracy": 0.5,
+    "confusion_matrix": [
+      [
+        1,
+        0,
+        3
+      ],
+      [
+        0,
+        1,
+        3
+      ],
+      [
+        0,
+        0,
+        3
+      ]
+    ],
+    "label_order": [
+      "negative",
+      "neutral",
+      "positive"
+    ],
+    "macro_f1": 0.4333
+  },
+  "model_family": "xgboost_financial",
+  "model_path": "models/financial/xgboost_financial_20260611T070850407000Z/model.ubj",
+  "model_version": "xgboost_financial_20260611T070850407000Z",
+  "parent_version": null,
+  "trained_at": "2026-06-11T07:08:50.407000+00:00",
+  "training_mode": "fresh",
+  "training_rows": 44,
+  "xgboost_version": "3.2.0"
+}
