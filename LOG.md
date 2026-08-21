@@ -1161,6 +1161,41 @@ commits are in it, only code.
 
 ---
 
+### 2026-08-21 — Bali — Merged changes from main (commit `1084421`)
+
+**What changed on main:**
+
+Teammate: chaiml7 (mingliang0312@gmail.com)
+Commit: `1084421dde11b5ac2e6a29d012d105ae0e2ea592`
+Date: 2026-08-21
+
+- `1084421` — uplooad modells to git
+- `13c6776` — Changes Made: Show applied date on market overview
+- `0bd44f0` — Fix unstyled filter/search forms to match the app's design system
+
+**Files changed (99a6478..1084421):**
+```
+ .gitignore                                         |     7 +-
+ backend/models/financial/... (7 new model versions) |  many + (binary .ubj/.joblib + metadata.json)
+ backend/models/technical/... (7 new model versions) |  many + (binary .txt/.joblib + metadata.json)
+ backend/routes/user_routes.py                       |    22 +-
+ backend/services/dashboard_service.py               |    18 +-
+ frontend/static/css/styles.css                      |    35 +
+ frontend/templates/free_users/user_market_overview.html |  20 +-
+ frontend/templates/index.html                        |     4 +-
+ frontend/templates/user_admin/activity_log.html      |    10 +-
+ frontend/templates/user_admin/performance_reports.html |  10 +-
+ frontend/templates/user_admin/prediction_logs.html   |    10 +-
+ 43 files changed, 31698 insertions(+), 22 deletions(-)
+```
+
+**Integration impact:**
+- New trained financial (XGBoost) and technical (LightGBM/XGBoost) model artifacts committed under `backend/models/`, plus `latest.json` pointers for both — no code in the sentiment pipeline touches these paths, so no conflict with `sentiment/` work.
+- `user_routes.py` / `dashboard_service.py` changes add an "applied date" to market overview — unrelated to sentiment scoring, merged clean via `ort` strategy with no conflicts.
+- Merge was a clean auto-merge (`.gitignore`, `user_routes.py`, `dashboard_service.py` auto-merged); no manual conflict resolution needed.
+
+---
+
 ## Issues / Bugs Tracker
 
 | Date | Issue | Status | Resolution |
